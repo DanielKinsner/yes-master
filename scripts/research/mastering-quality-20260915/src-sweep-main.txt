@@ -1,0 +1,5 @@
+fn main(){let args:Vec<String>=std::env::args().collect();let out=PathBuf::from(&args[1]);std::fs::create_dir_all(&out).unwrap();let mut rows=vec![];
+for (from,to) in [(44100u32,48000u32),(48000,44100),(96000,48000)]{for hz in [100u32,997,1000,7000,11000,15000,19000,21000]{
+let x:Vec<f32>=(0..from*2).flat_map(|i|{let y=(0.5*(std::f64::consts::TAU*hz as f64*i as f64/from as f64).sin()) as f32;[y,y]}).collect();
+let y=sample_rate::convert_interleaved(&x,from,to,2).unwrap();let filename=format!("{from}_{to}_{hz}.wav");let mut w=hound::WavWriter::create(out.join(&filename),hound::WavSpec{channels:2,sample_rate:to,bits_per_sample:32,sample_format:hound::SampleFormat::Float}).unwrap();for v in &y{w.write_sample(*v).unwrap();}w.finalize().unwrap();rows.push(json!({"from":from,"to":to,"hz":hz,"file":filename,"measure":measure(&y,2,to)}));}}
+std::fs::write(out.join("native.json"),serde_json::to_vec_pretty(&rows).unwrap()).unwrap();}

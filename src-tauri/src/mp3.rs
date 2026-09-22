@@ -9,6 +9,8 @@ use std::io::{Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 
+pub const READBACK_DECODER: &str = "symphonia-mp3-0.6.1-unclipped";
+
 pub fn delivery_rate(rate: u32) -> u32 {
     if rate % 44_100 == 0 {
         44_100
@@ -137,7 +139,24 @@ pub fn render_album(
         written.push(saved.clone());
         let (lufs, tp, lra) = measure(&saved, cancel)?;
         report.album_wav_path = saved.to_string_lossy().into_owned();
+        report.continuous_peak = Some(crate::engine::AlbumPeakResult {
+            true_peak_dbtp: tp,
+            ceiling_dbtp: report
+                .tracks
+                .iter()
+                .map(|t| t.ceiling_dbtp)
+                .fold(f32::NEG_INFINITY, f32::max),
+        });
         report.mp3_bitrate_kbps = Some(kbps);
+        report.delivered_format = Some(
+            crate::export_format::ExportEncoding::Mp3 { bitrate_kbps: kbps }.delivered(
+                report.rendered_sample_rate,
+                report.rendered_channels,
+                32,
+                request.plan.delivery_sample_rate,
+                crate::album_encoding::requested_bit_depth(request),
+            ),
+        );
         report.bit_depth = 0;
         report.requested_sample_rate = request.plan.delivery_sample_rate;
         report.manifest_path = metadata
@@ -151,6 +170,8 @@ pub fn render_album(
         manifest["album_wav_path"] = serde_json::json!(report.album_wav_path);
         manifest["album_measurements"] =
             serde_json::json!({"lufs_integrated":lufs,"true_peak_dbtp":tp,"dynamic_range_lu":lra});
+        manifest["continuous_peak"] =
+            serde_json::to_value(&report.continuous_peak).map_err(error)?;
         manifest["tracks"] = serde_json::to_value(&report.tracks).map_err(error)?;
         let mut file = std::fs::OpenOptions::new()
             .create_new(true)
@@ -300,84 +321,160 @@ pub fn write(
 /// Stream the delivered MP3 back through a separate decoder and BS.1770 meter.
 /// This remains bounded for continuous albums as well as individual tracks.
 pub fn measure(path: &Path, cancel: Option<&AtomicBool>) -> CommandResult<(f32, f32, f32)> {
-    use symphonia::core::{
-        audio::SampleBuffer, codecs::DecoderOptions, formats::FormatOptions, io::MediaSourceStream,
-        meta::MetadataOptions, probe::Hint,
+    Ok(measure_details(path, cancel)?.measurements)
+}
+
+pub struct DecodedMeasurements {
+    pub measurements: (f32, f32, f32),
+    pub sample_rate: u32,
+    pub channels: u32,
+    pub frames: u64,
+}
+
+pub fn measure_details(
+    path: &Path,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<DecodedMeasurements> {
+    use symphonia_readback::core::{
+        codecs::audio::AudioDecoderOptions,
+        formats::{probe::Hint, FormatOptions, TrackType},
+        io::MediaSourceStream,
+        meta::MetadataOptions,
     };
     let file = std::fs::File::open(path).map_err(error)?;
     let mut hint = Hint::new();
-    hint.with_extension("mp3");
-    let mut format = symphonia::default::get_probe()
-        .format(
+    if let Some(extension) = path.extension().and_then(|value| value.to_str()) {
+        hint.with_extension(extension);
+    }
+    let mut format = symphonia_readback::default::get_probe()
+        .probe(
             &hint,
             MediaSourceStream::new(Box::new(file), Default::default()),
-            &FormatOptions {
-                enable_gapless: true,
-                ..Default::default()
-            },
-            &MetadataOptions::default(),
+            FormatOptions::default(),
+            MetadataOptions::default(),
         )
-        .map_err(error)?
-        .format;
+        .map_err(error)?;
     let track = format
-        .default_track()
+        .default_track(TrackType::Audio)
         .ok_or_else(|| error("no audio stream"))?;
     let id = track.id;
-    let rate = track
+    let params = track
         .codec_params
-        .sample_rate
-        .ok_or_else(|| error("missing sample rate"))?;
-    let channels = track
-        .codec_params
-        .channels
-        .ok_or_else(|| error("missing channels"))?
-        .count() as u32;
-    let mut decoder = symphonia::default::get_codecs()
-        .make(&track.codec_params, &DecoderOptions::default())
+        .as_ref()
+        .and_then(|p| p.audio())
+        .ok_or_else(|| error("missing audio codec parameters"))?;
+    let mut decoder = symphonia_readback::default::get_codecs()
+        .make_audio_decoder(params, &AudioDecoderOptions::default().gapless(true))
         .map_err(error)?;
-    let mut meter = ebur128::EbuR128::new(
-        channels,
-        rate,
-        ebur128::Mode::I | ebur128::Mode::LRA | ebur128::Mode::TRUE_PEAK,
-    )
-    .map_err(error)?;
+    let mut state: Option<(ebur128::EbuR128, u32, u32)> = None;
+    // Preserve the exact decoder PCM for bounded, repeatable full-file peak
+    // reads. This never transcodes the MP3 or quantizes the decoded floats.
+    let scratch = tempfile::tempdir().map_err(error)?;
+    let decoded_path = scratch.path().join("mp3-readback.wav");
+    let mut writer = None;
+    let mut frames = 0_u64;
     loop {
         check_cancel(cancel)?;
-        let packet = match format.next_packet() {
-            Ok(p) => p,
-            Err(symphonia::core::errors::Error::IoError(e))
-                if e.kind() == std::io::ErrorKind::UnexpectedEof =>
-            {
-                break
-            }
-            Err(e) => return Err(error(e)),
+        let Some(packet) = format.next_packet().map_err(error)? else {
+            break;
         };
-        if packet.track_id() != id {
+        if packet.track_id != id {
             continue;
         }
         let decoded = decoder.decode(&packet).map_err(error)?;
-        let mut samples = SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
-        samples.copy_interleaved_ref(decoded);
-        meter.add_frames_f32(samples.samples()).map_err(error)?;
+        if state.is_none() {
+            let rate = decoded.spec().rate();
+            let channels = decoded.spec().channels().count() as u32;
+            let meter =
+                ebur128::EbuR128::new(channels, rate, ebur128::Mode::I | ebur128::Mode::LRA)
+                    .map_err(error)?;
+            let file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&decoded_path)
+                .map_err(error)?;
+            writer = Some(
+                hound::WavWriter::new(
+                    std::io::BufWriter::with_capacity(1 << 20, file),
+                    hound::WavSpec {
+                        sample_rate: rate,
+                        channels: channels as u16,
+                        bits_per_sample: 32,
+                        sample_format: hound::SampleFormat::Float,
+                    },
+                )
+                .map_err(error)?,
+            );
+            state = Some((meter, rate, channels));
+        }
+        let (meter, rate, channels) = state.as_mut().ok_or_else(|| error("no decoded format"))?;
+        if decoded.spec().rate() != *rate || decoded.spec().channels().count() as u32 != *channels {
+            return Err(error("delivered stream changes rate or channel count"));
+        }
+        let mut samples = vec![0_f32; decoded.samples_interleaved()];
+        decoded.copy_to_slice_interleaved(&mut samples);
+        if samples.as_slice().iter().any(|s| !s.is_finite()) {
+            return Err(error("non-finite delivered sample"));
+        }
+        frames += samples.as_slice().len() as u64 / u64::from(*channels);
+        meter.add_frames_f32(samples.as_slice()).map_err(error)?;
+        for &sample in samples.as_slice() {
+            writer
+                .as_mut()
+                .ok_or_else(|| error("no decoded PCM writer"))?
+                .write_sample(sample)
+                .map_err(error)?;
+        }
     }
+    let (meter, rate, channels) = state.ok_or_else(|| error("no delivered audio frames"))?;
     let lufs = crate::analysis::sanitize_lufs(meter.loudness_global().map_err(error)? as f32);
-    let peak = (0..channels)
-        .map(|ch| meter.true_peak(ch).map_err(error))
-        .collect::<CommandResult<Vec<_>>>()?
-        .into_iter()
-        .fold(0.0_f64, f64::max);
+    writer
+        .ok_or_else(|| error("no decoded PCM writer"))?
+        .finalize()
+        .map_err(error)?;
+    let source = crate::peak_meter::pcm::WavPcm::open(&decoded_path).map_err(error)?;
+    let qualified = crate::peak_meter::measure_source(&source, || {
+        cancel.is_some_and(|flag| flag.load(Ordering::Relaxed))
+    })
+    .map_err(error)?;
+    let peak = qualified.upper();
+    crate::diagnostics::info(format!("Decoded MP3 verified: decoder={READBACK_DECODER} estimator={} frames={frames} rate={rate} channels={channels} peak_dbtp={:?}", crate::peak_meter::VERSION, qualified.upper_dbtp()));
     let tp = if peak > 0.0 {
         (20.0 * peak.log10()) as f32
     } else {
         -60.0
     };
     let lra = meter.loudness_range().map_err(error)? as f32;
-    Ok((lufs, tp, if lra.is_finite() { lra } else { 0.0 }))
+    if frames == 0 {
+        return Err(error("no delivered audio frames"));
+    }
+    Ok(DecodedMeasurements {
+        measurements: (lufs, tp, if lra.is_finite() { lra } else { 0.0 }),
+        sample_rate: rate,
+        channels,
+        frames,
+    })
 }
 
 #[cfg(all(test, feature = "app-runner"))]
 mod tests {
     use super::*;
+    #[test]
+    fn receipt_decode_preserves_peaks_above_full_scale() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("over-full-scale.mp3");
+        let samples =
+            (0..48000).map(|n| Ok(1.5 * (n as f32 * 997. * std::f32::consts::TAU / 48000.).sin()));
+        let path = write(&path, samples, 48000, 1, 128, None).unwrap();
+        let measured = measure_details(&path, None).unwrap();
+        assert_eq!(measured.frames, 48000);
+        assert!(
+            measured.measurements.1 > 2.,
+            "decoder hid an above-full-scale peak: {:?}",
+            measured.measurements
+        );
+    }
+
     #[test]
     fn all_delivery_bitrates_decode_and_preserve_level_in_mono_and_stereo() {
         let dir = tempfile::tempdir().unwrap();

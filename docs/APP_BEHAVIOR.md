@@ -61,7 +61,23 @@ Track Master supports:
   is prepared. Preparation and live measurements share one heavy-worker permit.
 - Export receipts report delivered decoded-audio loudness/peak/LRA. Album receipts expand
   to per-track delivered loudness, true peak, resolved target and ceiling.
+  The continuous album file has its own measured peak and programme ceiling.
+  Decoded lossy ceiling excesses remain visible advisories, including small misses;
+  lossless FLAC/AIFF must preserve the protected PCM exactly. No automatic lossy
+  headroom or extra corrective encode is applied. MP3 receipt readback preserves
+  decoded samples above full scale; general MP3 import/playback remains separate.
   Target shortfalls are informational; warning-aware export remains advisory.
+- Final-rate Track/rendered-preview and album per-track PCM receive qualified
+  peak protection even without a loudness target or usable integrated loudness.
+  Exact deterministic delivery samples are verified before writing. Peak readings
+  include finite edges and a measured reconstruction uncertainty, with estimator
+  version recorded in diagnostics; live dBFS meters remain a separate reading.
+  Album export verifies the whole assembled programme before finalizing either
+  form. A necessary boundary correction applies the same downward gain to all
+  retained float tracks, preserving relative levels and exact component/album
+  PCM parity. Each track keeps its own ceiling; the programme ceiling is the
+  least restrictive resolved track ceiling. Device-rate audition remains tracked
+  separately in the active mastering-quality implementation ledger.
 - Delivery profile selection.
 - Advanced controls. The Advanced rail carries a global **Reset all**
   (2026-08-19; it confirms first — a misclick must not wipe a tuning) that returns every non-managed control — gains, EQ gains and
@@ -80,6 +96,15 @@ Track Master supports:
   MP3; there is no separate conversion workflow. Lossy true-peak excursions are
   measured from the completed MP3 and reported, not hidden by measuring its input.
 - Explicit save destination for export.
+- Desktop candidate formats additionally include FLAC, AIFF, AAC / M4A,
+  AAC (ADTS), and Ogg Vorbis in Track and Album. FLAC/AIFF use 16/24-bit
+  integer PCM; a requested 32-bit float export is delivered as 24-bit and
+  labeled accordingly. AAC targets 256 kbps by default (320/192/128 available);
+  Vorbis uses VBR quality 6 (4/8 available). Lossy controls hide inapplicable
+  PCM precision settings without discarding them. New lossy rates resolve to
+  44.1 kHz for that family, otherwise 48 kHz. File extensions and receipt facts
+  follow the captured export choice. ADTS priming/padding is disclosed.
+  AIFF/AIF are accepted imports. WAV/MP3 and mobile scope stay as above.
 - Warning-aware export review.
 - Post-render export receipt/checks.
 - Track and Album expose Export without a separate Tools/audit-WAV action.
@@ -269,10 +294,15 @@ The app has an explicit compressor mode field:
 `Off` does not bypass the limiter, ceiling protection, LUFS landing, metering,
 or export warnings.
 
-The per-band compressor card labels preset fallback values as `Preset`, not
-track-aware `Auto`. If a low-dynamic-range source is loaded while `Preset` mode
-is active, the card gives local guidance to lower density or switch Off if
-movement collapses.
+Density Auto keeps its requested null value: the thumb shows 0.50 for named
+presets and 0.00 for Custom. Adapt/source changes do not move that requested
+thumb. Idle band readouts use backend-resolved compression after source guards;
+their tooltips include resolved attack, release and makeup. Until a matching
+source/settings/analysis response arrives, fallback values are labeled before
+Adapt. This display never seeds Manual values: entering Manual retains the
+existing requested preset/density defaults and explicit overrides. If a
+low-dynamic-range source is loaded while `Preset` mode is active, the card gives
+local guidance to compare compression Off by ear.
 
 ## Private Fixture And Reference Lanes
 

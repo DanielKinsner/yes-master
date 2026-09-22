@@ -145,6 +145,21 @@ afterEach(() => {
 });
 
 describe("ExportReceiptCard", () => {
+  it("keeps the delivered AAC identity when measurements are unavailable", () => {
+    const delivered = receipt([]);
+    delivered.job.measurements = null;
+    delivered.job.delivered_format = {
+      encoding: { format: "m4a", bitrate_kbps: 192 }, codec: "aac", container: "mp4",
+      sample_rate: 48000, channels: 2, bit_depth: null,
+      requested_sample_rate: 96000, requested_bit_depth: 32,
+    };
+    const container = render(<ExportReceiptCard receipt={delivered} track={track()} settings={settings()} analysis={analysis()} onClose={() => {}} />);
+    expect(container.querySelector(".receipt-audio-format")?.textContent ?? container.textContent).toContain("AAC / M4A");
+    expect(container.textContent).toContain("192 kbps");
+    expect(container.textContent).toContain("48 kHz");
+    expect(container.textContent).toMatch(/measurements unavailable/i);
+  });
+
   it("renders the clean medallion with delivered measurements", () => {
     const container = render(
       <ExportReceiptCard

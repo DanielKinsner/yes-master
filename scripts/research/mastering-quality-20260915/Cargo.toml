@@ -1,0 +1,44 @@
+[package]
+name = "yes-stage-ablation"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+rustfft = "6"
+sha2 = "0.10"
+chrono = "0.4"
+hound = "3"
+tempfile = "3"
+serde_json = "1"
+ebur128 = "0.1"
+rubato = "1.0.1"
+audioadapter-buffers = "2.0.0"
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[profile.release]
+opt-level = 3
+
+[[bin]]
+name = "yes-mechanisms"
+path = "src/mechanisms.rs"
+
+[[bin]]
+name = "yes-peak-probe"
+path = "src/probe.rs"
+
+[[bin]]
+name = "yes-src-sweep"
+path = "src/src_sweep.rs"
+
+[[bin]]
+name = "yes-src-check"
+path = "src/src_check.rs"
+
+[[bin]]
+name = "yes-peak-meter"
+path = "src/peak_meter.rs"

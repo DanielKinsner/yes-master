@@ -26,6 +26,9 @@ permissions:
   contents: read
 
 jobs:
+  audio-encoders:
+    uses: ./.github/workflows/audio-encoders.yml
+
   preflight:
     name: Preflight
     runs-on: windows-latest
@@ -143,7 +146,7 @@ jobs:
 
   release:
     name: Build draft (${{ matrix.label }})
-    needs: preflight
+    needs: [preflight, audio-encoders]
     permissions:
       contents: write # tauri-action creates the draft release + uploads assets
     strategy:
@@ -235,11 +238,27 @@ jobs:
       - name: Assemble Tauri config overlays
         shell: bash
         run: |
-          ARGS="--config src-tauri/tauri.updater.conf.json"
+          ARGS="--config src-tauri/tauri.updater.conf.json --config src-tauri/tauri.encoder.conf.json"
           if [ "${{ matrix.platform }}" = "windows-latest" ] && [ "$AZURE_SIGNING_ENABLED" = "true" ]; then
             ARGS="$ARGS --config src-tauri/tauri.windows-signing.conf.json"
           fi
           echo "EXTRA_ARGS=$ARGS" >> "$GITHUB_ENV"
+
+      - name: Download qualified encoder sources and binaries
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: audio-encoder-*
+          path: test-output/encoders
+
+      - name: Stage Windows encoder
+        if: runner.os == 'Windows'
+        run: node scripts/stage-audio-encoder.mjs test-output/encoders/audio-encoder-x86_64-pc-windows-msvc x86_64-pc-windows-msvc
+
+      - name: Assemble universal Mac encoder
+        if: runner.os == 'macOS'
+        run: |
+          chmod +x test-output/encoders/audio-encoder-*/yes-master-encoder-*
+          node scripts/stage-universal-encoder.mjs test-output/encoders/audio-encoder-aarch64-apple-darwin test-output/encoders/audio-encoder-x86_64-apple-darwin
 
       - name: Build and create draft release
         uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
@@ -281,6 +300,30 @@ jobs:
           # prereleases from that channel, so beta identity lives in tag/title.
           prerelease: false
           args: ${{ matrix.args }} ${{ env.EXTRA_ARGS }}
+
+      - name: Prepare and upload exact source and encoder materials
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $target = if ('${{ runner.os }}' -eq 'Windows') { 'x86_64-pc-windows-msvc' } else { 'aarch64-apple-darwin' }
+          node scripts/prepare-redistribution.mjs '${{ github.sha }}' "test-output/encoders/audio-encoder-$target" $target test-output/redistribution
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $archive = 'yes-master-source-${{ runner.os }}.tar.gz'
+          tar -czf $archive -C test-output/redistribution .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tag = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}' } else { "yes-master-v$version-manual-${{ github.run_number }}" }
+          gh release upload $tag $archive --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($package in Get-ChildItem test-output/encoders -Directory) {
+            if (('${{ runner.os }}' -eq 'Windows') -ne $package.Name.Contains('windows')) { continue }
+            $archive = "$($package.Name).tar.gz"
+            tar -czf $archive -C $package.FullName .
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            gh release upload $tag $archive --clobber
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
   release-audit:
     name: Audit complete draft
@@ -356,6 +399,11 @@ jobs:
             "Windows MSI updater signature (.msi.sig)" = '\.msi\.sig$'
             "Windows NSIS updater signature (setup.exe.sig)" = 'setup\.exe\.sig$'
             "SHA-256 checksum ledger" = '^SHA256SUMS\.txt$'
+            "Windows corresponding source" = '^yes-master-source-Windows\.tar\.gz$'
+            "Mac corresponding source" = '^yes-master-source-macOS\.tar\.gz$'
+            "Windows encoder package" = '^audio-encoder-x86_64-pc-windows-msvc\.tar\.gz$'
+            "Mac ARM encoder package" = '^audio-encoder-aarch64-apple-darwin\.tar\.gz$'
+            "Mac Intel encoder package" = '^audio-encoder-x86_64-apple-darwin\.tar\.gz$'
           }
 
           foreach ($entry in $required.GetEnumerator()) {
@@ -376,4 +424,20 @@ jobs:
             exit 1
           }
 
-          Write-Host "Draft release is complete and remains unpublished: $env:RELEASE_TAG"
+          # Source archives are useful draft artifacts while recipient permission
+          # and relink verification remain unresolved. Never call those ready.
+          foreach ($platform in @('Windows', 'macOS')) {
+            $directory = "release-assets/source-$platform"
+            New-Item -ItemType Directory -Path $directory | Out-Null
+            tar -xzf "release-assets/yes-master-source-$platform.tar.gz" -C $directory
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $source = Get-Content "$directory/manifest.json" -Raw | ConvertFrom-Json
+            if ($source.commit -ne '${{ github.sha }}' -or -not $source.releaseReady) {
+              throw "Corresponding source is not release-ready for this revision: $($source.pending -join '; ')"
+            }
+            foreach ($file in $source.files.PSObject.Properties) {
+              $hash = (Get-FileHash -LiteralPath (Join-Path $directory $file.Name) -Algorithm SHA256).Hash.ToLowerInvariant()
+              if ($hash -ne $file.Value) { throw "Corresponding-source hash mismatch: $($file.Name)" }
+            }
+          }
+          Write-Host "Draft assets pass the mechanical audit; installed/publication gates still apply: $env:RELEASE_TAG"

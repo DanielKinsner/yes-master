@@ -1,9 +1,18 @@
+use crate::export_format::ExportEncoding;
 use crate::types::*;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
+
+#[cfg(test)]
+mod delivery_rate_probe;
+mod gain_stage;
+#[cfg(test)]
+mod gain_transition_probe;
+mod output_route;
+mod preparation_cache;
 
 /// Sentinel dBFS value reported when the peak window saw no signal. JSON can't
 /// round-trip -inf, so we use a finite "well below audible" floor instead.
@@ -24,11 +33,23 @@ fn linear_to_dbfs(linear: f32) -> f32 {
 use std::collections::HashMap;
 
 use crate::decode::{clamp_waveform_target_pixels, decode_full, decode_to_peaks, DecodedPcm};
-use crate::sources::{LiveCoeffUpdate, MasteringSource, MeteredPcmSource};
+use crate::sources::{LiveCoeffUpdate, MasteringSource, MeteredPcmSource, MeteredSource};
 
 #[cfg(test)]
 #[path = "listening_bench.rs"]
 mod listening_bench;
+#[cfg(test)]
+#[path = "native_callback_bench.rs"]
+mod native_callback_bench;
+
+/// Local opt-in lifecycle diagnostics mute after source DSP/meters. This hook
+/// is absent from application builds and never changes a system device volume.
+#[cfg(test)]
+fn mute_diagnostic_sink(sink: &rodio::Sink) {
+    if std::env::var_os("YES_MASTER_BENCH_MUTE").is_some() {
+        sink.set_volume(0.0);
+    }
+}
 use crate::spectrum::{SpectrumAnalyzer, SpectrumRing};
 use rodio::cpal::traits::{DeviceTrait, HostTrait};
 
@@ -112,6 +133,7 @@ pub async fn set_audio_output_device(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Keep the existing flat IPC arguments compatible.
 pub async fn play_master(
     track_id: TrackId,
     track_path: String,
@@ -119,6 +141,7 @@ pub async fn play_master(
     start_position_sec: Option<f64>,
     preview_lufs_landing: Option<bool>,
     album: Option<bool>,
+    encoding: Option<ExportEncoding>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
     if track_path.is_empty() {
@@ -130,7 +153,7 @@ pub async fn play_master(
             "path traversal not allowed: {track_path}"
         )));
     }
-    player.play_master(
+    player.play_master_encoded(
         track_id,
         path,
         settings,
@@ -138,6 +161,7 @@ pub async fn play_master(
         preview_lufs_landing.unwrap_or(true),
         // B2: album mode is non-adaptive; default false when the FE omits it.
         album.unwrap_or(false),
+        encoding.unwrap_or_default(),
     )
 }
 
@@ -146,12 +170,14 @@ pub async fn update_chain(
     settings: MasteringSettings,
     preview_lufs_landing: Option<bool>,
     album: Option<bool>,
+    encoding: Option<ExportEncoding>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
-    player.update_chain(
+    player.update_chain_encoded(
         settings,
         preview_lufs_landing.unwrap_or(true),
         album.unwrap_or(false),
+        encoding.unwrap_or_default(),
     )
 }
 
@@ -178,6 +204,7 @@ struct PreparedPreview {
         Option<std::time::SystemTime>,
         MasteringSettings,
         f32,
+        u32,
     )>,
 }
 
@@ -205,15 +232,19 @@ pub fn cancel_preview_preparation(request_id: String) {
 /// Prepare only the selected, analyzed track. Shares the live measurement
 /// budget, never loads a sink or changes playback, and drops obsolete results.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Includes injected Tauri state and optional encoding.
 pub async fn prepare_preview_level(
     request_id: String,
     track_id: TrackId,
     track_path: String,
     mut settings: MasteringSettings,
     album: bool,
+    encoding: Option<ExportEncoding>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
     profile_store: tauri::State<'_, Arc<crate::profile_store::SourceProfileStore>>,
 ) -> CommandResult<()> {
+    let encoding = encoding.unwrap_or_default();
+    encoding.validate()?;
     let path = std::path::PathBuf::from(&track_path);
     if track_path.is_empty() || crate::files::has_parent_dir_component(&path) {
         return Err(CommandError::InvalidPath(track_path));
@@ -245,10 +276,13 @@ pub async fn prepare_preview_level(
         cache.cancelled.store(true, Ordering::Relaxed);
         cache.cancelled = cancelled.clone();
         cache.request = request_id.clone();
-        if let Some((cached_path, cached_mtime, cached_settings, _)) = &cache.result {
+        if let Some((cached_path, cached_mtime, cached_settings, _, source_rate)) = &cache.result {
             if *cached_path == canonical
                 && *cached_mtime == mtime
-                && matching_landing_settings(cached_settings, &settings)
+                && matching_landing_settings(
+                    cached_settings,
+                    &output_route::preview_settings(&settings, *source_rate, encoding),
+                )
             {
                 return Ok(());
             }
@@ -269,10 +303,15 @@ pub async fn prepare_preview_level(
         // A live worker may have completed this same measurement while we
         // waited for its permit. Reuse it rather than rendering the track twice.
         if let Ok(cache) = prepared_preview().lock() {
-            if let Some((cached_path, cached_mtime, cached_settings, _)) = &cache.result {
+            if let Some((cached_path, cached_mtime, cached_settings, _, source_rate)) =
+                &cache.result
+            {
                 if *cached_path == canonical
                     && *cached_mtime == mtime
-                    && matching_landing_settings(cached_settings, &settings)
+                    && matching_landing_settings(
+                        cached_settings,
+                        &output_route::preview_settings(&settings, *source_rate, encoding),
+                    )
                 {
                     return Ok(());
                 }
@@ -292,13 +331,8 @@ pub async fn prepare_preview_level(
         if cancelled.load(Ordering::Relaxed) {
             return Ok(());
         }
-        let measured = crate::engine::preview_landing_with_cancel(
-            &pcm.samples,
-            pcm.sample_rate,
-            pcm.channels,
-            &settings,
-            Some(&cancelled),
-        );
+        let settings = output_route::preview_settings(&settings, pcm.sample_rate, encoding);
+        let measured = preparation_cache::measure(&pcm, &settings, &cancelled);
         if cancelled.load(Ordering::Relaxed) {
             return Ok(());
         }
@@ -312,7 +346,7 @@ pub async fn prepare_preview_level(
             .lock()
             .map_err(|e| CommandError::Other(e.to_string()))?;
         if cache.request == request_id && !cancelled.load(Ordering::Relaxed) {
-            cache.result = Some((canonical, mtime, settings, gain));
+            cache.result = Some((canonical, mtime, settings, gain, pcm.sample_rate));
         }
         Ok(())
     })
@@ -332,7 +366,7 @@ fn seed_prepared_preview(s: &mut AudioThreadState, settings: &MasteringSettings)
     let Ok(cache) = prepared_preview().try_lock() else {
         return;
     };
-    if let Some((path, mtime, cached_settings, gain)) = &cache.result {
+    if let Some((path, mtime, cached_settings, gain, _)) = &cache.result {
         if *path == entry.canonical_path
             && *mtime == entry.mtime
             && matching_landing_settings(cached_settings, settings)
@@ -503,6 +537,7 @@ enum AudioCommand {
         /// profile resolution and caches `live_album` for the subsequent
         /// settings-only `update_chain` dispatches.
         album: bool,
+        encoding: ExportEncoding,
         reply: Sender<Result<(), String>>,
     },
     UpdateChain {
@@ -513,6 +548,7 @@ enum AudioCommand {
         /// (album stays byte-flat / non-adaptive; track stays adaptive) instead
         /// of reusing the flag cached at the last `play_master`.
         album: bool,
+        encoding: ExportEncoding,
     },
     PreviewLandingReady {
         /// Captured at worker spawn time. Rejected by the audio thread if
@@ -523,6 +559,8 @@ enum AudioCommand {
         generation: u64,
         settings: MasteringSettings,
         gain: Option<f32>,
+        device_gain: Option<f32>,
+        error: Option<String>,
         vm_gain: Option<f32>,
         finished: bool,
     },
@@ -591,10 +629,19 @@ pub struct PlaybackSnapshot {
     /// Cached correction fades into the live chain when ready. Also valid while
     /// paused; drives the UI's "Measuring preview level…" status.
     pub landing_pending: bool,
+    /// Diagnostic publication tokens, independent of worker/settings generations.
+    /// Applied changes only after the DSP crossfade, converter overlap/buffers
+    /// and swap fade have emitted the revision. This is application output,
+    /// not a timestamp at the DAC or speaker. Zero is mixed/not yet emitted.
+    pub requested_output_revision: u64,
+    pub applied_output_revision: u64,
     /// True after the app-level stall detector decides a playing sink stopped
     /// advancing while still reporting "playing". The audio thread pauses the
     /// loaded sink but keeps the track/playhead loaded for a retry.
     pub device_lost: bool,
+    /// Failed audio conversion ends the source; retain a visible error instead
+    /// of presenting a truncated stream as normal completion.
+    pub playback_error: Option<PlaybackError>,
     /// True while a loop region is active. The device-loss detector treats loop
     /// mode as intentionally discontinuous and will not infer a frozen device.
     pub loop_active: bool,
@@ -627,7 +674,10 @@ impl Default for PlaybackSnapshot {
             lufs_integrated: SILENCE_DBFS,
             spectrum_db: SpectrumAnalyzer::silent(),
             landing_pending: false,
+            requested_output_revision: 0,
+            applied_output_revision: 0,
             device_lost: false,
+            playback_error: None,
             loop_active: false,
             play_generation: 0,
             device_loss_skips: 0,
@@ -834,15 +884,22 @@ fn output_devices_for_selection(
 
 fn open_output_stream(
     selected_device_name: Option<&str>,
-) -> Result<(rodio::OutputStream, rodio::OutputStreamHandle), String> {
+) -> Result<output_route::OpenedOutput, String> {
     match selected_device_name {
         Some(name) => {
             let device = output_device_by_name(name)?;
-            rodio::OutputStream::try_from_device(&device)
+            output_route::open_device(&device)
                 .map_err(|e| format!("audio output device unavailable ({name}): {e}"))
         }
         None => {
-            rodio::OutputStream::try_default().map_err(|e| format!("audio device unavailable: {e}"))
+            let host = rodio::cpal::default_host();
+            let device = host.default_output_device().ok_or_else(|| {
+                format!("audio device unavailable: {}", rodio::StreamError::NoDevice)
+            })?;
+            output_route::with_fallback(&device, output_route::open_device, || {
+                host.output_devices().ok()
+            })
+            .map_err(|e| format!("audio device unavailable: {e}"))
         }
     }
 }
@@ -1053,6 +1110,29 @@ impl AudioPlayer {
         preview_lufs_landing: bool,
         album: bool,
     ) -> CommandResult<()> {
+        self.play_master_encoded(
+            track_id,
+            path,
+            settings,
+            start_position_sec,
+            preview_lufs_landing,
+            album,
+            ExportEncoding::Wav,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn play_master_encoded(
+        &self,
+        track_id: TrackId,
+        path: &Path,
+        settings: MasteringSettings,
+        start_position_sec: f64,
+        preview_lufs_landing: bool,
+        album: bool,
+        encoding: ExportEncoding,
+    ) -> CommandResult<()> {
+        encoding.validate()?;
         let (reply_tx, reply_rx) = mpsc::channel();
         let request_epoch = issue_play_request_epoch(&self.play_request_epoch);
         let volume_match = settings.volume_match;
@@ -1064,6 +1144,7 @@ impl AudioPlayer {
             start_position_sec: start_position_sec.max(0.0),
             preview_lufs_landing,
             album,
+            encoding,
             reply: reply_tx,
         })
         .map_err(CommandError::Other)?;
@@ -1137,10 +1218,22 @@ impl AudioPlayer {
         preview_lufs_landing: bool,
         album: bool,
     ) -> CommandResult<()> {
+        self.update_chain_encoded(settings, preview_lufs_landing, album, ExportEncoding::Wav)
+    }
+
+    pub fn update_chain_encoded(
+        &self,
+        settings: MasteringSettings,
+        preview_lufs_landing: bool,
+        album: bool,
+        encoding: ExportEncoding,
+    ) -> CommandResult<()> {
+        encoding.validate()?;
         self.send(AudioCommand::UpdateChain {
             settings,
             preview_lufs_landing,
             album,
+            encoding,
         })
         .map_err(CommandError::Other)
     }
@@ -1274,8 +1367,14 @@ impl Drop for AudioPlayer {
 }
 
 struct AudioThreadState {
-    _stream: rodio::OutputStream,
-    handle: rodio::OutputStreamHandle,
+    _stream: rodio::cpal::Stream,
+    /// Exactly the configuration passed to the successfully opened stream,
+    /// including fallback. Never infer device rate from a requested file rate.
+    _output_config: rodio::cpal::SupportedStreamConfig,
+    handle: output_route::OutputHandle,
+    stream_failed: Arc<AtomicBool>,
+    source_failure: Option<Arc<AtomicU8>>,
+    playback_error: Option<PlaybackError>,
     sink: rodio::Sink,
     current_track: Option<TrackId>,
     /// L10 — fade-out trigger shared with the currently-playing source. On an
@@ -1291,9 +1390,18 @@ struct AudioThreadState {
     loop_region: Option<LoopRegion>,
     live_coeffs_tx: Option<Sender<LiveCoeffUpdate>>,
     live_coeff_generation: u64,
+    live_coeff_revision: u64,
+    live_raw_revision: u64,
+    live_raw_coeffs: Option<crate::dsp::ChainCoeffs>,
+    live_gain_mailbox: Option<Arc<gain_stage::GainMailbox>>,
+    applied_coeff_revision: Option<Arc<AtomicU64>>,
     live_landing_gain_lin: f32,
+    live_device_correction_lin: f32,
     live_preview_lufs_landing: bool,
     live_sample_rate: u32,
+    /// Fixed intermediate rate of the current Mastered source. A rate edit
+    /// reconstructs the converters while preserving the playhead/pause state.
+    live_file_rate: u32,
     preview_work: PreviewWorkerGate,
     /// Phase 12.1 decode cache — keyed by canonical path + mtime. Speeds up
     /// repeated `play_master` calls on the same file (e.g. Original/Mastered
@@ -1305,6 +1413,8 @@ struct AudioThreadState {
     /// currently-loaded decoded PCM. Cleared whenever
     /// `handle_play_master` swaps in a different canonical path.
     landing_gain_cache: PreviewLandingCache,
+    /// Final-device gain is qualified separately from the file/prewarm result.
+    device_gain_cache: PreviewLandingCache,
     /// 14b — memoized Volume Match gains, same key discipline (and
     /// therefore the same struct) as `landing_gain_cache`; same lifecycle
     /// (cleared wherever the landing cache clears).
@@ -1370,12 +1480,52 @@ struct AudioThreadState {
 }
 
 impl AudioThreadState {
+    fn fail_playback(&mut self, diagnostic: String) {
+        self.sink.pause();
+        self.landing_pending = false;
+        self.live_coeffs_tx = None;
+        self.preview_work.begin_playback(true);
+        crate::diagnostics::error(diagnostic);
+        self.playback_error = Some(PlaybackError {
+            generation: self.preview_work.epoch,
+            message: "Playback stopped while processing audio. Start playback again; if it fails again, re-import the source.".into(),
+        });
+    }
+
+    fn observe_source_failure(&mut self) {
+        let code = self
+            .source_failure
+            .as_ref()
+            .map_or(0, |slot| slot.load(Ordering::Acquire));
+        if code == 0 || self.playback_error.is_some() {
+            return;
+        }
+        // Invalidate failed-source work and renew the cancellation token, so
+        // a same-source retry cannot inherit an already-cancelled worker slot.
+        self.fail_playback(format!(
+            "Playback conversion failed (generation {}): {}",
+            self.play_generation,
+            crate::quality_source::failure_description(code)
+        ));
+    }
+
     fn open(selected_device_name: Option<&str>, initial_sample_rate: u32) -> Result<Self, String> {
-        let (stream, handle) = open_output_stream(selected_device_name)?;
-        let sink = rodio::Sink::try_new(&handle).map_err(|e| e.to_string())?;
+        let output_route::OpenedOutput {
+            stream,
+            handle,
+            config,
+            failed,
+        } = open_output_stream(selected_device_name)?;
+        let sink = handle.sink();
+        #[cfg(test)]
+        mute_diagnostic_sink(&sink);
         Ok(Self {
             _stream: stream,
+            _output_config: config,
             handle,
+            stream_failed: failed,
+            source_failure: None,
+            playback_error: None,
             sink,
             current_track: None,
             live_fade_out: Arc::new(AtomicBool::new(false)),
@@ -1383,12 +1533,20 @@ impl AudioThreadState {
             loop_region: None,
             live_coeffs_tx: None,
             live_coeff_generation: 0,
+            live_coeff_revision: 0,
+            live_raw_revision: 0,
+            live_raw_coeffs: None,
+            live_gain_mailbox: None,
+            applied_coeff_revision: None,
             live_landing_gain_lin: 1.0,
+            live_device_correction_lin: 1.0,
             live_preview_lufs_landing: false,
             live_sample_rate: initial_sample_rate,
+            live_file_rate: initial_sample_rate,
             preview_work: PreviewWorkerGate::default(),
             decoded_cache: None,
             landing_gain_cache: PreviewLandingCache::new(),
+            device_gain_cache: PreviewLandingCache::new(),
             vm_gain_cache: PreviewLandingCache::new(),
             live_vm_gain_lin: 1.0,
             peak_linear: Arc::new(AtomicU32::new(0)),
@@ -1617,7 +1775,7 @@ fn update_chain_preview_landing_plan(
 ///     so analysis updates (which inject this field) don't bust the
 ///     cache.
 fn option_f32_is_finite(value: Option<f32>) -> bool {
-    value.map_or(true, f32::is_finite)
+    value.is_none_or(f32::is_finite)
 }
 
 fn source_profile_is_finite(profile: SourceProfile) -> bool {
@@ -1664,7 +1822,7 @@ fn settings_landing_values_are_finite(settings: &MasteringSettings) -> bool {
     ]
     .into_iter()
     .all(f32::is_finite)
-        && settings.album.as_ref().map_or(true, album_plan_is_finite)
+        && settings.album.as_ref().is_none_or(album_plan_is_finite)
         && option_f32_is_finite(settings.advanced.lufs_offset_db)
         && option_f32_is_finite(settings.advanced.ceiling_dbtp)
         && option_f32_is_finite(settings.advanced.width)
@@ -1687,7 +1845,7 @@ fn settings_landing_values_are_finite(settings: &MasteringSettings) -> bool {
         && settings
             .advanced
             .source_profile
-            .map_or(true, source_profile_is_finite)
+            .is_none_or(source_profile_is_finite)
 }
 
 fn settings_landing_hash(settings: &MasteringSettings) -> LandingSettingsHash {
@@ -1771,6 +1929,7 @@ struct PreviewWorkRequest {
     generation: u64,
     track_epoch: u64,
     landing_enabled: bool,
+    device_rate: u32,
 }
 
 /// Source lifetime is independent of Original/Mastered playback generations.
@@ -1778,6 +1937,7 @@ struct PreviewWorkRequest {
 struct PreviewWorkerGate {
     epoch: u64,
     in_flight: bool,
+    active: Option<PreviewWorkRequest>,
     pending: Option<PreviewWorkRequest>,
     cancelled: Arc<AtomicBool>,
     budget: Arc<AtomicBool>,
@@ -1789,6 +1949,7 @@ impl Default for PreviewWorkerGate {
         Self {
             epoch: 0,
             in_flight: false,
+            active: None,
             pending: None,
             cancelled: Arc::new(AtomicBool::new(false)),
             budget: preview_worker_budget(),
@@ -1828,6 +1989,17 @@ impl PreviewWorkerGate {
             static NEXT_SOURCE_EPOCH: AtomicU64 = AtomicU64::new(1);
             self.epoch = NEXT_SOURCE_EPOCH.fetch_add(1, Ordering::Relaxed);
             self.in_flight = false;
+            self.active = None;
+        }
+    }
+}
+
+impl PreviewWorkerGate {
+    fn cancel_obsolete_response(&self, rate: u32, requested: &MasteringSettings) {
+        if self.active.as_ref().is_some_and(|active| {
+            !preparation_cache::same_response(rate, &active.settings, requested)
+        }) {
+            self.cancelled.store(true, Ordering::Relaxed);
         }
     }
 }
@@ -1884,6 +2056,7 @@ fn try_spawn_lufs_preview_worker(
                 generation,
                 track_epoch,
                 landing_enabled,
+                device_rate,
             } = request;
             if cancelled.load(Ordering::Relaxed) {
                 let _ = command_tx.send(AudioCommand::PreviewLandingReady {
@@ -1891,6 +2064,8 @@ fn try_spawn_lufs_preview_worker(
                     generation,
                     settings,
                     gain: None,
+                    device_gain: None,
+                    error: None,
                     vm_gain: None,
                     finished: true,
                 });
@@ -1908,23 +2083,34 @@ fn try_spawn_lufs_preview_worker(
                 generation,
                 settings: settings.clone(),
                 gain: None,
+                device_gain: None,
+                error: None,
                 vm_gain: (!cancelled.load(Ordering::Relaxed)).then_some(vm_gain),
-                finished: !landing_enabled || cancelled.load(Ordering::Relaxed),
+                finished: !landing_enabled,
             });
+            if !landing_enabled {
+                return;
+            }
             if landing_enabled && !cancelled.load(Ordering::Relaxed) {
-                let gain = crate::engine::preview_landing_with_cancel(
-                    &pcm.samples,
-                    pcm.sample_rate,
-                    pcm.channels,
-                    &settings,
-                    Some(&cancelled),
-                )
-                .ok()
-                .map(|result| result.gain_lin);
+                let measured =
+                    preparation_cache::measure_for_device(&pcm, &settings, device_rate, &cancelled);
+                let error = measured
+                    .as_ref()
+                    .err()
+                    .map(ToString::to_string)
+                    .filter(|_| !cancelled.load(Ordering::Relaxed));
+                let measured = measured.ok();
+                let gain = measured.as_ref().map(|result| result.file_gain);
                 if let Some(gain) = gain {
                     if !cancelled.load(Ordering::Relaxed) {
                         if let Ok(mut cache) = prepared_preview().lock() {
-                            cache.result = Some((canonical_path, mtime, settings.clone(), gain));
+                            cache.result = Some((
+                                canonical_path,
+                                mtime,
+                                settings.clone(),
+                                gain,
+                                pcm.sample_rate,
+                            ));
                         }
                     }
                 }
@@ -1932,7 +2118,24 @@ fn try_spawn_lufs_preview_worker(
                     track_epoch,
                     generation,
                     settings,
-                    gain,
+                    gain: gain.filter(|_| !cancelled.load(Ordering::Relaxed)),
+                    device_gain: measured
+                        .map(|result| result.device_gain)
+                        .filter(|_| !cancelled.load(Ordering::Relaxed)),
+                    error,
+                    vm_gain: None,
+                    finished: true,
+                });
+            } else {
+                // Cancellation can arrive immediately after the early VM
+                // message. Always release the logical job as well as its permit.
+                let _ = command_tx.send(AudioCommand::PreviewLandingReady {
+                    track_epoch,
+                    generation,
+                    settings,
+                    gain: None,
+                    device_gain: None,
+                    error: None,
                     vm_gain: None,
                     finished: true,
                 });
@@ -1942,6 +2145,10 @@ fn try_spawn_lufs_preview_worker(
 }
 
 fn publish_preview_coeffs(s: &mut AudioThreadState, settings: &MasteringSettings, generation: u64) {
+    if s.playback_error.is_some() {
+        s.landing_pending = false;
+        return;
+    }
     let mut coeffs = crate::dsp::ChainCoeffs::from_settings(s.live_sample_rate, settings);
     apply_preview_volume_match_gain_cached(
         &mut coeffs,
@@ -1957,10 +2164,43 @@ fn publish_preview_coeffs(s: &mut AudioThreadState, settings: &MasteringSettings
     );
     coeffs.export_landing_gain_lin = landing.coeff_gain;
     s.live_landing_gain_lin = landing.remembered_gain;
+    let device = update_chain_preview_landing_plan(
+        &s.device_gain_cache,
+        settings,
+        s.live_preview_lufs_landing,
+        s.live_device_correction_lin,
+    );
+    s.live_device_correction_lin = device.remembered_gain;
     s.landing_pending = landing.needs_measurement
+        || device.needs_measurement
         || (settings.volume_match && s.vm_gain_cache.get(settings).is_none());
     if let Some(tx) = &s.live_coeffs_tx {
-        let _ = tx.send(LiveCoeffUpdate { generation, coeffs });
+        debug_assert_eq!(generation, s.live_coeff_generation);
+        // Early VM and final landing can publish within one settings generation.
+        // Distinct tokens prevent an earlier output from acknowledging the final
+        // coefficients just because their logical settings generation matches.
+        s.live_coeff_revision = s.live_coeff_revision.wrapping_add(1).max(1);
+        let (landing, volume_match) = (device.coeff_gain, coeffs.volume_match_gain_lin);
+        coeffs.volume_match_gain_lin = 1.;
+        let raw_changed = s.live_raw_coeffs.as_ref() != Some(&coeffs);
+        if raw_changed {
+            s.live_raw_revision = s.live_raw_revision.wrapping_add(1).max(1);
+            s.live_raw_coeffs = Some(coeffs);
+        }
+        if let Some(mailbox) = &s.live_gain_mailbox {
+            mailbox.publish(gain_stage::GainPlan {
+                revision: s.live_coeff_revision,
+                raw_revision: s.live_raw_revision,
+                landing,
+                volume_match,
+            });
+        }
+        if raw_changed {
+            let _ = tx.send(LiveCoeffUpdate {
+                generation: s.live_raw_revision,
+                coeffs,
+            });
+        }
     }
 }
 
@@ -1970,12 +2210,15 @@ fn queue_preview_work(
     tx: &Sender<AudioCommand>,
 ) {
     seed_prepared_preview(s, &request.settings);
+    s.preview_work
+        .cancel_obsolete_response(s.live_sample_rate, &request.settings);
     if !preview_measurement_needed(
-        &s.landing_gain_cache,
+        &s.device_gain_cache,
         &s.vm_gain_cache,
         &request.settings,
         request.landing_enabled,
-    ) {
+    ) && !(request.landing_enabled && s.landing_gain_cache.get(&request.settings).is_none())
+    {
         s.preview_work.pending = None;
         publish_preview_coeffs(s, &request.settings, request.generation);
     } else if s.preview_work.in_flight {
@@ -1988,6 +2231,7 @@ fn queue_preview_work(
         s.preview_work.cancelled.clone(),
     ) {
         s.preview_work.in_flight = true;
+        s.preview_work.active = Some(request);
         s.preview_work.pending = None;
     } else {
         // A cancelled old-source worker may still be releasing its resources.
@@ -2235,6 +2479,7 @@ fn process_audio_command(
             start_position_sec,
             preview_lufs_landing,
             album,
+            encoding,
             reply,
         } => {
             let outcome =
@@ -2248,6 +2493,8 @@ fn process_audio_command(
                         start_position_sec,
                         preview_lufs_landing,
                         album,
+                        false,
+                        encoding,
                         selected_output_device_name,
                         prewarm_cache,
                         play_request_epoch,
@@ -2262,7 +2509,51 @@ fn process_audio_command(
             mut settings,
             preview_lufs_landing,
             album,
+            encoding,
         } => {
+            if let Some(s) = state.as_ref() {
+                settings = output_route::preview_settings(&settings, s.live_sample_rate, encoding);
+            }
+            // Converters have a fixed rate. Rebuild from the cached PCM with
+            // the same playhead/fade rules; never briefly resume a paused edit.
+            let rate_edit = state.as_ref().and_then(|s| {
+                if s.live_coeffs_tx.is_none()
+                    || s.live_file_rate == settings.effective_sample_rate(s.live_sample_rate)
+                {
+                    return None;
+                }
+                Some((
+                    s.current_track.clone()?,
+                    s.decoded_cache.as_ref()?.canonical_path.clone(),
+                    s.sink.get_pos().as_secs_f64(),
+                    s.sink.is_paused(),
+                ))
+            });
+            if let Some((track, path, position, paused)) = rate_edit {
+                let epoch = play_request_epoch.load(Ordering::Acquire);
+                let outcome = handle_play_master(
+                    state,
+                    pending_loop_region,
+                    track,
+                    &path,
+                    &settings,
+                    position,
+                    preview_lufs_landing,
+                    album,
+                    paused,
+                    encoding,
+                    selected_output_device_name,
+                    prewarm_cache,
+                    play_request_epoch,
+                    epoch,
+                    command_tx,
+                    profile_store,
+                );
+                if let (Some(s), Err(error)) = (state.as_mut(), outcome) {
+                    s.fail_playback(format!("Playback rate change failed: {error}"));
+                }
+                return false;
+            }
             if let Some(s) = state.as_mut() {
                 // B2: the settings-only live path carries no track id, so resolve
                 // the backend-owned adaptive profile via the currently-loaded
@@ -2303,6 +2594,7 @@ fn process_audio_command(
                         generation,
                         track_epoch: s.preview_work.epoch,
                         landing_enabled: preview_lufs_landing,
+                        device_rate: s._output_config.sample_rate().0,
                     };
                     queue_preview_work(s, request, command_tx);
                 }
@@ -2313,6 +2605,8 @@ fn process_audio_command(
             generation,
             settings,
             gain,
+            device_gain,
+            error,
             vm_gain,
             finished,
         } => {
@@ -2320,8 +2614,25 @@ fn process_audio_command(
                 // A stale-track result must neither poison caches nor release
                 // the slot held by a worker for the current track.
                 if track_epoch == s.preview_work.epoch {
+                    if let Some(error) = error {
+                        if generation == s.live_coeff_generation
+                            || s.preview_work.pending.as_ref().is_some_and(|pending| {
+                                pending_can_use_preview_result(
+                                    pending,
+                                    &settings,
+                                    s.live_coeff_generation,
+                                )
+                            })
+                        {
+                            s.fail_playback(format!("Preview device protection failed: {error}"));
+                            return false;
+                        }
+                    }
                     if let Some(gain) = gain {
                         s.landing_gain_cache.insert(&settings, gain);
+                    }
+                    if let Some(gain) = device_gain {
+                        s.device_gain_cache.insert(&settings, gain);
                     }
                     if let Some(gain) = vm_gain {
                         s.vm_gain_cache.insert(&settings, gain);
@@ -2341,6 +2652,8 @@ fn process_audio_command(
                     }
                     if finished {
                         s.preview_work.in_flight = false;
+                        s.preview_work.active = None;
+                        s.preview_work.cancelled = Arc::new(AtomicBool::new(false));
                         if let Some(pending) = s.preview_work.pending.take() {
                             if drain_clears_landing_pending(
                                 pending.generation,
@@ -2540,6 +2853,12 @@ fn audio_thread(
         }
 
         if let Some(s) = state.as_mut() {
+            s.observe_source_failure();
+            if s.stream_failed.swap(false, Ordering::Acquire) {
+                s.sink.pause();
+                s.device_lost = true;
+                crate::diagnostics::error("Native output stream failed; playback paused");
+            }
             if !s.preview_work.in_flight {
                 if let Some(request) = s.preview_work.pending.take() {
                     queue_preview_work(s, request, &command_tx);
@@ -2556,7 +2875,9 @@ fn audio_thread(
         if let Some(s) = state.as_ref() {
             if let Some(region) = s.loop_region {
                 let pos = s.sink.get_pos().as_secs_f64();
-                if let Some(target_sec) = loop_seek_target(pos, &region) {
+                if let Some(target_sec) =
+                    loop_seek_target(pos, &region).filter(|_| s.playback_error.is_none())
+                {
                     let _ = s.sink.try_seek(Duration::from_secs_f64(target_sec));
                 }
             }
@@ -2618,7 +2939,7 @@ fn audio_thread(
                     track_id: s.current_track.clone(),
                     position_sec: s.sink.get_pos().as_secs_f64(),
                     is_playing,
-                    is_loaded: true,
+                    is_loaded: s.playback_error.is_none(),
                     peak_dbfs,
                     peak_left_dbfs,
                     peak_right_dbfs,
@@ -2629,7 +2950,17 @@ fn audio_thread(
                     lufs_integrated,
                     spectrum_db,
                     landing_pending: s.landing_pending,
+                    requested_output_revision: if s.live_coeffs_tx.is_some() {
+                        s.live_coeff_revision
+                    } else {
+                        0
+                    },
+                    applied_output_revision: s
+                        .applied_coeff_revision
+                        .as_ref()
+                        .map_or(0, |r| r.load(Ordering::Acquire)),
                     device_lost: s.device_lost,
+                    playback_error: s.playback_error.clone(),
                     loop_active: s.loop_region.is_some(),
                     play_generation: s.play_generation,
                     device_loss_skips: s.device_loss_skips,
@@ -2847,6 +3178,7 @@ fn handle_play(
     if cache_stale {
         if let Some(s) = state.as_mut() {
             s.landing_gain_cache.clear();
+            s.device_gain_cache.clear();
             s.vm_gain_cache.clear();
             s.live_vm_gain_lin = 1.0;
         }
@@ -2890,14 +3222,15 @@ fn handle_play(
     s.gr_high.store(0, Ordering::Relaxed);
     s.lufs_x100.store(i32::MIN, Ordering::Relaxed);
     s.integrated_lufs_x100.store(i32::MIN, Ordering::Relaxed);
-    rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, pcm.sample_rate);
+    let device_rate = s._output_config.sample_rate().0;
+    rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, device_rate);
 
     let sample_rate = pcm.sample_rate;
     // L10 — the incoming source carries its own fade-out trigger so the *next*
     // toggle can fade it out; on a swap it also fades in behind a silent lead-in.
     let new_fade_out = Arc::new(AtomicBool::new(false));
-    let fade = build_swap_fade(sample_rate, is_swap, new_fade_out.clone());
-    let source = MeteredPcmSource::new(
+    let fade = build_swap_fade(device_rate, is_swap, new_fade_out.clone());
+    let mut source = MeteredPcmSource::new(
         pcm.samples,
         pcm.channels,
         sample_rate,
@@ -2907,8 +3240,12 @@ fn handle_play(
         s.lufs_x100.clone(),
         s.integrated_lufs_x100.clone(),
         s.spectrum_ring.clone(),
-    )
-    .with_swap_fade(fade);
+    );
+    let meters = source.take_meter_slots();
+    let source = crate::quality_source::QualitySource::new(source, device_rate)?;
+    s.source_failure = Some(source.error_slot());
+    s.playback_error = None;
+    let source = MeteredSource::new(source, meters, fade);
 
     // F4 — the outgoing sink kept advancing while this command ran; resolve
     // the start through the shared decision point (swap floor + loop-wrap
@@ -2919,7 +3256,9 @@ fn handle_play(
         s.sink.get_pos().as_secs_f64(),
         s.loop_region.as_ref(),
     );
-    let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
+    let new_sink = s.handle.sink();
+    #[cfg(test)]
+    mute_diagnostic_sink(&new_sink);
     new_sink.append(source);
     play_sink_from_start_position(&new_sink, start_position_sec);
     // L10 — swap in the new sink. On a swap, detach the old one so Drop doesn't
@@ -2933,8 +3272,12 @@ fn handle_play(
     s.current_track = Some(track_id);
     s.device_lost = false;
     s.live_coeffs_tx = None;
+    s.applied_coeff_revision = None;
+    s.live_gain_mailbox = None;
+    s.live_raw_coeffs = None;
     s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
     s.live_landing_gain_lin = 1.0;
+    s.live_device_correction_lin = 1.0;
     // Original playback has no mastering chain — no landing to wait on.
     s.landing_pending = false;
     s.live_sample_rate = sample_rate;
@@ -2958,6 +3301,8 @@ fn handle_play_master(
     start_position_sec: f64,
     preview_lufs_landing: bool,
     album: bool,
+    paused: bool,
+    encoding: ExportEncoding,
     selected_output_device_name: &Arc<RwLock<Option<String>>>,
     prewarm_cache: &SharedDecodedCache,
     play_request_epoch: &AtomicU64,
@@ -3000,6 +3345,9 @@ fn handle_play_master(
     let pcm = resolve_pcm_with_caches(state.as_ref(), prewarm_cache, path, &canonical, mtime)?;
     ensure_play_request_current(play_request_epoch, request_epoch)?;
 
+    let settings = output_route::preview_settings(settings, pcm.sample_rate, encoding);
+    let settings = &settings;
+
     // Cache invalidation: clear the landing-gain cache when canonical
     // path OR mtime differs from the prior decoded cache entry. Same-
     // path replays at the same mtime (Original/Mastered toggle,
@@ -3015,6 +3363,7 @@ fn handle_play_master(
     if cache_stale {
         if let Some(s) = state.as_mut() {
             s.landing_gain_cache.clear();
+            s.device_gain_cache.clear();
             s.vm_gain_cache.clear();
             s.live_vm_gain_lin = 1.0;
         }
@@ -3028,6 +3377,8 @@ fn handle_play_master(
         )?);
     }
     let s = state.as_mut().expect("state just inserted");
+    s.playback_error = None;
+    s.source_failure = None;
     // A loop armed before the first-ever play was buffered by SetLoop (the
     // thread state didn't exist yet); install it so Play honors the armed UI.
     install_pending_loop_region(&mut s.loop_region, pending_loop_region);
@@ -3044,7 +3395,11 @@ fn handle_play_master(
     if !loop_region_survives_play(s.current_track.as_ref(), &track_id) {
         s.loop_region = None;
     }
-    rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, pcm.sample_rate);
+    let device_rate = s._output_config.sample_rate().0;
+    let file_rate = settings.effective_sample_rate(pcm.sample_rate);
+    s.live_sample_rate = pcm.sample_rate;
+    s.live_file_rate = file_rate;
+    rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, device_rate);
 
     // Update the cache (replace any prior entry — single-slot LRU is fine
     // for the typical "one or two fixtures" Track Master workflow).
@@ -3086,6 +3441,8 @@ fn handle_play_master(
     seed_prepared_preview(s, settings);
     let landing_plan =
         play_master_preview_landing_plan(&s.landing_gain_cache, settings, preview_lufs_landing);
+    let device_plan =
+        play_master_preview_landing_plan(&s.device_gain_cache, settings, preview_lufs_landing);
     chain.coeffs.export_landing_gain_lin = landing_plan.initial_gain;
     apply_preview_volume_match_gain_cached(
         &mut chain.coeffs,
@@ -3094,9 +3451,15 @@ fn handle_play_master(
         &mut s.live_vm_gain_lin,
     );
     s.live_landing_gain_lin = chain.coeffs.export_landing_gain_lin;
+    s.live_device_correction_lin = device_plan.initial_gain;
     s.live_preview_lufs_landing = preview_lufs_landing;
     s.landing_pending = landing_plan.needs_measurement
+        || device_plan.needs_measurement
         || (settings.volume_match && s.vm_gain_cache.get(settings).is_none());
+    // The old source may still be fading out. New-play preparation must not
+    // publish into its coefficient channel.
+    s.live_coeffs_tx = None;
+    s.live_gain_mailbox = None;
     queue_preview_work(
         s,
         PreviewWorkRequest {
@@ -3104,13 +3467,24 @@ fn handle_play_master(
             generation,
             track_epoch,
             landing_enabled: preview_lufs_landing,
+            device_rate,
         },
         command_tx,
     );
     // L10 — the incoming source carries its own fade-out trigger so the *next*
     // toggle can fade it out; on a swap it also fades in behind a silent lead-in.
     let new_fade_out = Arc::new(AtomicBool::new(false));
-    let fade = build_swap_fade(pcm.sample_rate, is_swap, new_fade_out.clone());
+    let fade = build_swap_fade(device_rate, is_swap, new_fade_out.clone());
+    s.live_coeff_revision = s.live_coeff_revision.wrapping_add(1).max(1);
+    s.live_raw_revision = s.live_raw_revision.wrapping_add(1).max(1);
+    let gains = gain_stage::GainMailbox::new(gain_stage::GainPlan {
+        revision: s.live_coeff_revision,
+        raw_revision: s.live_raw_revision,
+        landing: device_plan.initial_gain,
+        volume_match: chain.coeffs.volume_match_gain_lin,
+    });
+    chain.coeffs.volume_match_gain_lin = 1.;
+    s.live_raw_coeffs = Some(chain.coeffs);
     let mastering_source = MasteringSource::new(
         pcm.samples,
         pcm.channels,
@@ -3124,7 +3498,17 @@ fn handle_play_master(
         s.integrated_lufs_x100.clone(),
         s.spectrum_ring.clone(),
     )
-    .with_swap_fade(fade);
+    .with_initial_revision(s.live_raw_revision);
+    let (mastering_source, failure) = output_route::mastered_source(
+        mastering_source,
+        file_rate,
+        device_rate,
+        fade,
+        gains.clone(),
+    )?;
+    s.live_gain_mailbox = Some(gains);
+    s.source_failure = Some(failure);
+    s.applied_coeff_revision = Some(mastering_source.revision_slot());
 
     // F4 — same resolution as handle_play: the outgoing sink kept advancing
     // during this command (which can run long on a cold decode); the shared
@@ -3135,9 +3519,22 @@ fn handle_play_master(
         s.sink.get_pos().as_secs_f64(),
         s.loop_region.as_ref(),
     );
-    let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
+    let new_sink = s.handle.sink();
+    #[cfg(test)]
+    mute_diagnostic_sink(&new_sink);
+    if paused {
+        new_sink.pause();
+    }
     new_sink.append(mastering_source);
-    play_sink_from_start_position(&new_sink, start_position_sec);
+    if paused {
+        if let Some(position) = seek_target(start_position_sec) {
+            new_sink
+                .try_seek(position)
+                .map_err(|e| format!("paused playback seek: {e}"))?;
+        }
+    } else {
+        play_sink_from_start_position(&new_sink, start_position_sec);
+    }
     // L10 — swap in the new sink. On a swap, detach the old one so Drop doesn't
     // hard-stop the outgoing source mid-fade; its triggered fade-out ends the
     // source, draining the detached sink. (Non-swap was already stopped above.)
@@ -3153,6 +3550,7 @@ fn handle_play_master(
     s.live_album = album;
     s.live_coeffs_tx = Some(coeffs_tx);
     s.live_sample_rate = pcm.sample_rate;
+    s.live_file_rate = file_rate;
     s.play_generation = s.play_generation.wrapping_add(1);
     #[cfg(any(feature = "app-runner", test))]
     {
@@ -3222,6 +3620,33 @@ mod tests {
         assert!(
             new_cancel.load(Ordering::Relaxed),
             "device teardown cancels work"
+        );
+    }
+
+    #[test]
+    fn new_processing_cancels_obsolete_preparation_but_target_edits_keep_reusable_work() {
+        let mut gate = PreviewWorkerGate::default();
+        let settings = settings_with_intensity(0.7);
+        gate.active = Some(PreviewWorkRequest {
+            settings: settings.clone(),
+            generation: 1,
+            track_epoch: gate.epoch,
+            landing_enabled: true,
+            device_rate: 48000,
+        });
+        let mut next = settings.clone();
+        next.advanced.lufs_offset_db = Some(-23.);
+        gate.cancel_obsolete_response(48000, &next);
+        assert!(!gate.cancelled.load(Ordering::Relaxed));
+        next.volume_match = true;
+        gate.cancel_obsolete_response(48000, &next);
+        assert!(!gate.cancelled.load(Ordering::Relaxed));
+        next.eq_high_db = 2.;
+        gate.cancel_obsolete_response(48000, &next);
+        assert!(gate.cancelled.load(Ordering::Relaxed));
+        assert!(
+            gate.active.is_some(),
+            "terminal worker message still owns completion"
         );
     }
 
@@ -4360,6 +4785,7 @@ mod tests {
             generation: 12,
             track_epoch: 4,
             landing_enabled: true,
+            device_rate: 48000,
         };
         pending.settings.volume_match = true;
         assert!(pending_can_use_preview_result(&pending, &measured, 12));
@@ -4553,6 +4979,7 @@ mod tests {
             start_position_sec: 0.0,
             preview_lufs_landing: true,
             album: false,
+            encoding: ExportEncoding::Wav,
             reply,
         }
     }
@@ -4581,6 +5008,7 @@ mod tests {
             settings: settings_with_intensity(intensity),
             preview_lufs_landing: preview,
             album: false,
+            encoding: ExportEncoding::Wav,
         }
     }
 
@@ -4626,6 +5054,7 @@ mod tests {
                 generation: 42,
                 track_epoch: 7,
                 landing_enabled: true,
+                device_rate: 48000,
             },
             &tx,
             &Arc::new(AtomicBool::new(false)),
@@ -4672,6 +5101,7 @@ mod tests {
                     generation: 9001,
                     track_epoch: 17,
                     landing_enabled,
+                    device_rate: 48000,
                 },
                 &tx,
                 &Arc::new(AtomicBool::new(false)),

@@ -56,10 +56,21 @@ the updater archives and `.sig` files. The app reads `latest.json` from:
 
 `https://github.com/DanielKinsner/yes-master/releases/latest/download/latest.json`
 
-The remaining beta gate is an end-to-end 0.9.0 → 0.9.1 update proof on a real
-installed build. Because GitHub's `/latest` channel excludes drafts, this proof
-requires the owner to publish the full 0.9.1 release quietly before the public
-announcement; its files become publicly accessible at that moment.
+The remaining beta gate is an end-to-end older installed seed → approved
+candidate update proof. The September 9 proposal is app 0.9.2 / tag
+`v0.9.2-beta.2`; neither tag nor publication is approved by that proposal.
+An existing private 0.9.2 install requires reinstalling rather than expecting a
+same-version update. Because GitHub's `/latest` channel excludes drafts, live
+updater proof requires separately approved publication before announcement;
+the files become publicly accessible at that moment. Keep the audit-blocked
+beta.1 artifacts out of this candidate.
+
+The export candidate adds qualified encoder/source archives to the asset audit.
+The source preparation script intentionally records `releaseReady: false` while
+the LGPL recipient-permission proposal and rebuild proof remain unresolved;
+the draft audit fails on that state. See
+[the permission draft](third-party/lgpl-relink-exception-DRAFT.md). Approving a
+push or workflow run does not approve that license change or publication.
 
 ## Optional macOS trust upgrade (post-beta)
 
@@ -140,9 +151,9 @@ partial state and no override.
 1. Publish the release (owner action — see the $0 release path above).
 2. Record the two artifact URLs, byte sizes, and SHA-256 digests from
    `SHA256SUMS.txt`.
-3. Set the beta end date. It is an owner decision and is tracked in
-   `docs/OWNER_INPUT_QUEUE.md`; until it is answered the download stays closed
-   even with a perfect release.
+3. Set the beta end date to the actual publication date plus 56 calendar days
+   (eight weeks, owner decision September 14). Candidate preparation does not
+   start the clock. Record the concrete ISO date in the release metadata.
 4. Populate `RELEASE_METADATA`, run `npm test` and `npm run verify:headless`,
    and confirm the landing lane now reports `verified-public`.
 5. Deploy (U17).

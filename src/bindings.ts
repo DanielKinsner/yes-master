@@ -361,6 +361,7 @@ export interface Confidence {
 /// `stereo_correlation` fields are the source context that drove them.
 export interface GuardrailReadout {
   signal_chain?: SignalChainReadout | null;
+  compression?: ResolvedCompressionReadout | null;
   active: boolean;
   strength: number;
   bright_trim: number;
@@ -384,6 +385,22 @@ export interface GuardrailReadout {
   // preset baseline after the Tier-1 trim (raw baseline when inactive).
   // Drives the Width slider's Auto thumb position + "Auto · 1.11" readout.
   effective_auto_width?: number | null;
+}
+
+/** Actual guarded chain values for display only; never Manual seed values. */
+export interface ResolvedCompressionBand {
+  threshold_db: number;
+  ratio: number;
+  attack_ms: number;
+  release_ms: number;
+  makeup_db: number;
+}
+
+export interface ResolvedCompressionReadout {
+  active: boolean;
+  low: ResolvedCompressionBand;
+  mid: ResolvedCompressionBand;
+  high: ResolvedCompressionBand;
 }
 
 export interface SignalChainReadout {
@@ -495,6 +512,7 @@ export interface RenderedMeasurements {
 }
 
 export interface RenderJob {
+  delivered_format?: import("./lib/export-formats").DeliveredFormat | null;
   id: string;
   job_id: string;
   kind: RenderKind;
@@ -515,6 +533,7 @@ export interface QualityCheck {
 }
 
 export interface ExportReport {
+  delivered_format?: import("./lib/export-formats").DeliveredFormat | null;
   track_id: TrackId;
   output_path: string;
   measured_lufs: number;
@@ -596,6 +615,9 @@ export interface PlaybackTick {
   is_playing: boolean;
   is_loaded: boolean;
   device_lost?: boolean;
+  /// A conversion failure, retained until a new playback attempt. Optional for
+  /// older/mobile backends; generation distinguishes a failed retry.
+  playback_error?: { generation: number; message: string } | null;
   /// Post-output-gain peak across all channels since the last tick, in dBFS.
   /// `-120` is the silence sentinel (no signal seen in the window). Values
   /// above `-0.1` indicate clipping risk; values above `0` are clipping.

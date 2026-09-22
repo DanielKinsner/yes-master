@@ -64,12 +64,14 @@ pub fn init_confidence_gating_from_env() {
 
 /// Tauri command: enable/disable Phase B confidence gating at runtime (owner A/B
 /// calibration — no rebuild). Returns the previous value.
+#[cfg(not(target_arch = "wasm32"))]
 #[tauri::command]
 pub fn set_confidence_gating(enabled: bool) -> bool {
     set_confidence_gating_enabled(enabled)
 }
 
 /// Tauri command: read whether Phase B confidence gating is currently enabled.
+#[cfg(not(target_arch = "wasm32"))]
 #[tauri::command]
 pub fn confidence_gating_enabled() -> bool {
     is_confidence_gating_enabled()
@@ -406,7 +408,7 @@ mod tests {
             .map(|i| 0.3 * (omega * i as f32).sin())
             .collect();
         let mut with_tail = boomy.clone();
-        with_tail.extend(std::iter::repeat(0.0).take(sr as usize * 2)); // + 2 s silence
+        with_tail.resize(with_tail.len() + sr as usize * 2, 0.0); // + 2 s silence
 
         let c_boomy = Confidence::from_deep(&DeepAnalysis::from_parts(
             [1.0 / 31.0; 31],

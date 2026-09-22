@@ -1,0 +1,15 @@
+{
+  "preset": "universal",
+  "intensity": 0.75,
+  "delivery_profile": "custom",
+  "lufs_target": -9.0,
+  "ceiling_dbtp": -1.0,
+  "sample_rate": 48000,
+  "bit_depth": 24,
+  "compression_mode": "preset",
+  "adapt_strength": 0.5,
+  "input_gain_db": 0.0,
+  "output_gain_db": 0.0,
+  "volume_match": false,
+  "resolve_adaptive": true
+}

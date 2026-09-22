@@ -1,0 +1,24 @@
+[package]
+name = "yes-recon-harness"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Reconciliation harness (unblinded follow-up). Same construction as the
+# sealed blind harness: depends on the UNMODIFIED production crate by path,
+# default-features = false. Adds SRC probes (production-verbatim rubato loop,
+# an independently written corrected loop, and Codex's prototype for
+# comparison), a file-level SRC converter and a stage-statistics command.
+[dependencies]
+yes-master = { path = "../../../src-tauri", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hound = "3"
+sha2 = "0.10"
+ebur128 = "0.1"
+rubato = "1.0.1"
+audioadapter-buffers = "2.0"
+
+[profile.release]
+opt-level = 3
+debug = false

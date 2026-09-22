@@ -1,0 +1,134 @@
+[
+ {
+  "source": "coat",
+  "policy": "P",
+  "trim": 0.0,
+  "source_side_mid_db": -8.108599627391671,
+  "side_mid_db": -7.253296776059713,
+  "delta_side_mid_vs_source_db": 0.8553028513319578,
+  "source_corr": 0.732450751415623,
+  "corr": 0.6833501777136441,
+  "sha256": "750e6f184d574e5ce54b2735bbb997a8c0ae20200e31bcb8f423278359e8228d"
+ },
+ {
+  "source": "coat",
+  "policy": "A",
+  "trim": -6.625409392522864,
+  "source_side_mid_db": -8.108599627391671,
+  "side_mid_db": -7.229840091456366,
+  "delta_side_mid_vs_source_db": 0.8787595359353046,
+  "source_corr": 0.732450751415623,
+  "corr": 0.6819397520454515,
+  "sha256": "084a50c7b9081d6bd7d47e89f1190d3aa935fd508c5c22a3be2437a96204db83"
+ },
+ {
+  "source": "coat",
+  "policy": "C",
+  "trim": -17.669,
+  "source_side_mid_db": -8.108599627391671,
+  "side_mid_db": -7.212971085752353,
+  "delta_side_mid_vs_source_db": 0.8956285416393177,
+  "source_corr": 0.732450751415623,
+  "corr": 0.6809101755345187,
+  "sha256": "d88692ca1522f9292502bef41ea93e59f77ff53126be5dd3ec176bdd73be561f"
+ },
+ {
+  "source": "metal",
+  "policy": "P",
+  "trim": 0.0,
+  "source_side_mid_db": -13.807028466364892,
+  "side_mid_db": -12.92169089729564,
+  "delta_side_mid_vs_source_db": 0.885337569069252,
+  "source_corr": 0.920087358660205,
+  "corr": 0.9028939623378603,
+  "sha256": "b7865644edebadfff770db2adad4cc04e4beb713f68ad2a3120aba378584d020"
+ },
+ {
+  "source": "metal",
+  "policy": "A",
+  "trim": -7.702785858493048,
+  "source_side_mid_db": -13.807028466364892,
+  "side_mid_db": -12.897341385787445,
+  "delta_side_mid_vs_source_db": 0.9096870805774468,
+  "source_corr": 0.920087358660205,
+  "corr": 0.9023752285892631,
+  "sha256": "d47ac25f68447b30806d9bb73b0c5346608af18127b5f5d94f5acdff1ddb9654"
+ },
+ {
+  "source": "metal",
+  "policy": "C",
+  "trim": -9.715,
+  "source_side_mid_db": -13.807028466364892,
+  "side_mid_db": -12.884493922077713,
+  "delta_side_mid_vs_source_db": 0.9225345442871795,
+  "source_corr": 0.920087358660205,
+  "corr": 0.9021002732936285,
+  "sha256": "3bff08f44360dda45e35e3eb5f7715d45f76b072bf2ad41b054c6f7c75e5d7f6"
+ },
+ {
+  "source": "rich",
+  "policy": "P",
+  "trim": 0.0,
+  "source_side_mid_db": -2.9305916357941086,
+  "side_mid_db": -2.3361092543096755,
+  "delta_side_mid_vs_source_db": 0.5944823814844331,
+  "source_corr": 0.3252979920580711,
+  "corr": 0.26274149661213936,
+  "sha256": "790df6926cc1ee9e99fb297d5afeb81307097887b369344870dcf7e6cf055577"
+ },
+ {
+  "source": "rich",
+  "policy": "A",
+  "trim": 0.0,
+  "source_side_mid_db": -2.9305916357941086,
+  "side_mid_db": -2.3361092543096755,
+  "delta_side_mid_vs_source_db": 0.5944823814844331,
+  "source_corr": 0.3252979920580711,
+  "corr": 0.26274149661213936,
+  "sha256": "790df6926cc1ee9e99fb297d5afeb81307097887b369344870dcf7e6cf055577"
+ },
+ {
+  "source": "rich",
+  "policy": "C",
+  "trim": 7.869,
+  "source_side_mid_db": -2.9305916357941086,
+  "side_mid_db": -2.4962000253898404,
+  "delta_side_mid_vs_source_db": 0.4343916104042682,
+  "source_corr": 0.3252979920580711,
+  "corr": 0.27976309549016537,
+  "sha256": "db147c4f63547ccbfe81dab68bf28aa520d24dd6fb87cccd29fc8a291301e566"
+ },
+ {
+  "source": "imaginal",
+  "policy": "P",
+  "trim": 0.0,
+  "source_side_mid_db": -7.29372747154774,
+  "side_mid_db": -6.449122332474556,
+  "delta_side_mid_vs_source_db": 0.8446051390731837,
+  "source_corr": 0.7288720630883688,
+  "corr": 0.6754095970735208,
+  "sha256": "741389caafe89d99767e9bdb948277f5031019e6597203b002af0f53ef5e715b"
+ },
+ {
+  "source": "imaginal",
+  "policy": "A",
+  "trim": 0.0,
+  "source_side_mid_db": -7.29372747154774,
+  "side_mid_db": -6.449122332474556,
+  "delta_side_mid_vs_source_db": 0.8446051390731837,
+  "source_corr": 0.7288720630883688,
+  "corr": 0.6754095970735208,
+  "sha256": "741389caafe89d99767e9bdb948277f5031019e6597203b002af0f53ef5e715b"
+ },
+ {
+  "source": "imaginal",
+  "policy": "C",
+  "trim": 7.408,
+  "source_side_mid_db": -7.29372747154774,
+  "side_mid_db": -6.525687282416104,
+  "delta_side_mid_vs_source_db": 0.7680401891316357,
+  "source_corr": 0.7288720630883688,
+  "corr": 0.6793932849209218,
+  "sha256": "6eee1ada98174a0cdb0a48608b703c7b793b03d16f0703c6673ae2842e61ce12"
+ }
+]

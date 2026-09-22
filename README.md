@@ -21,13 +21,16 @@ License: source-available, proprietary — see `LICENSE`.
 
 - **Standard** (default): pick a Style (Universal / Clarity / Tape / Oomph) and
   a loudness (−14 / −11 / −9 LUFS), audition Original vs Mastered at the same
-  playhead, Create Master. Exports a fixed known-safe format: 44.1 kHz /
-  24-bit WAV at a −1 dBTP ceiling. No blocking review ceremony; cosmetic
+  playhead, Create Master. Desktop delivery offers WAV, MP3, FLAC, AAC/M4A,
+  standalone AAC, Ogg Vorbis and AIFF. Standard uses 44.1 kHz with 24-bit
+  lossless precision or the selected lossy quality, at a −1 dBTP ceiling.
+  No blocking review ceremony; cosmetic
   warnings are suppressed, genuine integrity problems are never hidden.
 - **Advanced**: the full surface — eight presets, intensity, 7-band visual
   EQ/tone, width/warmth, explicit compressor modes (Preset / Manual / Off,
   with per-band detail), delivery profiles and formats (44.1/48/96 kHz,
-  16/24-bit), live metering (peak, LUFS, gain reduction, spectrum), and a
+  16/24-bit integer or 32-bit float WAV; FLAC/AIFF use 16/24-bit),
+  live metering (peak, LUFS, gain reduction, spectrum), and a
   warning-aware export review with a post-render receipt (delivered LUFS,
   true peak, dynamic range, check results).
 
@@ -52,6 +55,11 @@ License: source-available, proprietary — see `LICENSE`.
 **Album Master** (Advanced): album-wide intent with per-track overrides,
 album delivery format with mixed-rate resampling, continuous + per-track
 renders with a manifest.
+
+The expanded formats are implemented locally and verified in the installed
+Windows `7cd36ab6` candidate. Mac qualification and public release remain
+pending; see [the evidence ledger](docs/plans/2026-09-09-export-formats-evidence.md).
+ALAC and Opus are follow-ups. Export format changes do not retune mastering.
 
 **Projects:** `.ams.json` save/open, autosaved recent session with restore,
 waveform/peaks rebuilt from referenced source files (audio is referenced from

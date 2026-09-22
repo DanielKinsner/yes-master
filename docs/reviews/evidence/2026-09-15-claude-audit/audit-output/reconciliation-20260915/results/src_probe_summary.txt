@@ -1,0 +1,69 @@
+== rubato Fft parameters per rate pair (chunk 2048 request, FixedSync::Both)
+   44100->48000  in_next= 2058 out_next= 2240 delay= 1120 useful_after_first_block= 1120 -> copy covers useful suffix
+   48000->44100  in_next= 2080 out_next= 1911 delay=  955 useful_after_first_block=  956 -> STALE SAMPLE at index 955
+   96000->48000  in_next= 2048 out_next= 1024 delay=  512 useful_after_first_block=  512 -> copy covers useful suffix
+   48000->96000  in_next= 2048 out_next= 4096 delay= 2048 useful_after_first_block= 2048 -> copy covers useful suffix
+   44100->96000  in_next= 2058 out_next= 4480 delay= 2240 useful_after_first_block= 2240 -> copy covers useful suffix
+   96000->44100  in_next= 2240 out_next= 1029 delay=  514 useful_after_first_block=  515 -> STALE SAMPLE at index 514
+
+== length correctness (actual == ceil(frames*to/from)) by mode
+  prod  : 368/408 exact; wrong-length cases: 40
+     44100->48000 frames_in=441 hz=100.0: got 481 expected 480
+     44100->48000 frames_in=441 hz=997.0: got 481 expected 480
+     44100->48000 frames_in=441 hz=5000.0: got 481 expected 480
+     44100->48000 frames_in=441 hz=19000.0: got 481 expected 480
+     44100->48000 frames_in=1323 hz=100.0: got 1441 expected 1440
+     44100->48000 frames_in=1323 hz=997.0: got 1441 expected 1440
+     44100->48000 frames_in=1323 hz=5000.0: got 1441 expected 1440
+     44100->48000 frames_in=1323 hz=19000.0: got 1441 expected 1440
+     ... 32 more
+  recon : 408/408 exact; wrong-length cases: 0
+  codex : 408/408 exact; wrong-length cases: 0
+
+== long cases: worst residual per (pair, mode)
+   44100->48000  prod   n= 36 worst max_err=0.0037 at idx 95903 (2nd 3.70e-03) resid=  -72.2 dBc  [frames_in=88200 hz=19000.0]; best resid= -127.4
+   44100->48000  recon  n= 36 worst max_err=0.0037 at idx 95903 (2nd 3.70e-03) resid=  -72.2 dBc  [frames_in=88200 hz=19000.0]; best resid= -127.5
+   44100->48000  codex  n= 36 worst max_err=0.0037 at idx 95903 (2nd 3.70e-03) resid=  -72.2 dBc  [frames_in=88200 hz=19000.0]; best resid= -127.5
+   44100->96000  prod   n= 36 worst max_err=0.0037 at idx 191806 (2nd 3.70e-03) resid=  -72.3 dBc  [frames_in=88200 hz=19000.0]; best resid= -127.5
+   44100->96000  recon  n= 36 worst max_err=0.0037 at idx 191806 (2nd 3.70e-03) resid=  -72.3 dBc  [frames_in=88200 hz=19000.0]; best resid= -127.6
+   44100->96000  codex  n= 36 worst max_err=0.0037 at idx 191806 (2nd 3.70e-03) resid=  -72.3 dBc  [frames_in=88200 hz=19000.0]; best resid= -127.6
+   48000->44100  prod   n= 36 worst max_err=0.6421 at idx 955 (2nd 1.69e-03) resid=  -44.3 dBc  [frames_in=96000 hz=19000.0]; best resid=  -53.1
+   48000->44100  recon  n= 36 worst max_err=0.0018 at idx 3728 (2nd 1.78e-03) resid=  -61.3 dBc  [frames_in=4161 hz=19000.0]; best resid= -128.5
+   48000->44100  codex  n= 36 worst max_err=0.0018 at idx 3728 (2nd 1.78e-03) resid=  -61.3 dBc  [frames_in=4161 hz=19000.0]; best resid= -128.5
+   48000->96000  prod   n= 36 worst max_err=0.0021 at idx 7996 (2nd 2.03e-03) resid=  -63.0 dBc  [frames_in=4095 hz=19000.0]; best resid= -128.9
+   48000->96000  recon  n= 36 worst max_err=0.0021 at idx 7996 (2nd 2.03e-03) resid=  -63.0 dBc  [frames_in=4095 hz=19000.0]; best resid= -128.9
+   48000->96000  codex  n= 36 worst max_err=0.0021 at idx 7996 (2nd 2.03e-03) resid=  -63.0 dBc  [frames_in=4095 hz=19000.0]; best resid= -128.9
+   96000->44100  prod   n= 12 worst max_err=0.5788 at idx 514 (2nd 1.38e-03) resid=  -45.2 dBc  [frames_in=192000 hz=19000.0]; best resid=  -50.5
+   96000->44100  recon  n= 12 worst max_err=0.0014 at idx 88 (2nd 1.30e-03) resid=  -70.4 dBc  [frames_in=9600 hz=19000.0]; best resid= -134.6
+   96000->44100  codex  n= 12 worst max_err=0.0014 at idx 88 (2nd 1.30e-03) resid=  -70.4 dBc  [frames_in=9600 hz=19000.0]; best resid= -134.6
+   96000->48000  prod   n= 12 worst max_err=0.0007 at idx 102 (2nd 7.17e-04) resid=  -73.2 dBc  [frames_in=9600 hz=19000.0]; best resid= -135.1
+   96000->48000  recon  n= 12 worst max_err=0.0007 at idx 102 (2nd 7.17e-04) resid=  -73.2 dBc  [frames_in=9600 hz=19000.0]; best resid= -135.1
+   96000->48000  codex  n= 12 worst max_err=0.0007 at idx 102 (2nd 7.17e-04) resid=  -73.2 dBc  [frames_in=9600 hz=19000.0]; best resid= -135.1
+
+== short cases (< ~100 ms): output RMS / reference RMS by mode (mean over cases)
+   44100->48000  prod   n=32 ratio min=0.000 mean=0.361; near-silent(<0.1): 16
+   44100->48000  recon  n=32 ratio min=0.000 mean=0.869; near-silent(<0.1): 4
+   44100->48000  codex  n=32 ratio min=0.000 mean=0.869; near-silent(<0.1): 4
+   44100->96000  prod   n=32 ratio min=0.000 mean=0.361; near-silent(<0.1): 16
+   44100->96000  recon  n=32 ratio min=0.000 mean=0.871; near-silent(<0.1): 4
+   44100->96000  codex  n=32 ratio min=0.000 mean=0.871; near-silent(<0.1): 4
+   48000->44100  prod   n=28 ratio min=0.000 mean=0.420; near-silent(<0.1): 12
+   48000->44100  recon  n=28 ratio min=0.939 mean=0.995; near-silent(<0.1): 0
+   48000->44100  codex  n=28 ratio min=0.939 mean=0.995; near-silent(<0.1): 0
+   48000->96000  prod   n=32 ratio min=0.000 mean=0.369; near-silent(<0.1): 16
+   48000->96000  recon  n=32 ratio min=0.000 mean=0.872; near-silent(<0.1): 4
+   48000->96000  codex  n=32 ratio min=0.000 mean=0.872; near-silent(<0.1): 4
+   96000->44100  prod   n=52 ratio min=0.000 mean=0.723; near-silent(<0.1): 12
+   96000->44100  recon  n=52 ratio min=0.888 mean=0.993; near-silent(<0.1): 0
+   96000->44100  codex  n=52 ratio min=0.888 mean=0.993; near-silent(<0.1): 0
+   96000->48000  prod   n=52 ratio min=0.000 mean=0.724; near-silent(<0.1): 12
+   96000->48000  recon  n=52 ratio min=0.958 mean=1.000; near-silent(<0.1): 0
+   96000->48000  codex  n=52 ratio min=0.958 mean=1.000; near-silent(<0.1): 0
+
+== stale-sample check: prod max_error index == delay?
+   44100->48000 : 0/36 long cases have a >1e-3 error exactly at index 1120
+   44100->96000 : 0/36 long cases have a >1e-3 error exactly at index 2240
+   48000->44100 : 36/36 long cases have a >1e-3 error exactly at index 955
+   48000->96000 : 0/36 long cases have a >1e-3 error exactly at index 2048
+   96000->44100 : 12/12 long cases have a >1e-3 error exactly at index 514
+   96000->48000 : 0/12 long cases have a >1e-3 error exactly at index 512

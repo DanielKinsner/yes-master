@@ -5,6 +5,12 @@ Branch: `feat/adaptive-dsp-guardrails`
 Status: spec for build; numeric thresholds are provisional and meant to be
 calibrated by ear.
 
+> **September 14 source clarification:** [Fresh vendor/code research](../reviews/2026-09-14-landr-waves-dsp-assessment.md)
+> distinguishes this historical design rationale from verified competitor
+> internals. US9654869B2 concerns autonomous multi-track processing; it does not
+> establish today's LANDR stereo mastering chain. The guardrail scope and
+> calibration constants below are unchanged.
+
 ## TL;DR
 
 Make YES Master's presets *fit the track* instead of applying the same move to
@@ -23,8 +29,9 @@ In scope (v1, "Tier-1 defensive"):
 
 Out of scope (deferred to "Tier-2 corrective", see end): pushing a source toward
 a target/reference curve, genre classification, reference-track upload, dynamic
-notching, per-band width matching. Those are how LANDR/iZotope work; they are a
-bigger, separate effort.
+notching, per-band width matching. These are candidate corrective capabilities
+in the wider mastering-tool category, not a verified list of LANDR's internal
+processors. They are a bigger, separate effort.
 
 ## Why this shape (what the research found)
 
@@ -33,11 +40,10 @@ iZotope Ozone / Tonal Balance Control, Sonible smart:EQ/comp/limit, eMastered /
 CloudBounce / Bakuage, Gullfoss / soothe2 / FabFilter, and the academic LTAS
 literature) produced these load-bearing, **sourced** conclusions:
 
-- **Most commercial "smart" mastering is corrective**, not defensive. LANDR's
-  patent and iZotope's Tonal Balance Control both pre-compute *target curves* and
-  push the source toward them. That is powerful but it is Tier-2. Our Tier-1
-  borrows their *analysis* (what to measure) and rejects their *correction* (we
-  only trim our own preset moves).
+- **Corrective processing is a separate design option.** Commercial tools such
+  as Ozone document target-based tonal adjustment; LANDR's cited patent is
+  historical multi-track research, not proof of its current mastering engine.
+  Our Tier-1 uses source measurements but only trims our own preset moves.
 - **Express "on target" as a range, not a point.** Every surveyed tool uses a
   tolerance band (iZotope's "tunnel", Sonible's safe-zone, REFERENCE 3's ±3 dB).
   → We use a **deadband**: inside it, the guardrail does nothing.
@@ -49,9 +55,10 @@ literature) produced these load-bearing, **sourced** conclusions:
   → Hard **per-axis caps** + a character floor, independent of strength.
 - **Trim existing moves only; never introduce a new boost or cut.** soothe2 and
   Ozone Stabilizer "Cut Mode" are the clean precedents.
-- **Decouple loudness from tonal/dynamics decisions.** Every system keeps the
-  LUFS target a separate user choice applied at the limiter. YES Master already
-  does this — we preserve it. Adaptive trim **never** feeds back into loudness.
+- **Decouple loudness from tonal/dynamics decisions in YES.** Delivery targets
+  remain separate from the adaptive trims. This is our product contract, not
+  a universal competitor behavior: Waves' current FAQ has no dedicated LUFS
+  target control. Adaptive trim does not select a new loudness target.
 - **Show what was trimmed and why.** Competitors are opaque ("black box"); this
   is an unmet UX surface and it matches our non-negotiable on clear metering and
   review states.

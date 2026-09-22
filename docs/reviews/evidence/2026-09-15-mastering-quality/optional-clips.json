@@ -1,0 +1,46 @@
+[
+  {
+    "source": "metal",
+    "variant": "control",
+    "start": 60,
+    "duration": 20,
+    "excerpt_input_lufs": -14.0,
+    "gain_only_db": -4.0,
+    "achieved_lufs": -18.0,
+    "tp": -12.5,
+    "file": "metal_control_minus18.wav"
+  },
+  {
+    "source": "metal",
+    "variant": "drive",
+    "start": 60,
+    "duration": 20,
+    "excerpt_input_lufs": -13.8,
+    "gain_only_db": -4.199999999999999,
+    "achieved_lufs": -18.0,
+    "tp": -6.1,
+    "file": "metal_drive_minus18.wav"
+  },
+  {
+    "source": "piano",
+    "variant": "control",
+    "start": 60,
+    "duration": 20,
+    "excerpt_input_lufs": -12.6,
+    "gain_only_db": -5.4,
+    "achieved_lufs": -18.0,
+    "tp": -9.2,
+    "file": "piano_control_minus18.wav"
+  },
+  {
+    "source": "piano",
+    "variant": "drive",
+    "start": 60,
+    "duration": 20,
+    "excerpt_input_lufs": -12.7,
+    "gain_only_db": -5.300000000000001,
+    "achieved_lufs": -18.0,
+    "tp": -6.8,
+    "file": "piano_drive_minus18.wav"
+  }
+]

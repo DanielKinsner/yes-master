@@ -1,0 +1,67 @@
+{
+  "status": "complete",
+  "scope": "Post-power interruption: muted actual Realtek callbacks, 48-to-96-to-48 kHz, device-default buffer; no fixed-256, installed or listening claim",
+  "source_sha256": "c7f3a8db696e3b65246de493ef3dc5d6f8db3083a1239d73b588edf58030c591",
+  "binary_sha256": "82e7808c6d67e34559e462106708827d60dae47ee30e4b9fe180aab485dcdeb6",
+  "script_sha256": "5ccb34d9dea0f0f2fca295cdd409356749e5430cf1fe664c239aadbca9207f52",
+  "inputs": {
+    "devices": {
+      "path": "test-output\\dynamics-research-20260916\\post-power-device-open.json",
+      "sha256": "0b3d3f1c4d183caf94e3494ae1c251c6d32f816c53d53d5a208ea20349c22a18"
+    },
+    "gain": {
+      "path": "test-output\\dynamics-research-20260916\\post-power-realtek-gain.json",
+      "sha256": "f40ac5763f4a99690e19077a4452503423b352257283683e08f2ee692a29ed3e"
+    },
+    "eq": {
+      "path": "test-output\\dynamics-research-20260916\\post-power-realtek-eq.json",
+      "sha256": "9d323245a95c4709e7c0c5d5fcfc22a0c064906995ef4420700cfc48593c28b5"
+    }
+  },
+  "default_open": {
+    "advertised": "Ok(\"SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }\")",
+    "device": "Speakers (Realtek(R) Audio)",
+    "is_default": true,
+    "result": {
+      "actual": "SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }",
+      "opened": true
+    }
+  },
+  "rows": [
+    {
+      "kind": "gain",
+      "device": "Speakers (Realtek(R) Audio)",
+      "callbacks": 659,
+      "gain_edits": 1200,
+      "eq_edits": 0,
+      "granted_frames_min": 480,
+      "granted_frames_max": 1056,
+      "median_ms": 0.0489,
+      "p95_ms": 0.8494200000000001,
+      "max_ms": 1.6897,
+      "deadline_misses": 0,
+      "device_errors": 0,
+      "converter_errors": 0,
+      "exhausted_samples": 0,
+      "cancellation_join_s": 0.0038399
+    },
+    {
+      "kind": "eq",
+      "device": "Speakers (Realtek(R) Audio)",
+      "callbacks": 609,
+      "gain_edits": 0,
+      "eq_edits": 120,
+      "granted_frames_min": 480,
+      "granted_frames_max": 1056,
+      "median_ms": 0.0521,
+      "p95_ms": 1.0077,
+      "max_ms": 1.701,
+      "deadline_misses": 0,
+      "device_errors": 0,
+      "converter_errors": 0,
+      "exhausted_samples": 0,
+      "cancellation_join_s": 0.0032475
+    }
+  ],
+  "limitations": "Earlier endpoint-open failure remains historical with cause unresolved. An initial wrong exact test filter ran zero tests and is not counted; the corrected filter ran one test."
+}

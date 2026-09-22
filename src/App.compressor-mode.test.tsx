@@ -3,11 +3,13 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AdvancedPanel } from "./App";
+import samples from "./wire-samples.json";
 import { ADAPTIVE_STRENGTH_DEFAULT } from "./bindings";
 import type {
   AdvancedSettings,
   AnalysisResult,
   CompressionPlan,
+  GuardrailReadout,
   MasteringSettings,
   Preset,
 } from "./bindings";
@@ -73,6 +75,7 @@ async function renderAdvancedPanel(props: {
   onDeliveryBitDepth?: (bitDepth: number | null) => void;
   onDeliverySampleRate?: (sampleRate: number | null) => void;
   compressionPlan?: CompressionPlan | null;
+  adaptiveReadout?: GuardrailReadout | null;
 }): Promise<{ container: HTMLDivElement; root: Root }> {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -90,6 +93,7 @@ async function renderAdvancedPanel(props: {
         onDeliveryBitDepth={props.onDeliveryBitDepth ?? vi.fn()}
         onDeliverySampleRate={props.onDeliverySampleRate ?? vi.fn()}
         compressionPlan={props.compressionPlan ?? null}
+        adaptiveReadout={props.adaptiveReadout ?? null}
       />,
     );
   });
@@ -182,6 +186,42 @@ afterEach(() => {
 });
 
 describe("AdvancedPanel compressor mode", () => {
+  it("shows guarded backend bands and timings without changing Manual seed values", async () => {
+    const onAdvanced = vi.fn();
+    const band = { threshold_db: -7.2, ratio: 1.1, attack_ms: 18.25, release_ms: 241.2, makeup_db: 0.4 };
+    const readout: GuardrailReadout = { ...samples.guardrail_readout,
+      compression: { active: true, low: band, mid: { ...band, threshold_db: -8.4 }, high: { ...band, threshold_db: -6.1 } } };
+    const { container, root } = await renderAdvancedPanel({
+      settings: makeSettings(), adaptiveReadout: readout, onAdvanced,
+    });
+    expect(container.querySelector(".compressor-preset-summary")?.textContent).toContain("Resolved compression after Adapt");
+    expect(Array.from(container.querySelectorAll(".gr-meter-value"), node => node.textContent))
+      .toEqual(["-7.2 dB · 1.1:1", "-8.4 dB · 1.1:1", "-6.1 dB · 1.1:1"]);
+    expect(container.querySelector(".gr-meter")?.getAttribute("title"))
+      .toContain("attack 18.3 ms, release 241.2 ms, makeup 0.4 dB");
+    expect(container.querySelector<HTMLInputElement>('input[type="range"][aria-label="Preset density"]')?.value).toBe("0.5");
+    expect(onAdvanced).not.toHaveBeenCalled();
+    await act(async () => buttonNamed(container, "Manual").click());
+    expect(onAdvanced).toHaveBeenCalledWith(expect.objectContaining({
+      compression_mode: "manual", compression_low_threshold_db: -12.5,
+      compression_low_ratio: 1.45, compression_low_attack_ms: 15, compression_low_release_ms: 250,
+    }));
+    await act(async () => root.unmount());
+  });
+
+  it("labels missing resolved values as pre-Adapt and respects resolved bypass", async () => {
+    const missing = await renderAdvancedPanel({ settings: makeSettings() });
+    expect(missing.container.querySelector(".compressor-preset-summary")?.textContent).toContain("before Adapt");
+    expect(missing.container.querySelector(".gr-meter")?.getAttribute("title")).toContain("resolved values unavailable");
+    await act(async () => missing.root.unmount());
+    const readout: GuardrailReadout = { ...samples.guardrail_readout,
+      compression: { ...samples.guardrail_readout.compression, active: false } };
+    const inactive = await renderAdvancedPanel({ settings: makeSettings(), adaptiveReadout: readout });
+    expect(inactive.container.querySelector(".compressor-preset-summary")?.textContent).toBe("Resolved compression: inactive.");
+    expect(Array.from(inactive.container.querySelectorAll(".gr-meter-value"), node => node.textContent)).toEqual(["inactive", "inactive", "inactive"]);
+    await act(async () => inactive.root.unmount());
+  });
+
   it("does not show a reset button on delivery profile", async () => {
     const { container, root } = await renderAdvancedPanel({
       settings: makeSettings(),
@@ -328,7 +368,7 @@ describe("AdvancedPanel compressor mode", () => {
       "Preset values from Universal.",
     );
     expect(preset.container.textContent).toContain(
-      "Effective compression · -12.5 dB · 1.4:1 · 15 ms · 250 ms",
+      "Preset compression before Adapt · -12.5 dB · 1.4:1 · 15 ms · 250 ms",
     );
     expect(preset.container.textContent).not.toContain("LOWMIDHIGH");
     expect(compressionInputs(preset.container).every((input) => input.disabled)).toBe(
@@ -401,7 +441,7 @@ describe("AdvancedPanel compressor mode", () => {
       "Preset values from Universal.",
     );
     expect(universal.container.textContent).toContain(
-      "Effective compression · -12.5 dB · 1.4:1 · 15 ms · 250 ms",
+      "Preset compression before Adapt · -12.5 dB · 1.4:1 · 15 ms · 250 ms",
     );
     expect(universal.container.textContent).not.toContain("-22.0 dB");
     expect(universal.container.textContent).not.toContain("2.6:1");
@@ -414,11 +454,46 @@ describe("AdvancedPanel compressor mode", () => {
     });
     expect(tape.container.textContent).toContain("Preset values from Tape.");
     expect(tape.container.textContent).toContain(
-      "Effective compression · -16.0 dB · 1.6:1 · 30 ms · 400 ms",
+      "Preset compression before Adapt · -16.0 dB · 1.6:1 · 30 ms · 400 ms",
     );
     await act(async () => {
       tape.root.unmount();
     });
+  });
+
+  it("parks Density Auto at the requested preset default independently of Adapt", async () => {
+    for (const kind of ["universal", "tape", "custom"] as const) {
+      for (const strength of [0, 0.5, 1]) {
+        const settings = makeSettings(
+          { adaptive_strength: strength },
+          kind === "custom" ? { kind, id: "density-auto-test" } : { kind },
+        );
+        const onAdvanced = vi.fn();
+        const { container, root } = await renderAdvancedPanel({ settings, onAdvanced });
+        const slider = container.querySelector<HTMLInputElement>('input[type="range"][aria-label="Preset density"]')!;
+        expect(slider.value).toBe(kind === "custom" ? "0" : "0.5");
+        expect(settings.advanced.compression_density).toBeNull();
+        expect(onAdvanced).not.toHaveBeenCalled();
+        expect(container.querySelector(".compressor-density-field")?.textContent).toContain(
+          kind === "custom" ? "0.00" : "0.50",
+        );
+        await act(async () => { root.unmount(); });
+      }
+    }
+  });
+
+  it("preserves explicit Density, and resetting requests null without materializing Auto", async () => {
+    for (const density of [0, 0.8]) {
+      const settings = makeSettings({ compression_density: density });
+      const onAdvanced = vi.fn();
+      const { container, root } = await renderAdvancedPanel({ settings, onAdvanced });
+      const slider = container.querySelector<HTMLInputElement>('input[type="range"][aria-label="Preset density"]')!;
+      expect(slider.value).toBe(String(density));
+      await act(async () => { slider.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })); });
+      expect(onAdvanced).toHaveBeenCalledWith({ ...settings.advanced, compression_density: null });
+      expect(settings.advanced.compression_density).toBe(density);
+      await act(async () => { root.unmount(); });
+    }
   });
 
   it("labels density-zero preset compression as inactive instead of showing identity values", async () => {

@@ -316,7 +316,17 @@ fn album_receipt_measures_delivery_and_continuous_pcm_matches_track_files() {
         meter.add_frames_f32(&track.samples).unwrap();
         let actual = meter.loudness_global().unwrap() as f32;
         let delivered = serde_json::to_value(&report.tracks[0]).unwrap();
-        let expected_tp = 20.0 * meter.true_peak(0).unwrap().log10();
+        // Receipt uses the qualified finite-signal meter. The old ebur128
+        // estimate underreads this waveform; independent reconstruction
+        // qualification is retained in the B2/B3 evidence suite.
+        let expected_tp = yes_master_lib::peak_meter::measure(
+            &track.samples,
+            usize::from(track.channels),
+            || false,
+        )
+        .unwrap()
+        .upper_dbtp()
+        .unwrap();
         let reported_tp = delivered["true_peak_dbtp"]
             .as_f64()
             .expect("delivered true peak missing");
@@ -325,6 +335,141 @@ fn album_receipt_measures_delivery_and_continuous_pcm_matches_track_files() {
             (actual - report.tracks[0].measured_lufs).abs() < 0.02,
             "{bits}-bit album LUFS: saved {actual}, receipt {}",
             report.tracks[0].measured_lufs
+        );
+    }
+}
+
+#[test]
+fn album_butt_join_preserves_pcm_parity_and_reconstruction_ceiling() {
+    let dir = TempDir::new().unwrap();
+    let a = dir.path().join("positive.wav");
+    let b = dir.path().join("negative.wav");
+    write_wav_mono(&a, 48_000, &[0.95]);
+    write_wav_mono(&b, 48_000, &[-0.95]);
+    let analyses = [
+        fake_analysis("a", TrackRole::AlbumTrack, None, 0.5, 0.5),
+        fake_analysis("b", TrackRole::AlbumTrack, None, 0.5, 0.5),
+    ];
+    for (bits, gap_frames) in [16, 24, 32]
+        .into_iter()
+        .flat_map(|bits| [0, 1, 7].map(|gap| (bits, gap)))
+    {
+        let mut plan = album::build_album_plan(
+            "Join".into(),
+            &[&analyses[0], &analyses[1]],
+            &[1. / 48000., 1. / 48000.],
+            AlbumArc::Preset {
+                preset: AlbumArcKind::Cinematic,
+            },
+            1.,
+        );
+        plan.transitions = if gap_frames == 0 {
+            vec![]
+        } else {
+            vec![TransitionSpec::gap((gap_frames as f32 + 0.25) / 48000.)]
+        };
+        plan.delivery_bit_depth = Some(bits);
+        let mut settings = default_master_settings();
+        settings.preset = yes_master_lib::Preset::Custom {
+            id: "neutral".into(),
+        };
+        settings.intensity = 0.;
+        settings.advanced.compression_mode = yes_master_lib::CompressionMode::Off;
+        settings.advanced.ceiling_dbtp = Some(-1.);
+        settings.output_gain_db = 12.;
+        let mut second_settings = settings.clone();
+        if gap_frames == 7 {
+            second_settings.advanced.ceiling_dbtp = Some(-2.);
+        }
+        let request = AlbumPlanRenderRequest {
+            plan,
+            tracks: vec![
+                AlbumTrackRenderInput {
+                    track_id: TrackId("a".into()),
+                    source_path: a.to_string_lossy().into(),
+                    settings: settings.clone(),
+                    override_album: true,
+                },
+                AlbumTrackRenderInput {
+                    track_id: TrackId("b".into()),
+                    source_path: b.to_string_lossy().into(),
+                    settings: second_settings,
+                    override_album: true,
+                },
+            ],
+        };
+        let report =
+            render_album_plan_impl(&request, &dir.path().join(format!("out-{bits}")), None)
+                .unwrap();
+        let mut parts = Vec::new();
+        for (index, track) in report.tracks.iter().enumerate() {
+            let pcm = yes_master_lib::decode::decode_full(std::path::Path::new(&track.output_path))
+                .unwrap();
+            let peak = yes_master_lib::peak_meter::measure(&pcm.samples, 1, || false).unwrap();
+            assert!(peak.upper_dbtp().unwrap() <= f64::from(track.ceiling_dbtp) + 1e-5);
+            parts.extend_from_slice(&pcm.samples);
+            if index == 0 && gap_frames > 0 {
+                // The gap uses the same deterministic, per-write quantizer seed.
+                let zeros = vec![0.; gap_frames];
+                let gap = yes_master_lib::wav_writer::DeliveryPcm::new(&zeros, 1, bits, || false)
+                    .unwrap();
+                let mut delivered = vec![0.; gap_frames];
+                yes_master_lib::peak_meter::pcm::PcmSource::read_channel(
+                    &gap,
+                    0,
+                    0,
+                    &mut delivered,
+                )
+                .unwrap();
+                parts.extend(delivered.into_iter().map(|s| s as f32));
+            }
+        }
+        let continuous =
+            yes_master_lib::decode::decode_full(std::path::Path::new(&report.album_wav_path))
+                .unwrap();
+        assert_eq!(continuous.samples.len(), 2 + gap_frames);
+        let parent = std::path::Path::new(&report.album_wav_path)
+            .parent()
+            .unwrap();
+        assert!(std::fs::read_dir(parent).unwrap().all(|entry| !entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with(".album-preparation-")));
+        assert_eq!(
+            parts, continuous.samples,
+            "album trim must preserve component PCM parity"
+        );
+        let peak = yes_master_lib::peak_meter::measure(&continuous.samples, 1, || false)
+            .unwrap()
+            .upper_dbtp()
+            .unwrap();
+        // Independent direct cardinal-sinc sum, including exterior ringout.
+        let direct = (-262_144..278_528)
+            .map(|i| {
+                let t = f64::from(i) / 16384.;
+                continuous
+                    .samples
+                    .iter()
+                    .enumerate()
+                    .map(|(n, &sample)| {
+                        let x = std::f64::consts::PI * (t - n as f64);
+                        f64::from(sample) * if x == 0. { 1. } else { x.sin() / x }
+                    })
+                    .sum::<f64>()
+                    .abs()
+            })
+            .fold(0_f64, f64::max);
+        assert!(20. * direct.log10() <= -1. + 1e-5);
+        println!(
+            "join bits={bits} gap_frames={gap_frames} pcm={:?} qualified_dbtp={peak:.9} direct_16384_dbtp={:.9}",
+            continuous.samples,
+            20. * direct.log10()
+        );
+        assert!(
+            peak <= -1. + 1e-5,
+            "{bits}-bit gap={gap_frames} join peak {peak} dBTP, PCM {:?}",
+            continuous.samples
         );
     }
 }

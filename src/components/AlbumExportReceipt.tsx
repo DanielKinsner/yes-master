@@ -3,11 +3,17 @@
 import { formatBitDepth, formatSampleRate } from "./ExportReceiptCard";
 import type { AlbumRenderReport, AlbumTrackRenderRecord } from "../lib/api";
 import { trackCountLabel } from "../lib/album-copy";
+import { deliveredFormatLabel } from "../lib/export-formats";
 
 function formatChannelCount(channels: number): string {
   if (channels === 1) return "mono";
   if (channels === 2) return "stereo";
   return `${channels} ch`;
+}
+
+function peakExcessText(peak: number, ceiling: number): string {
+  const excess = peak - ceiling;
+  return excess < 0.01 ? "less than 0.01" : excess.toFixed(2);
 }
 
 function TrackResult({ track }: { track: AlbumTrackRenderRecord }) {
@@ -20,7 +26,7 @@ function TrackResult({ track }: { track: AlbumTrackRenderRecord }) {
   const hasPeak = peak != null && Number.isFinite(peak);
   const hasCeiling = ceiling != null && Number.isFinite(ceiling);
   const difference = hasTarget && hasLoudness ? track.measured_lufs - target : 0;
-  const aboveCeiling = hasPeak && hasCeiling && peak > ceiling + 0.05;
+  const aboveCeiling = hasPeak && hasCeiling && peak > ceiling + 0.00001;
   return (
     <li className="album-track-result">
       <strong title={track.output_path}>{filename}</strong>
@@ -39,14 +45,14 @@ function TrackResult({ track }: { track: AlbumTrackRenderRecord }) {
         {hasTarget ? `Target ${target.toFixed(1)} LUFS` : target === null ? "No loudness target" : "Target not recorded"}
         {hasCeiling && ` · ceiling ${ceiling.toFixed(1)} dBTP`}
       </span>
-      {Math.abs(difference) > 0.5 && (
+      {Math.abs(difference) > 0.25 && (
         <span className="album-track-result-note">
           {Math.abs(difference).toFixed(1)} LU {difference < 0 ? "below" : "above"} target.
         </span>
       )}
       {aboveCeiling && (
         <span className="album-export-receipt-advisory">
-          Above ceiling by {(peak - ceiling).toFixed(2)} dB. Review before sharing.
+          Above ceiling by {peakExcessText(peak, ceiling)} dB. Review before sharing.
         </span>
       )}
     </li>
@@ -54,6 +60,8 @@ function TrackResult({ track }: { track: AlbumTrackRenderRecord }) {
 }
 
 export function AlbumExportReceipt({ report, expanded = false }: { report: AlbumRenderReport; expanded?: boolean }) {
+  const continuous = report.continuous_peak;
+  const hasContinuousPeak = continuous != null && Number.isFinite(continuous.true_peak_dbtp) && Number.isFinite(continuous.ceiling_dbtp);
   const renderedRate = formatSampleRate(report.rendered_sample_rate);
   const exportCancelled = report.status.status === "cancelled";
   const requestedRate =
@@ -100,7 +108,7 @@ export function AlbumExportReceipt({ report, expanded = false }: { report: Album
       <code className="album-export-receipt-path">{report.album_wav_path}</code>
       <span className="album-export-receipt-meta">
         {trackCountLabel(report.tracks.length)} · rendered {renderedRate} /{" "}
-        {report.mp3_bitrate_kbps ? `MP3 ${report.mp3_bitrate_kbps} kbps` : `WAV ${formatBitDepth(report.bit_depth)}`} /{" "}
+        {report.delivered_format ? deliveredFormatLabel(report.delivered_format) : report.mp3_bitrate_kbps ? `MP3 ${report.mp3_bitrate_kbps} kbps` : `WAV ${formatBitDepth(report.bit_depth)}`} /{" "}
         {formatChannelCount(report.rendered_channels)} · requested {requestedRate}
         {requestedMismatch && `, got ${renderedRate}`}
       </span>
@@ -108,6 +116,16 @@ export function AlbumExportReceipt({ report, expanded = false }: { report: Album
         <span className="album-export-receipt-meta">
           Export details: <code>{report.manifest_path}</code>. These supporting
           files are not needed to play or share your audio.
+        </span>
+      )}
+      {hasContinuousPeak && (
+        <span className="album-export-receipt-meta">
+          Continuous file true peak {continuous.true_peak_dbtp.toFixed(2)} dBTP · ceiling {continuous.ceiling_dbtp.toFixed(2)} dBTP
+        </span>
+      )}
+      {hasContinuousPeak && continuous.true_peak_dbtp > continuous.ceiling_dbtp + 0.00001 && (
+        <span className="album-export-receipt-advisory">
+          Continuous file exceeds its ceiling by {peakExcessText(continuous.true_peak_dbtp, continuous.ceiling_dbtp)} dB. Review before sharing.
         </span>
       )}
       {upsampledRates.length > 0 && (

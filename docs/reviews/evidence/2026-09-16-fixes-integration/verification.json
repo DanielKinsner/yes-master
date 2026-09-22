@@ -1,0 +1,410 @@
+{
+  "status": "verified_for_local_integration",
+  "reviewed_snapshot": "03df038a",
+  "selected_application_checkpoint": "b7a8eb35",
+  "production_identity": "same as reviewed snapshot; only cfg(test) native probe adds explicit buffer/device diagnostics",
+  "source_fixture": {
+    "name": "Doors Open.wav",
+    "sha256": "f51cddaf7b9aa231836443f69da66d9adbf4276d4fc560d6135bca808d63f0db"
+  },
+  "frontend": {
+    "files": 89,
+    "tests": 897,
+    "headless_app_checks": 38,
+    "production_build": "pass"
+  },
+  "desktop": {
+    "passed": 716,
+    "ignored": 33,
+    "library_passed": 507,
+    "private_fixture_tests_executed": 4,
+    "fmt": "pass",
+    "clippy": "pass"
+  },
+  "bridges": {
+    "iphone_tests": 46,
+    "iphone_ignored": 1,
+    "android_tests": 26,
+    "android_arm64_api": 29
+  },
+  "whole_outputs": [
+    {
+      "id": "imaginal",
+      "source_sha256": "c7f3a8db696e3b65246de493ef3dc5d6f8db3083a1239d73b588edf58030c591",
+      "sha256": "eca130fc03f351270758ffa6623b3811de758b3f56c4bc5da73064b3a2046c32",
+      "frames": 15598577,
+      "device_rate": 44100,
+      "file_rate": 48000,
+      "peak": -1.0000240802764893,
+      "lufs": -20.6732177734375,
+      "pcm_differences": 0,
+      "independent_peak": -1.039898,
+      "independent_lufs": -20.7,
+      "exact_prior_output": true
+    },
+    {
+      "id": "imaginal",
+      "source_sha256": "c7f3a8db696e3b65246de493ef3dc5d6f8db3083a1239d73b588edf58030c591",
+      "sha256": "4edc0e78bdcaabf5bac328b30c26ef1a84b11eff58f5179b0f81afe444a03616",
+      "frames": 33956084,
+      "device_rate": 96000,
+      "file_rate": 48000,
+      "peak": -1.0000249147415161,
+      "lufs": -20.474374771118164,
+      "pcm_differences": 0,
+      "independent_peak": -1.041155,
+      "independent_lufs": -20.5,
+      "exact_prior_output": true
+    },
+    {
+      "id": "coat",
+      "source_sha256": "0b39d396856d38c0d927986e0bb45058e7a92c378dac4bcf27ddcf1552e651c9",
+      "sha256": "841b23ebdef7c54590695816666334e935e231fdbe13f588fa34dc098dd60289",
+      "frames": 10785096,
+      "device_rate": 44100,
+      "file_rate": 48000,
+      "peak": -7.54152250289917,
+      "lufs": -13.996031761169434,
+      "pcm_differences": 0,
+      "independent_peak": -7.581879,
+      "independent_lufs": -14.0,
+      "exact_prior_output": true
+    },
+    {
+      "id": "coat",
+      "source_sha256": "0b39d396856d38c0d927986e0bb45058e7a92c378dac4bcf27ddcf1552e651c9",
+      "sha256": "1f7a344aadc4814752b8dc89dabb0bf18ec66a56945ce17c0358567d4f97a225",
+      "frames": 23477758,
+      "device_rate": 96000,
+      "file_rate": 48000,
+      "peak": -7.594215393066406,
+      "lufs": -14.022130012512207,
+      "pcm_differences": 0,
+      "independent_peak": -7.637914,
+      "independent_lufs": -14.0,
+      "exact_prior_output": true
+    }
+  ],
+  "callbacks": [
+    {
+      "device": "VP2756-4K (NVIDIA High Definition Audio)",
+      "requested_buffer_policy": "device_default",
+      "requested_frames": null,
+      "callbacks": 652,
+      "granted_frames_min": 480,
+      "granted_frames_max": 1056,
+      "deadline_misses": 0,
+      "device_errors": 0,
+      "exhausted_samples": 0,
+      "streaming_error_code": 0,
+      "coefficient_edits": 0,
+      "combined_gain_edits": 1200,
+      "join_after_cancel_s": 0.002632,
+      "case": "native-gain-monitor",
+      "median_ms": 0.0536,
+      "p95_ms": 0.9346599999999999,
+      "max_ms": 1.7725
+    },
+    {
+      "device": "VP2756-4K (NVIDIA High Definition Audio)",
+      "requested_buffer_policy": "device_default",
+      "requested_frames": null,
+      "callbacks": 607,
+      "granted_frames_min": 480,
+      "granted_frames_max": 1056,
+      "deadline_misses": 0,
+      "device_errors": 0,
+      "exhausted_samples": 0,
+      "streaming_error_code": 0,
+      "coefficient_edits": 120,
+      "combined_gain_edits": 0,
+      "join_after_cancel_s": 0.0026796,
+      "case": "native-eq-monitor",
+      "median_ms": 0.0545,
+      "p95_ms": 1.1208199999999997,
+      "max_ms": 1.8311
+    }
+  ],
+  "lifecycle": [
+    {
+      "accepted_s": 0.6050712,
+      "event": "cold_mastered_without_landing",
+      "first_meter_s": 0.6598305
+    },
+    {
+      "after": 30.065,
+      "before": 30.065,
+      "event": "rate_edit",
+      "observed_s": 0.0055056,
+      "paused": false,
+      "rate": 44100
+    },
+    {
+      "after": 30.065,
+      "before": 30.065,
+      "event": "rate_edit",
+      "observed_s": 0.0110654,
+      "paused": false,
+      "rate": 48000
+    },
+    {
+      "after": 30.065,
+      "before": 30.065,
+      "event": "rate_edit",
+      "observed_s": 0.0105297,
+      "paused": false,
+      "rate": 96000
+    },
+    {
+      "after": 30.065,
+      "before": 30.065,
+      "event": "rate_edit",
+      "observed_s": 0.1054562,
+      "paused": true,
+      "rate": 44100
+    },
+    {
+      "after": 30.065,
+      "before": 30.065,
+      "event": "rate_edit",
+      "observed_s": 0.1113463,
+      "paused": true,
+      "rate": 48000
+    },
+    {
+      "after": 30.065,
+      "before": 30.065,
+      "event": "rate_edit",
+      "observed_s": 0.1115953,
+      "paused": true,
+      "rate": 96000
+    },
+    {
+      "event": "paused_seek_resume",
+      "observed_s": 0.0538984
+    },
+    {
+      "after": 90.045,
+      "before": 90.045,
+      "event": "ab",
+      "mastered": false,
+      "observed_s": 0.0113167
+    },
+    {
+      "after": 90.045,
+      "before": 90.045,
+      "event": "ab",
+      "mastered": true,
+      "observed_s": 0.0100149
+    },
+    {
+      "after": 90.045,
+      "before": 90.045,
+      "event": "ab",
+      "mastered": false,
+      "observed_s": 0.0102113
+    },
+    {
+      "after": 90.045,
+      "before": 90.045,
+      "event": "ab",
+      "mastered": true,
+      "observed_s": 0.0096175
+    },
+    {
+      "event": "first_landing_preparation",
+      "first_pending_s": 0.0056869,
+      "output_applied_s": 49.8652734,
+      "revision": 12,
+      "settled_snapshot_s": 49.6874693
+    },
+    {
+      "event": "target_edit",
+      "output_applied_s": 2.8201564,
+      "revision": 15,
+      "settled_snapshot_s": 2.6403299000000002,
+      "target": -23.0
+    },
+    {
+      "event": "target_edit",
+      "output_applied_s": 0.2503871,
+      "revision": 17,
+      "settled_snapshot_s": 0.0754695,
+      "target": -14.0
+    },
+    {
+      "event": "paused_cached_target_resume",
+      "output_applied_s": 0.1869173,
+      "paused_applied_revision": 17,
+      "paused_requested_revision": 19,
+      "revision": 19
+    }
+  ],
+  "session": {
+    "total_wall_s": 54.6295762,
+    "last_observed_cpu_s": 53.71875,
+    "peak_working_set_bytes": 766414848.0,
+    "maximum_observed_private_bytes": 748806144.0
+  },
+  "device_diagnostic": {
+    "rows": [
+      {
+        "advertised": "Ok(\"SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }\")",
+        "device": "Virtual Speaker (ASUS Utility)",
+        "is_default": false,
+        "result": {
+          "error": "A backend-specific error has occurred: 0x8889000A",
+          "opened": false
+        }
+      },
+      {
+        "advertised": "Ok(\"SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }\")",
+        "device": "VP2756-4K (NVIDIA High Definition Audio)",
+        "is_default": false,
+        "result": {
+          "actual": "SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }",
+          "opened": true
+        }
+      },
+      {
+        "advertised": "Ok(\"SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }\")",
+        "device": "Speakers (Realtek(R) Audio)",
+        "is_default": true,
+        "result": {
+          "error": "A backend-specific error has occurred: 0x887C003A",
+          "opened": false
+        }
+      },
+      {
+        "advertised": "Ok(\"SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }\")",
+        "device": "AI Noise-Canceling Speaker (ASUS Utility)",
+        "is_default": false,
+        "result": {
+          "actual": "SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }",
+          "opened": true
+        }
+      },
+      {
+        "advertised": "Ok(\"SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }\")",
+        "device": "BenQ PD2700U (NVIDIA High Definition Audio)",
+        "is_default": false,
+        "result": {
+          "actual": "SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }",
+          "opened": true
+        }
+      },
+      {
+        "advertised": "Ok(\"SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }\")",
+        "device": "Realtek Digital Output (Realtek(R) Audio)",
+        "is_default": false,
+        "result": {
+          "actual": "SupportedStreamConfig { channels: 2, sample_rate: SampleRate(48000), buffer_size: Range { min: 0, max: 4294967295 }, sample_format: F32 }",
+          "opened": true
+        }
+      }
+    ],
+    "scope": "empty production mixer opens and closes each route; no preference changes or listening proof",
+    "status": "complete"
+  },
+  "failed_probe_scope": "Default Realtek stream open failed twice at fixed256 and once with default buffer (0x887C003A). Production empty-stream diagnostic also fails there. Working monitor fallback is measured separately; no Realtek or fixed256 pass.",
+  "package": [
+    {
+      "name": "YES Master_0.9.2_x64_en-US.msi",
+      "bytes": 16904192,
+      "sha256": "b02b9b70b2d7590742d1753c4643ca71b691c1934a1cff4fd99d611fa411f898",
+      "build_source": "b7a8eb35",
+      "scope": "local package build only; not installed or released"
+    },
+    {
+      "name": "YES Master_0.9.2_x64-setup.exe",
+      "bytes": 14507745,
+      "sha256": "37686ef62f7a35e1e6136ca65694387e9efdba8a2bb0bbb30eab9caae118112a",
+      "build_source": "b7a8eb35",
+      "scope": "local package build only; not installed or released"
+    }
+  ],
+  "remaining": [
+    "Realtek endpoint failure cause and Realtek-specific callback proof",
+    "universal live-transient ceiling / broader B3 boundaries",
+    "final-result UI / C3 policy integration",
+    "new subjective listening and installed/Mac/remote-CI/release evidence",
+    "sonic policy/calibration decisions"
+  ],
+  "helper_check": {
+    "status": "complete",
+    "hash_pass": true,
+    "peak_helper_exact": true,
+    "peaks": {
+      "fft_dbtp": [
+        -12.85789539178789,
+        -9.42499148079467
+      ],
+      "soxr_dbtp": [
+        -12.902812,
+        -9.2472
+      ],
+      "sample_dbfs": [
+        -13.979399957290536,
+        -10.457574560460515
+      ]
+    },
+    "imported": [
+      "check_codec_matrix.py",
+      "check_completed_device_rows.py",
+      "check_linear_reuse.py",
+      "check_live_rate_witness.py",
+      "check_native_peak_bounds.py",
+      "check_pcm_experiment.py",
+      "check_reconstruction_edges.py",
+      "check_witnesses.py",
+      "compare_peak_implementation.py",
+      "ebu_phase_signals.py",
+      "extract_soxr_kernel.py",
+      "peak_cost.py",
+      "qualify_fft.py",
+      "qualify_fft_bound.py",
+      "qualify_fir.py",
+      "qualify_hybrid_peak.py",
+      "qualify_peak_probe.py",
+      "qualify_sinc_bound.py",
+      "recheck_codec_readback.py",
+      "sinc_tail_moments.py",
+      "verification_common.py",
+      "verify_reference_padding.py"
+    ]
+  },
+  "logs": {
+    "android.log": "272369fdac80f51c687ca365b9e38bf1391cd8edc1265c3aec23414d8bc2198a",
+    "assembly.log": "24d42ef7854d79c2c17ff3ec08ec30db7d2c75c76c003915f86f63506ae1b79f",
+    "clippy-stable-assets.log": "f7ae98c4b0115d59c61134c510aac9be14f738f2e81b52d69a69344fe2f8de39",
+    "clippy.log": "a470dfff3968febf42b3253a35c8fbfb3f8c9b7323bd71a8e6da8148f4ed87a8",
+    "device-open.log": "d7e41b23abf004409972adc2b47b4595862e4c27f0b74a52cc48a464cb5b1b3c",
+    "fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "frontend-tests.log": "b541716d9826a1cdcb4be027236a79f3031246f3a60e43ec8c427d9d1be52b62",
+    "headless.log": "1029afdf0203ba0c705e86e216125b41886983383de536d1ea1a735ceea2416f",
+    "helper-check-v2.log": "13c27d98c5415f2cd845c606b27166b26472e49edf7b610baf592987da126a06",
+    "helper-check.log": "3b46f6136526797a589679ef505cfc57dbf9a6d292a857db119015a5ac64a012",
+    "iphone.log": "156877a00d15d695d9a5c4e2e800b502f36b2e64e964fbfda1652fae660efa17",
+    "native-eq-monitor.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "native-eq-monitor.stdout.log": "8cadaba848dff17de0ea719200022527eb51e93aaffd8a2fc39d5ca38a333710",
+    "native-gain-default.stderr.log": "942ef2f5fc5e05234926807da46d6cb2f4832005230d917df01e56f9ca6a7088",
+    "native-gain-default.stdout.log": "255ff04c09e9345c64bcb4da73a8318ae0772066fe4ef30807a4d38023591354",
+    "native-gain-monitor.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "native-gain-monitor.stdout.log": "c772c358a1021d583d8dcea53221e57844f3a85d85d6f8ddfe0310d49a9d08ef",
+    "native-gain-retry.stderr.log": "e9d07d69ac323c5b8723dd8d030f7551283a497ee974eab0dad001210af618b2",
+    "native-gain-retry.stdout.log": "255ff04c09e9345c64bcb4da73a8318ae0772066fe4ef30807a4d38023591354",
+    "native-gain.stderr.log": "d16f856de0e5298737420d9b5bfe3bce3006c5b15b0d89d190ab612f0b0e576c",
+    "native-gain.stdout.log": "77e7e5c34ac1d2236c30012cea6b62fd920f058bb7546c86b4aec38f851cc207",
+    "native-lifecycle.stderr.log": "97f7b887787156486f7de09c2cb749a6e566e69b07a3661b225cc57205c38b26",
+    "native-lifecycle.stdout.log": "7713c28041aeae4f9ebe58a71bc27ab267709cbd2865f7decdad8bdc60347251",
+    "native-probe-build.log": "07478e6c989fdbdbeb7a930688b1dd46af24f7dd80bf5d0fc18f4e8188565fdb",
+    "native-probe-clippy.log": "68bea76e77e9ded24f73d217e5a74249bd9c1f3c9a0c6d949b459ab41f733098",
+    "native-probe-fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "native-route-build.log": "2ffe54c6756c548dad1b5d83649c58693860a21e2ad4fba5e5af3d9ae04ca369",
+    "native-route-clippy.log": "21eb3963d159170cf0f880cebeb09d9c611ac84b8798e45d41c2808b44155668",
+    "rust-fixtures.log": "638f7107dada89c4cce7f16e598e62f60d96235df5f0696626ec3386a77f21c1",
+    "whole-device-independent.log": "2c82c1dd2551edeb9f38a2112e2b969174ada6cda9f045d348ee3e4f948cbf3c",
+    "whole-device.log": "99f198bf7d18f02fc2bc1d02a327a940697c698726693eb6ba13551ed3022ba1",
+    "windows-package.log": "7c674a9d4b8d21ad4e785c87c1d6071d909ac62b4317cfe11b70c08404025d0f"
+  }
+}

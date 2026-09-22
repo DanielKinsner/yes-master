@@ -600,6 +600,7 @@ async fn phase_12_1_real_fixture_metering_snapshot() {
 
     // Predict which advisories run_export_checks would fire on this master.
     let report = ExportReport {
+        delivered_format: None,
         track_id: t.id.clone(),
         output_path: out_path.to_string_lossy().to_string(),
         measured_lufs: master.lufs_integrated,
@@ -642,6 +643,7 @@ async fn phase_12_1_real_fixture_metering_snapshot() {
 #[tokio::test]
 async fn run_export_checks_warns_on_high_true_peak() {
     let report = ExportReport {
+        delivered_format: None,
         track_id: TrackId("t".to_string()),
         output_path: "out.wav".to_string(),
         measured_lufs: -14.0,
@@ -667,6 +669,7 @@ async fn run_export_checks_warns_on_high_true_peak() {
 #[tokio::test]
 async fn run_export_checks_passes_silently_when_clean() {
     let report = ExportReport {
+        delivered_format: None,
         track_id: TrackId("t".to_string()),
         output_path: "out.wav".to_string(),
         measured_lufs: -14.0,
@@ -693,6 +696,7 @@ async fn run_export_checks_passes_silently_when_clean() {
 #[tokio::test]
 async fn run_export_checks_criticals_on_requested_sample_rate_mismatch() {
     let report = ExportReport {
+        delivered_format: None,
         track_id: TrackId("t".to_string()),
         output_path: "out.wav".to_string(),
         measured_lufs: -14.0,
@@ -730,6 +734,7 @@ async fn run_export_checks_warns_on_low_streaming_headroom() {
     // new `streaming_headroom_low` advisory but NOT the critical
     // `true_peak_high` warning.
     let report = ExportReport {
+        delivered_format: None,
         track_id: TrackId("t".to_string()),
         output_path: "out.wav".to_string(),
         measured_lufs: -14.0,
@@ -766,6 +771,7 @@ async fn run_export_checks_streaming_headroom_quiet_at_streaming_ceiling() {
     // the default streaming ceiling and the master is acceptable. The cutoff
     // is `> -1.0`, so the boundary case stays silent.
     let report = ExportReport {
+        delivered_format: None,
         track_id: TrackId("t".to_string()),
         output_path: "out.wav".to_string(),
         measured_lufs: -14.0,
@@ -2050,6 +2056,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
     let mut settings = default_master_settings();
     settings.advanced.compression_density = Some(0.5);
     let report = ExportReport {
+        delivered_format: None,
         track_id: TrackId("t".to_string()),
         output_path: "out.wav".to_string(),
         measured_lufs: -14.0,
@@ -2088,6 +2095,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
     settings2.advanced.compression_density = Some(0.5);
     settings2.advanced.compression_mid_threshold_db = Some(-30.0);
     let report2 = ExportReport {
+        delivered_format: None,
         track_id: TrackId("t".to_string()),
         output_path: "out.wav".to_string(),
         measured_lufs: -14.0,
@@ -2176,6 +2184,7 @@ fn golden_receipt_triple() -> serde_json::Value {
         ),
     };
     let report = ExportReport {
+        delivered_format: None,
         track_id: TrackId("golden-track".to_string()),
         output_path: "out/golden-track.master.wav".to_string(),
         measured_lufs: -13.5,

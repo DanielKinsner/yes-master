@@ -1,0 +1,4 @@
+fn main(){let a:Vec<String>=std::env::args().collect();let out=PathBuf::from(&a[1]);let mut rows=vec![];
+for rel in ["finalists/funk/continuous_drive_t14.wav","finalists/imaginal/adapt0_t14.wav"]{let mut r=hound::WavReader::open(out.join(rel)).unwrap();let sp=r.spec();let scale=(1i64<<(sp.bits_per_sample-1)) as f32;let x:Vec<f32>=r.samples::<i32>().map(|x|x.unwrap() as f32/scale).collect();
+for block in [64usize,256,1024,4096,x.len()/2]{let mut e=ebur128::EbuR128::new(2,sp.sample_rate,ebur128::Mode::I|ebur128::Mode::LRA|ebur128::Mode::TRUE_PEAK).unwrap();for b in x.chunks(block*2){e.add_frames_f32(b).unwrap();}let tp=(0..2).map(|c|e.true_peak(c).unwrap()).fold(0.0_f64,f64::max);rows.push(json!({"file":rel,"block":block,"tp":20.0*tp.log10(),"lufs":e.loudness_global().unwrap()}));}}
+println!("{}",serde_json::to_string_pretty(&rows).unwrap());std::fs::write(out.join("peak-meter-blocks.json"),serde_json::to_vec_pretty(&rows).unwrap()).unwrap();}

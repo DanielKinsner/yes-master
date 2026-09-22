@@ -72,6 +72,7 @@ fn receipt_from(
     rendered: &RenderedMeasurements,
 ) -> ExportReport {
     ExportReport {
+        delivered_format: None,
         track_id: track_id.clone(),
         output_path: output_path.to_string_lossy().to_string(),
         measured_lufs: rendered.lufs_integrated,

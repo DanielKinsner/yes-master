@@ -1,0 +1,19 @@
+{
+  "package_setup": "fresh directory, production hashes verified",
+  "native_build": "cargo build --release --locked, all six binaries passed",
+  "reproduction": {
+    "on": "639ac1dd5d049040d8b689636c08bf2890b39929b72601703d1b93938f6022ce",
+    "off": "d33c8cae3238161a8d7f812884c2137d980189485b3618def8af93a8baab6ea5",
+    "chunk257": "639ac1dd5d049040d8b689636c08bf2890b39929b72601703d1b93938f6022ce"
+  },
+  "src_wav_identity_count": 90,
+  "fixed_src_exact_length_conditions": 45,
+  "complete_frozen_grid_rows": 384,
+  "selection_rule_checks": 48,
+  "independent_pilot_deliveries": 192,
+  "centered_deliveries": 24,
+  "default_intensity_deliveries": 16,
+  "mechanism_cases": 504,
+  "production_changed": false,
+  "application_or_installed_tests_claimed": false
+}

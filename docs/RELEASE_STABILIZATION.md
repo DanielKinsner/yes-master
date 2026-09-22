@@ -1,5 +1,13 @@
 # Release Stabilization
 
+**September 9 installed Windows signoff:** the owner completed all five checks
+on 0.9.2 / `07021f1b` and reported all passed. The
+[installed check record](listening/2026-09-09-installed-check.md) contains the
+artifact identity, automated evidence and exact listening/interaction scope.
+This supersedes the earlier not-ready verdict for the tested Windows baseline;
+continue with the requested export-format expansion and test affected behavior.
+Mac and final distribution/updater gates remain separate.
+
 This is the active jump-fix queue for the new YES Master repo. Keep it aligned
 with `docs/PRODUCT.md` and `docs/APP_BEHAVIOR.md`.
 
@@ -14,8 +22,9 @@ session on 2026-09-05** (owner-verified `e600a21`). Read
 [the follow-up plan](plans/2026-09-05-listening-follow-up.md). Preserve the passed
 normal A/B, musical contrast, and observed Track Master export checks; investigate
 the recorded findings and only the specific coverage gaps. Do not restart the
-owner questionnaire or call the session missing. The overall verdict remains
-“Not ready / stopped here”; subsequent corrections need targeted verification.
+owner questionnaire or call the session missing. Its historical verdict was
+“Not ready / stopped here”; the September 9 installed pass above supersedes it
+for the tested Windows baseline. Subsequent changes need targeted verification.
 Release activity is parked; these records do not activate the beta.
 
 The accepted September 5 follow-through is implemented locally.

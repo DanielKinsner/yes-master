@@ -14,9 +14,11 @@ Important frontend helpers:
 
 - `src/lib/settings-transitions.ts` injects source LUFS and handles profile /
   loudness-setting transitions.
-- `src/lib/compressor-auto.ts` computes preset/density compressor readouts for
-  the `Preset` compressor UI. The filename is historical; the user-facing
-  behavior is not track-aware auto-analysis.
+- `src/lib/compressor-auto.ts` computes requested preset/density defaults for
+  Manual initialization and accurately labeled pre-Adapt fallback display.
+  Current band readouts come from `guardrails::readout_for`'s actual resolved
+  `ChainCoeffs`; the hook associates each response with source, settings,
+  analysis and mode/gate identity. Missing or stale values cannot appear resolved.
 - `src/lib/export-location.ts` tracks last-used export folders and path helpers.
 - `src/lib/shortcuts.ts` is the one keyboard-shortcut catalogue (handlers,
   the `?` overlay and Help all read it).
@@ -29,6 +31,13 @@ Important frontend helpers:
   filters, compressor behavior, saturation, width, limiter, and metering.
 - `src-tauri/src/engine.rs` handles analysis, rendering, LUFS landing, output
   measurements, and album render entry points.
+- `src-tauri/src/peak_meter/` supplies offline finite-signal reconstruction
+  intervals and replayable bounded PCM reads. `output_protection.rs` applies
+  optional loudness landing with a format-specific rounding/dither reserve,
+  scans exact delivery PCM, and remeasures final loudness. A retained peak result
+  may be reused only under a uniform gain plus a verified whole-file residual;
+  wide intervals require fresh reconstruction. These modules never run in the
+  audio callback. See the September 15 peak/reuse qualification records.
 - `src-tauri/src/exports.rs` runs export quality checks.
 - `src-tauri/src/demo.rs` synthesises the empty state's demo track once into
   app-data (`prepare_demo_track`); swap the generator for a bundled file
@@ -51,10 +60,55 @@ playback coefficient generations. Same-source A/B switching reuses in-flight wor
 Live integrated metering uses bounded 0.1 LU histogram history and fixed batches;
 feed/reset allocate nothing. Export receipts measure delivered PCM with exact
 history. Album assembly streams delivered tracks into the continuous WAV.
+Original/Mastered sources share `OutputMeter`; seeking reuses both momentary
+and integrated meter storage. The [B3 rate route](reviews/2026-09-15-live-rate-verification.md)
+places meters and swap fades after conversion, at the opened device rate.
+Original converts directly; Mastered aligns/drains the finite DSP source, then
+converts through the requested file rate and the device rate. A live file-rate
+edit reconstructs these converters from cached source PCM while preserving
+playhead and pause state. Preview commands also carry the selected encoding:
+the backend resolves its pre-encode PCM rate and precision with the export
+encoder's own rules. A transient settings copy preserves the effective target,
+ceiling and exact processing coefficients; requested/saved settings stay intact.
+Matching PCM responses share preparation even across formats, while changed
+rates invalidate it. This does not simulate lossy decoding. Device planning
+measures complete file/device PCM. File landing remains in the compensated DSP
+crossfade; device-specific correction and attenuation-only Volume Match run after
+both converters, before meters/fade. Source/file raw PCM shares a two-entry,
+288 MiB cache (one allocation at equal rates); a separate two-entry, 192 MiB cache
+holds device raw PCM. Target edits reuse nonlinear DSP and peak facts, recompute
+actual landed/SRC PCM, scan its entire residual against the cached response and
+verify complete delivery. Excess residual uncertainty triggers fresh measurement
+before planning correction. These 480 MiB retained caps exclude transient buffers.
+Oversized responses are not retained; device checking still needs temporary
+conversion/delivery buffers. File-only prewarm is never device-qualified. See
+[device preparation](reviews/2026-09-15-device-gain-preparation.md) for measured
+cost and verification scope. Conversion or
+matching device-preparation failure carries a unique
+failed-source epoch to the existing UI error surface; replay reconstructs the
+source rather than resuming an exhausted iterator.
+Preview measurement readiness and output application are distinct. Each
+coefficient publication receives a revision separate from the logical settings
+generation. Raw-processing revisions are separate: file-landing edits participate in the
+compensated DSP transition; VM-only edits can reuse the raw revision. The DSP crossfade and
+both converters propagate raw revisions as PCM is emitted; the post-device gain
+stage acknowledges the matching plan after its ramp, followed by the final fade. `PlaybackSnapshot` exposes the
+requested/applied tokens for diagnostics; a paused edit may be prepared without
+being emitted. This is application-output readiness, not DAC/speaker latency.
+`audio/output_route.rs` opens CPAL directly and retains the successful stream
+configuration through format/device fallback, while retaining Rodio's mixer and
+sinks. Rodio's stream helper hides its internal format fallback. Callback errors
+set a flag handled by the existing device-loss path on the control thread.
 Signal-chain indicators use backend-resolved stage activity rather than copied
 frontend preset tables.
 
 ## Signal-Chain Direction
+
+Recursive biquad feedback uses f64 state/arithmetic with the designed f32
+coefficients and f32 output at each filter boundary. This corrects amplification
+of tiny input-rounding differences; it does not retune filter coefficients or
+preset calibration. The [full-chain comparison](reviews/2026-09-15-drive-gain-consistency.md)
+records numerical improvements, preserved baseline references and callback cost.
 
 The mastering chain, as implemented in `MasteringChain::process_frame_inplace`
 (`src-tauri/src/dsp.rs`), is:

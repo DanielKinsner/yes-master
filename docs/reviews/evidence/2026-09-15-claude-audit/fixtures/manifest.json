@@ -1,0 +1,117 @@
+{
+  "inputs": [
+    {
+      "id": "input01",
+      "file": "fixtures/inputs/input01.wav",
+      "sha256": "0b39d396856d38c0d927986e0bb45058e7a92c378dac4bcf27ddcf1552e651c9",
+      "title": "It's a coat",
+      "artist": "Owner-supplied",
+      "kind": "owner_source_mastering_history_unspecified",
+      "license": "Private owner-authorized research, no redistribution here",
+      "preparation": "Unchanged PCM16 source"
+    },
+    {
+      "id": "input02",
+      "file": "fixtures/inputs/input02.wav",
+      "sha256": "41400345e20b1577a4c14e55ee571bf3182b5be1dbf22a4af9f8286bc142ea2b",
+      "title": "In This Moment",
+      "artist": "Scott Buckley",
+      "kind": "finished_mix",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "preparation": "FFmpeg decoded to stereo float WAV at original rate; no gain or mastering.",
+      "credit_url": "https://www.scottbuckley.com.au/library/in-this-moment/"
+    },
+    {
+      "id": "input03",
+      "file": "fixtures/inputs/input03.wav",
+      "sha256": "ba25305aa489f07ba89795da82d02fc99476179176786c4cd50d64c16abe91df",
+      "title": "Aphelion",
+      "artist": "Scott Buckley",
+      "kind": "finished_mix",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "preparation": "FFmpeg decoded to stereo float WAV at original rate; no gain or mastering.",
+      "credit_url": "https://www.scottbuckley.com.au/library/aphelion/"
+    },
+    {
+      "id": "input04",
+      "file": "fixtures/inputs/input04.wav",
+      "sha256": "436970f5fc25c79989891e48243a00d6daa99ae03eeda6b27f767af9a78326a5",
+      "title": "Funkorama",
+      "artist": "Kevin MacLeod",
+      "kind": "finished_mix",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "preparation": "FFmpeg decoded to stereo float WAV at original rate; no gain or mastering.",
+      "credit_url": "https://incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1100474"
+    },
+    {
+      "id": "input05",
+      "file": "fixtures/inputs/input05.wav",
+      "sha256": "f1f1bb3fe485397dca9ef364ef9d805b1433ae5e8701247a47bfd4a55dac48c6",
+      "title": "Metalmania",
+      "artist": "Kevin MacLeod",
+      "kind": "finished_mix",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "preparation": "FFmpeg decoded to stereo float WAV at original rate; no gain or mastering.",
+      "credit_url": "https://incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1700023"
+    },
+    {
+      "id": "input06",
+      "file": "fixtures/inputs/input06.wav",
+      "sha256": "9662eae234edf131d1538a13c7fdb3b1b505d8082dafbadbd773dd057339fd47",
+      "title": "Baby Bird",
+      "artist": "Admiral Bob",
+      "kind": "constructed_unmastered_stem_sum",
+      "license": "https://creativecommons.org/licenses/by/3.0/",
+      "preparation": "All available stems summed from time zero at unity relative gain; shorter stems zero padded; scalar peak normalization to -6 dBFS; no bus EQ/compression/limiter. Constructed balance, not artist premaster.",
+      "credit_url": "https://ccmixter.org/files/admiralbob77/25039"
+    },
+    {
+      "id": "input07",
+      "file": "fixtures/inputs/input07.wav",
+      "sha256": "76dba53d89c6995960726c484bc4d23b3c6aa7fd44459ced4f02d3e2a61f92e3",
+      "title": "Rich",
+      "artist": "Hans Atom featuring Adisa McKenzie",
+      "kind": "constructed_unmastered_stem_sum",
+      "license": "https://creativecommons.org/licenses/by/3.0/",
+      "preparation": "All available stems summed from time zero at unity relative gain; shorter stems zero padded; scalar peak normalization to -6 dBFS; no bus EQ/compression/limiter. Constructed balance, not artist premaster.",
+      "credit_url": "https://ccmixter.org/files/hansatom/32556",
+      "additional_credit_url": "https://ccmixter.org/files/adisa/28618"
+    },
+    {
+      "id": "input08",
+      "file": "fixtures/inputs/input08.wav",
+      "sha256": "c7f3a8db696e3b65246de493ef3dc5d6f8db3083a1239d73b588edf58030c591",
+      "title": "Imagining Imaginal",
+      "artist": "SackJo22",
+      "kind": "constructed_unmastered_stem_sum",
+      "license": "https://creativecommons.org/licenses/by/3.0/",
+      "preparation": "All available stems summed from time zero at unity relative gain; shorter stems zero padded; scalar peak normalization to -6 dBFS; no bus EQ/compression/limiter. Constructed balance, not artist premaster.",
+      "credit_url": "https://ccmixter.org/files/SackJo22/64781"
+    }
+  ],
+  "baseline_exports": [
+    {
+      "file": "fixtures/baseline/export01.wav",
+      "source_id": "input01",
+      "sha256": "639ac1dd5d049040d8b689636c08bf2890b39929b72601703d1b93938f6022ce",
+      "purpose": "Production export reproduction control; not a preferred-sound target.",
+      "settings": {
+        "preset": "Universal",
+        "intensity": 0.75,
+        "compressor_mode": "Preset",
+        "compression_density": "Auto (named-preset default)",
+        "adapt_strength": 0.5,
+        "delivery_profile": "Custom",
+        "lufs_target": -9,
+        "true_peak_ceiling_dbtp": -1,
+        "output_sample_rate_hz": 48000,
+        "output_format": "WAV PCM24",
+        "volume_match": false,
+        "input_gain_db": 0,
+        "output_gain_db": 0,
+        "manual_eq": "Neutral",
+        "other_advanced_settings": "Defaults"
+      }
+    }
+  ]
+}

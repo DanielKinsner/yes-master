@@ -931,8 +931,9 @@ const studioInteractions = [];
 for (const [width, height] of [[1440, 900], [390, 844]]) {
   await page.setViewportSize({ width, height });
   await page.goto(url, { waitUntil: "networkidle" });
-  const demo = page.getByRole("button", { name: "Watch demo", exact: true });
-  if (await demo.getAttribute("aria-disabled") !== "true") failures.push(`${width}: demo must remain unavailable`);
+  if (await page.getByRole("button", { name: "Watch demo", exact: true }).count()
+    || await page.getByRole("link", { name: "Watch demo", exact: true }).count()
+    || await page.locator("#demo-note").count()) failures.push(`${width}: unavailable demo placeholder must be absent`);
   const faq = page.locator('.studio-faq-grid summary').first();
   await faq.focus();
   await page.keyboard.press("Enter");
@@ -956,7 +957,7 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
     if (!await button.evaluate(el => document.activeElement === el)) failures.push(`${width}: screenshot dialog lost its return focus`);
     inspected += 1;
   }
-  studioInteractions.push({ width, inspected, faqKeyboard: true, demoUnavailable: true });
+  studioInteractions.push({ width, inspected, faqKeyboard: true, demoPlaceholderAbsent: true });
 }
 const studioMotion = await verifyStudioMotion(browser, url, outDir, failures);
 await browser.close();

@@ -4,7 +4,7 @@ version = "0.9.2"
 description = "YES Master"
 authors = ["Daniel Kinsner"]
 edition = "2021"
-rust-version = "1.77.2"
+rust-version = "1.85"
 autobins = false
 # The dialog smoke helper lives under `examples/` so release desktop
 # bundles include only the main app executable.
@@ -22,6 +22,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 # Build-stamp formatting only (build.rs); not a runtime dependency.
 chrono = "0.4"
+serde_json = "1"
 
 [dependencies]
 tauri = { version = "2", features = [] }
@@ -44,16 +45,24 @@ symphonia = { version = "0.5", features = [
     "isomp4",
     "flac",
     "wav",
+    "aiff",
     "pcm",
     "ogg",
     "vorbis",
 ] }
+# MP3 receipt readback must preserve decoder values above full scale. The
+# existing 0.5 decoder clamps them; the locked 0.6.1 MP3 bundle removes that
+# clamp (accessed through the 0.6.0 facade). Keep this scoped
+# alias separate from the general import/playback decoder migration.
+symphonia_readback = { package = "symphonia", version = "=0.6.0", default-features = false, features = ["mp3"] }
 rodio = { version = "0.20", features = ["symphonia-all"] }
 hound = "3"
 ebur128 = "0.1"
 # Phase A5: FFT for the 6-band spectral analysis. rustfft is the
 # standard pure-Rust FFT implementation; no native deps.
 rustfft = "6"
+# Offline finite-signal peak measurement; already locked through Rubato.
+realfft = "3.5"
 # B4: real timestamps for analysis / render / preset report fields.
 # Default features (clock + std) cover RFC 3339 formatting; no
 # extra serde/format features needed because every consumer here just
@@ -62,6 +71,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 rubato = "1.0.1"
 audioadapter-buffers = "2.0.0"
 mp3lame-encoder = { version = "0.2.5", optional = true }
+sha2 = { version = "0.10", optional = true }
 tempfile = "3"
 
 [dev-dependencies]
@@ -70,7 +80,7 @@ tokio = { version = "1", features = ["macros", "rt"] }
 
 [features]
 default = ["app-runner", "custom-protocol"]
-app-runner = ["dep:tauri-plugin-updater", "dep:tauri-plugin-opener", "dep:mp3lame-encoder"]
+app-runner = ["dep:tauri-plugin-updater", "dep:tauri-plugin-opener", "dep:mp3lame-encoder", "dep:sha2"]
 custom-protocol = ["tauri/custom-protocol"]
 
 # Dev builds must keep the realtime DSP chain comfortably above 1x even at

@@ -1,0 +1,41 @@
+fn write_float(p:&std::path::Path,x:&[f32],sr:u32){
+ let mut w=hound::WavWriter::create(p,hound::WavSpec{channels:2,sample_rate:sr,bits_per_sample:32,sample_format:hound::SampleFormat::Float}).unwrap();for s in x{w.write_sample(*s).unwrap();}w.finalize().unwrap();
+}
+fn main(){
+ let args:Vec<String>=std::env::args().collect();let out=PathBuf::from(&args[1]);std::fs::create_dir_all(&out).unwrap();
+ let data:Value=serde_json::from_slice(&std::fs::read(&args[2]).unwrap()).unwrap();
+ let mut settings:MasteringSettings=serde_json::from_value(data["base_settings"].clone()).unwrap();
+ settings.preset=Preset::Custom{id:"diagnostic-neutral".into()};settings.advanced.source_profile=None;settings.advanced.compression_mode=CompressionMode::Off;settings.advanced.compression_density=Some(0.0);settings.advanced.adaptive_strength=Some(0.0);
+ let mut rows=vec![];
+ for sr in [44100u32,48000,96000]{
+  let cases:Vec<(String,Vec<f32>,Value)>=[1000u32,7000,11000].into_iter().flat_map(|hz|[-24.0f32,-12.0,-6.0,0.0,6.0].into_iter().map(move |level|{
+    let x:Vec<f32>=(0..sr*2).flat_map(|i|{let y=(10f64.powf(level as f64/20.0)*(std::f64::consts::TAU*hz as f64*i as f64/sr as f64).sin()) as f32;[y,y]}).collect();
+    (format!("tone_{hz}_{level}"),x,json!({"type":"tone","hz":hz,"level":level}))
+  })).collect();
+  let mut cases=cases;
+  for typ in ["multitone","burst","silence","tiny_tail","impulse","step"]{
+    let x:Vec<f32>=(0..sr*5).flat_map(|i|{let t=i as f64/sr as f64;let y=match typ{
+      "multitone"=>0.4*((std::f64::consts::TAU*997.0*t).sin()+(std::f64::consts::TAU*7003.0*t).sin()),
+      "burst"=>{let a=if (1.0..1.02).contains(&t){2.0}else{0.01};a*(std::f64::consts::TAU*997.0*t).sin()},
+      "tiny_tail"=>10f64.powf(-6.0-8.0*t)*(std::f64::consts::TAU*997.0*t).sin(),
+      "impulse"=>if i==sr{2.0}else{0.0},
+      "step"=>if t<1.0{0.0}else if t<2.0{0.5}else if t<3.0{-0.5}else{0.0},
+      _=>0.0};[y as f32,(y*0.5) as f32]}).collect();cases.push((typ.into(),x,json!({"type":typ})));
+  }
+  for (name,input,meta) in cases{
+   let input_name=format!("{sr}_{name}_input.wav");write_float(&out.join(&input_name),&input,sr);
+   for (mode,amount,limited) in [("bypass",0.0,false),("epsilon",1.0e-8,false),("current",0.0715,false),("half",0.03575,false),("continuous",-0.0715,false),("current_limit",0.0715,true),("continuous_limit",-0.0715,true),("limiter_only",0.0,true)]{
+    let mut c=MasteringChain::new(sr,2,&settings);c.coeffs.saturation_amount=amount;c.coeffs.input_gain_lin=1.0;
+    if !limited{c.limiter=dsp::Limiter::new(sr,2,60.0,3.0,50.0);}
+    let mut pcm=input.clone();let t=std::time::Instant::now();c.process_interleaved(&mut pcm,2);c.flush_render_tail(&mut pcm,2);let seconds=t.elapsed().as_secs_f64();
+    assert!(pcm.iter().all(|x|x.is_finite()));assert_eq!(pcm.len(),input.len());
+    let subnormals=pcm.iter().filter(|x|**x!=0.0&&x.abs()<f32::MIN_POSITIVE).count();
+    let err=pcm.iter().zip(&input).map(|(a,b)|(a-b).abs()).fold(0.0_f32,f32::max);
+    if mode=="bypass" && name.starts_with("tone"){assert!(err<1.0e-6,"Neutral seam is not identity {}",err);}
+    let file=format!("{sr}_{name}_{mode}.wav");write_float(&out.join(&file),&pcm,sr);
+    rows.push(json!({"rate":sr,"case":name,"meta":meta,"mode":mode,"amount":amount,"limited":limited,"input":input_name,"output":file,"stats":c.diag,"seconds":seconds,"subnormal_samples":subnormals,"max_input_difference":err,"measure":measure(&pcm,2,sr)}));
+   }
+  }
+ }
+ std::fs::write(out.join("native.json"),serde_json::to_vec_pretty(&rows).unwrap()).unwrap();println!("{} mechanism cases",rows.len());
+}

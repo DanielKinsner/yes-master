@@ -8,7 +8,9 @@ import { Icon } from "./StudioElements";
 
 export default function Hero({
   release = resolveRelease(),
-}: { release?: ResolvedRelease } = {}) {
+  onTryIt,
+  onTryItIntent,
+}: { release?: ResolvedRelease; onTryIt?: () => void; onTryItIntent?: () => void } = {}) {
   return (
     <>
       <section id="top" className="studio-hero">
@@ -36,22 +38,19 @@ export default function Hero({
                   ? copy.hero.primary_available
                   : copy.hero.primary_unavailable}
               </a>
-              <button
-                className="btn-ghost studio-demo"
-                type="button"
-                aria-disabled="true"
-                aria-describedby="demo-note"
-              >
-                <Icon kind="play" />
-                Watch demo
-              </button>
+              {onTryIt && (
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={onTryIt}
+                  onPointerEnter={onTryItIntent}
+                  onFocus={onTryItIntent}
+                  data-testid="hero-try-it"
+                >
+                  Try it on your mix <Icon kind="arrow" />
+                </button>
+              )}
             </div>
-            <p id="demo-note" className="studio-demo-note">
-              Demo video not available yet.{" "}
-              <a href="#how">
-                See how it works <span aria-hidden="true">↗</span>
-              </a>
-            </p>
             <ul className="studio-hero-points">
               <li>
                 <Icon kind="bolt" />

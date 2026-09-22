@@ -1,0 +1,4 @@
+input04, Universal default chain output (limiter ceiling -1 dBTP, 1.012 margin => -1.10 target):
+  chain_input04_44k.f32.wav            sr=44100 crate4xTP= -1.10 16xTP= -0.84 samplePk= -1.10 LUFS=-10.77
+  chain_input04_engineSRC48.wav        sr=48000 crate4xTP=  0.49 16xTP=  0.49 samplePk=  0.49 LUFS=-10.79
+  chain_input04_soxr48.wav             sr=48000 crate4xTP= -0.19 16xTP= -0.19 samplePk= -0.19 LUFS=-10.85

@@ -1,0 +1,141 @@
+{
+  "analysis": {
+    "deep_analysis_present": true,
+    "dynamic_range_lu": 0.0992347002029419,
+    "dynamic_range_p95_p10_db": 13.361482620239258,
+    "energy_density_score": 0.08265408128499985,
+    "inferred_character": "dark",
+    "inferred_role": "interlude",
+    "lufs_integrated": -29.160320281982422,
+    "lufs_short_term_max_3s": -29.082263946533203,
+    "source_profile_digest": "bright 0.12 / low 0.81 / DR 13.4dB / LRA 0.1LU / corr 1.00",
+    "spectral_balance_6band": {
+      "air": 0.07744890451431274,
+      "low": 0.1353049874305725,
+      "low_mid": 0.03132415935397148,
+      "mid": 0.037006232887506485,
+      "presence": 0.046533335000276566,
+      "sub": 0.6723824143409729
+    },
+    "stand_down": {
+      "hot_loudness": false,
+      "low_lra": false,
+      "near_ceiling": false,
+      "stand_down": 0.0,
+      "uniformly_low_psr": true
+    },
+    "stereo_correlation": 1.0,
+    "stereo_width": 0.0,
+    "transient_flux": 0.15221871435642242,
+    "true_peak_dbtp": -8.167908668518066
+  },
+  "checks": [
+    {
+      "code": "streaming_headroom_low",
+      "level": "warning",
+      "message": "True peak is -1.00 dBTP. Within safe digital range, but lossy delivery (AAC, MP3, Opus) can overshoot by up to ~1 dB after encoding. Consider lowering the ceiling for comfortable streaming masters."
+    },
+    {
+      "code": "target_not_reached",
+      "level": "info",
+      "message": "Delivered -17.4 LUFS — 3.4 LU below the -14.0 LUFS target; the -1.0 dBTP ceiling capped the loudness push (true peak is at the ceiling). Use a lower target or a higher ceiling if this master should be louder."
+    },
+    {
+      "code": "dynamic_range_low",
+      "level": "info",
+      "message": "Delivered loudness range (LRA) is 0.2 LU: little longer-term loudness variation. This does not measure transient dynamics."
+    },
+    {
+      "code": "comp_density_on_compressed_source",
+      "level": "info",
+      "message": "Source loudness range (LRA) is low. Compare with compression Off to judge transient movement by ear."
+    }
+  ],
+  "effective_bit_depth": 24,
+  "effective_ceiling_dbtp": -1.0,
+  "effective_target_lufs": -14.0,
+  "elapsed_s": 1.2789562,
+  "input": "C:\\Users\\Daniel Kinsner\\OneDrive\\Documents\\GitHub\\yes-master-independent-audit-20260915\\audit-output/variants/heldout_drums_-6dB_96k.wav",
+  "measurements": {
+    "bit_depth": 24,
+    "compression_digest": null,
+    "confidence_digest": null,
+    "dynamic_range_lu": 0.16231802105903625,
+    "effective_adaptive_strength": 0.5,
+    "lufs_integrated": -17.43145751953125,
+    "mp3_bitrate_kbps": null,
+    "sample_rate": 48000,
+    "source_profile_digest": "bright 0.12 / low 0.81 / DR 13.4dB / LRA 0.1LU / corr 1.00",
+    "true_peak_dbtp": -0.9999985694885254
+  },
+  "output": "C:\\Users\\Daniel Kinsner\\OneDrive\\Documents\\GitHub\\yes-master-independent-audit-20260915\\audit-output\\renders\\candidate\\heldout_drums_universal_B.wav",
+  "requested_sample_rate": 48000,
+  "settings": {
+    "advanced": {
+      "adaptive_strength": null,
+      "bit_depth": null,
+      "ceiling_dbtp": null,
+      "compression_density": null,
+      "compression_high_attack_ms": null,
+      "compression_high_ratio": null,
+      "compression_high_release_ms": null,
+      "compression_high_threshold_db": null,
+      "compression_link_stereo": null,
+      "compression_low_attack_ms": null,
+      "compression_low_ratio": null,
+      "compression_low_release_ms": null,
+      "compression_low_threshold_db": null,
+      "compression_mid_attack_ms": null,
+      "compression_mid_ratio": null,
+      "compression_mid_release_ms": null,
+      "compression_mid_threshold_db": null,
+      "compression_mode": "preset",
+      "lufs_offset_db": null,
+      "presence_air": null,
+      "source_profile": {
+        "dynamic_range_lu": 0.0992347002029419,
+        "dynamic_range_p95_p10_db": 13.361482620239258,
+        "spectral_6": {
+          "air": 0.07744890451431274,
+          "low": 0.1353049874305725,
+          "low_mid": 0.03132415935397148,
+          "mid": 0.037006232887506485,
+          "presence": 0.046533335000276566,
+          "sub": 0.6723824143409729
+        },
+        "stereo_correlation": 1.0,
+        "stereo_width": 0.0
+      },
+      "target_sample_rate": null,
+      "warmth": null,
+      "width": null
+    },
+    "album": null,
+    "delivery_profile": "streaming-universal",
+    "eq_bands": {
+      "high_hz": 6000.0,
+      "high_mid_hz": 3500.0,
+      "low_hz": 200.0,
+      "low_mid_hz": 400.0,
+      "mid_hz": 1500.0,
+      "sparkle_hz": 12000.0,
+      "sub_hz": 80.0
+    },
+    "eq_high_db": 0.0,
+    "eq_high_mid_db": 0.0,
+    "eq_low_db": 0.0,
+    "eq_low_mid_db": 0.0,
+    "eq_mid_db": 0.0,
+    "eq_sparkle_db": 0.0,
+    "eq_sub_db": 0.0,
+    "input_gain_db": 6.0,
+    "intensity": 0.5,
+    "output_gain_db": 0.0,
+    "preset": {
+      "kind": "universal"
+    },
+    "source_lufs_integrated": -29.160320281982422,
+    "volume_match": false
+  },
+  "status": "Done"
+}

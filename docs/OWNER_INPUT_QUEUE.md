@@ -1,5 +1,33 @@
 # YES Master — Owner Input Queue
 
+**September 16 experimental sound direction answered:** favor preserving punch
+and quiet-to-loud contrast when pursuing the target would flatten them. Dan chose
+this recommendation for experiments and wants polished results without routine
+user-facing caveats. Keep research explanations internal and measured results
+accurate. Do not ask this direction again. Specific shipping thresholds, preset
+voicing and selector adoption still require their evidence and applicable decision.
+See [the verified checkpoint and decision](reviews/2026-09-16-single-first-development-results.md).
+
+**September 16 follow-through:** Dan approved selective local fixes integration
+and subsequent sound research on a separate branch. Engineering verification
+continues without another routine approval. Sonic tradeoff/calibration decisions
+remain unresolved; the review pause below is historical. See the
+[integration record](reviews/2026-09-16-mastering-fixes-integration.md).
+
+**September 16 mastering update:** the owner will review the local fixes before
+main integration and potential beta inclusion. Sound experiments and their
+preference questions are deferred until the approved fixes are merged; subsequent
+sound research belongs on a separate branch. Do not ask for a sound-priority
+answer to proceed with this review. See the [review guide](reviews/2026-09-16-mastering-fixes-review.md)
+and current decision in `docs/OPEN_THREADS_AND_DECISIONS.md`. No preference,
+merge approval or release approval is inferred from the pause.
+
+**September 9 update:** the owner completed all five checks on installed Windows
+0.9.2 / `07021f1b` and reported all passed. See the
+[installed record](listening/2026-09-09-installed-check.md). Do not add another
+request for those same checks; preserve this pass while verifying subsequent
+export-format changes and the separate Mac/release requirements.
+
 The single place where **questions only the owner can answer** accumulate while
 an agent is executing a chunk of
 `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`.
@@ -20,6 +48,16 @@ See checkpoint 9 in the follow-up plan for verification and remaining limits.
 The objective VM, resource and UI fixes proceed independently.
 
 ## Why this file exists
+
+September 9 export candidate prerequisites: Mac checks are deferred to the
+owner's next Mac session (answered; do not ask again now). Before redistribution,
+the owner must resolve the [specific LGPL relinking permission draft](third-party/lgpl-relink-exception-DRAFT.md).
+The [exact Windows candidate](listening/2026-09-09-export-candidate.md) and source
+materials are now prepared. A full modified-LAME rebuild and real MP3 encode
+passed; the proposed permission remains an unresolved owner decision.
+Permanent updater key cross-machine backup/recovery still needs its release
+evidence. On September 14 the owner selected eight weeks from actual launch;
+the concrete end date will be publication date plus 56 calendar days.
 
 Record real unresolved owner choices so independent work can continue without
 inventing an answer or repeatedly asking the same question. First check current
@@ -60,9 +98,9 @@ already authorized do not belong here.
 | ~~2026-09-05~~ | ~~Listening follow-up 5C manifest~~ | ~~Album manifest presentation~~ **ANSWERED:** use `metadata/manifest.json`; explain its purpose in the receipt so users do not receive an unexplained file. See `docs/OPEN_THREADS_AND_DECISIONS.md`. | Implemented locally; see checkpoint 6 in the follow-up plan. Existing exports stay untouched. | Update paths, links, folder creation and cleanup; explain that supporting export details are not needed to play or share audio. |
 | ~~2026-09-05~~ | ~~Listening follow-up 5C naming~~ | ~~Master filename suffix~~ **ANSWERED:** Track `Song_mastered.wav`; Album `01-Song_mastered.wav`, one underscore, numbered in final left-rail order. See `docs/OPEN_THREADS_AND_DECISIONS.md`. | Implemented locally; see checkpoint 6 in the follow-up plan. Existing exports retain their names. | Apply new default names with source/prior-output protection. |
 | ~~2026-09-05~~ | ~~Listening follow-up 6~~ | ~~MP3 scope and quality~~ **ANSWERED:** Standard and Advanced Track first, then Album after agent verification without further approval. Offer 320 (default), 256, 192 and 128 kbps; WAV remains the default format. Normal mastering export only; no converter or setting reset. See `docs/OPEN_THREADS_AND_DECISIONS.md`. | Implemented for Standard/Track and Album with codec, processed-PCM parity, cancellation and decoded-file measurement tests; see checkpoint 9. Mac packaging remains a release check. | Deliver Track then Album and update product/behavior/help descriptions to match verified functionality. |
-| 2026-07-24 | U1 (for U4/U6) | **Founder-window dates and exact purchase terms** (R24). `docs/PRODUCT.md` already records the $29→$49 founder/standard split as a settled business model, but the *window* — when it opens, how long it runs, what exactly a beta tester is entitled to and for how long — is not decided. | No date, duration, or entitlement wording appears in any public surface or doc. Where copy must reference the window it stays qualified ("a time-limited founder price will be announced") with no number attached. | U6 landing copy and U4 newsletter/beta-guide copy can state the window. Until then any concrete term is a hard stop, not an agent call. |
+| 2026-09-14 | U1 (for U4/U6) | **Founder-window dates and exact purchase terms** (R24), including final prices. The owner explicitly reopened the former $29 founder / $49 standard figures; they are not fixed. The [competitive assessment](reviews/2026-09-14-pricing-assessment.md) recommends $49 introductory / $79 standard, but no replacement price, window or entitlement is adopted. | Existing public copy remains a qualified prior pricing proposal. The free-beta duration stays eight weeks from actual launch. Do not treat either the former prices or the new recommendation as final purchase terms. | Once the owner settles pricing and terms, update affected product, landing and purchase copy consistently. The requested research itself needs no further approval. |
 | 2026-07-24 | U1 (for U4) | **Newsletter provider, consent storage, retention period, and sender identity.** `src/landing/signup-config.ts` ships `SIGNUP_ENDPOINT = ""` and the form is safe-disabled. No vendor is selected. | Signup form stays safe-disabled. No vendor is inferred, no endpoint is written, no consent text promises a retention period. Download access does not depend on it. | U4 can wire the form, write real consent/retention/unsubscribe copy, and add the provider-outage path. A provisioning/integration review runs before it goes live (hardening plan Workstream F). |
-| 2026-07-24 | U1 (for U4/U6) | **Beta end date.** D2 specifies a ~8-week timebox with a concrete flip date announced on the landing page; the date itself is unset. **Provisional answer 2026-08-31 (owner, in-session): 2026-10-31**, pending the owner's launch-cost review — confirm at publish time before it lands in `RELEASE_METADATA` or public copy. | Public copy says the beta is time-boxed without naming a date. **Implemented in U5 (2026-07-25):** `resolveRelease()` in `src/landing/release-config.ts` treats an absent or malformed `betaEndsAt` as a reason the download stays **unavailable**, and a date in the past closes it again — so a stale window can never keep a download live. Pinned by `release-readiness.test.ts`. | The date can be set in `RELEASE_METADATA` (which also needs a published, verified release — see `docs/RELEASE_SIGNING_SETUP.md` "Activating the landing download") and U6 can print it. |
+| ~~2026-07-24~~ | ~~U1 (for U4/U6)~~ | **Beta end date / duration ANSWERED September 14:** eight weeks from actual launch, superseding provisional October 31. | Keep release metadata closed during preparation. | At verified publication, set betaEndsAt to the actual publication date plus 56 calendar days and publish that concrete date. No repeat date question is needed. |
 | 2026-07-24 | U1 (for U17) | **Public beta announcement date and publication authorization.** | Nothing is announced. No non-draft release is published, no landing deploy happens. | U17 can deploy and the owner announces. This is an owner action in every case — the answer sets timing, not authority. |
 | 2026-07-24 | U3 | **Headless browser runtime for the web E2E lane** — Playwright's bundled Chromium vs the installed Chrome channel. *Agent-settled: U3 explicitly delegates this choice. Logged so the owner can see and reverse it, not because it blocked anything.* | **Bundled Chromium.** `channel: "chrome"` was dropped; the runtime now lives in one place (`scripts/lib/headless-browser.mjs`) and is pinned by the `playwright` entry in `package-lock.json`. CI installs it explicitly with `npx playwright install --with-deps chromium`. A missing browser **fails** the lane instead of skipping. Verified before adopting: the full landing suite produces **identical** results under both runtimes — 0 failures each, 12 viewports, 8 anchor checks, 0 per-viewport metric mismatches. | Nothing is waiting on this. Reversing it is one `channel` argument in `headless-browser.mjs` plus the CI install target. |
 | 2026-07-24 | U1 | **Do the `docs/legal/` drafts ship as-is with the beta?** D6 records that legal is explicitly *not* a beta gate and the owner researches independently — which answers "is it blocking" but not "does it ship". | Drafts stay in the repo, unbundled and unlinked from any public surface. | The beta guide and installer can reference them. |

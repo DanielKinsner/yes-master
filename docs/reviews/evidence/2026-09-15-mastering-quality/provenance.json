@@ -1,0 +1,86 @@
+{
+  "head": "a4fb621d88a95b8af549467fb499943acb4274d5",
+  "records": [
+    {
+      "file": "src-tauri\\src\\confidence.rs",
+      "source_sha256": "e83c2472fa7bed625bbfa8273eab07a864ad1b394980e3a49b27d2c47d588443",
+      "diagnostic_sha256": "f8bba8d75a98fb22be0706c2dd4955ffcf4c2ae6688abb5e878b439963f5110d",
+      "transformation": "Disable six existing non-WASM-only IPC wrappers and one related import using cfg(any()); no algorithm edits.",
+      "sections": 2
+    },
+    {
+      "file": "src-tauri\\src\\guardrails.rs",
+      "source_sha256": "1630d4c6b798c562ac07395e0522f24e3873be5dc2ee199f94fa0b72551c3195",
+      "diagnostic_sha256": "cfe666c165548b6f79e4c4bc37292337c4ad7e589a4de970ae4b0a3e99ea85e0",
+      "transformation": "Disable six existing non-WASM-only IPC wrappers and one related import using cfg(any()); no algorithm edits.",
+      "sections": 5
+    },
+    {
+      "file": "src-tauri\\src\\dsp.rs",
+      "source_sha256": "da54418c8c197456c4534d72cc6bdafc429a72ee2b5c0175023da459324f907c",
+      "transformation": "Direct path inclusion, unchanged"
+    },
+    {
+      "file": "src-tauri\\src\\types.rs",
+      "source_sha256": "5778a66a8276beb8aa6d80d8a6e88d1be89747d31324e8d36b6dc650e3a2b7fe",
+      "transformation": "Direct path inclusion, unchanged"
+    },
+    {
+      "file": "src-tauri\\src\\analysis.rs",
+      "source_sha256": "b7ac4234cc6c3d54d0287d63a6de0c47d36097fa919dac8d41fbab0834f9e4e1",
+      "transformation": "Direct path inclusion, unchanged"
+    },
+    {
+      "file": "src-tauri\\src\\deep_analysis.rs",
+      "source_sha256": "909d6a1795287ea0159ec52e4d62146c508e9d776df76a176151deae046da162",
+      "transformation": "Direct path inclusion, unchanged"
+    },
+    {
+      "file": "src-tauri\\src\\sample_rate.rs",
+      "source_sha256": "bade23975ae231b8d63373b991775e4e3ecb0166224d81916f667702358b7990",
+      "transformation": "Direct path inclusion, unchanged"
+    },
+    {
+      "file": "src-tauri\\src\\wav_writer.rs",
+      "source_sha256": "4675c15213c6e43b591eb91cdda1693d5676820f8f3667d1211a25e834efb856",
+      "transformation": "Direct path inclusion, unchanged"
+    },
+    {
+      "file": "src-tauri\\src\\export_format.rs",
+      "source_sha256": "1d3e6c445eb758438a6b5ecc826e8b1cfb906bda1cb6301ad92de7bb6cbd4ad6",
+      "transformation": "Direct path inclusion, unchanged"
+    },
+    {
+      "file": "web\\tryit\\wasm\\src\\stubs.rs",
+      "source_sha256": "2e552ce4e763d38f702727c0b7c4c7670ae393ce71b39f90d2f877ccfaf7c3c8",
+      "transformation": "Direct path inclusion of existing compile stubs."
+    }
+  ],
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "ffmpeg": "ffmpeg version 7.1.1-full_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers",
+  "numpy": "2.2.6",
+  "reproduction": {
+    "on": "639ac1dd5d049040d8b689636c08bf2890b39929b72601703d1b93938f6022ce",
+    "off": "d33c8cae3238161a8d7f812884c2137d980189485b3618def8af93a8baab6ea5"
+  },
+  "protocol_sha256": "7fdc8e864a3688ba9ea8e2d960a3ac9eb0191e6751ef98fba1578cb9deae6f2b",
+  "cargo_lock_sha256": "aaba829c0c7d37ca5929472c6c9919bfd2512feb0938d234cf9d61a49a730940",
+  "python": "3.13.5",
+  "scipy": "1.17.1",
+  "verified_reproduction": {
+    "on": "639ac1dd5d049040d8b689636c08bf2890b39929b72601703d1b93938f6022ce",
+    "off": "d33c8cae3238161a8d7f812884c2137d980189485b3618def8af93a8baab6ea5",
+    "chunk257": "639ac1dd5d049040d8b689636c08bf2890b39929b72601703d1b93938f6022ce"
+  },
+  "instrumentation": {
+    "source_sha256": "da54418c8c197456c4534d72cc6bdafc429a72ee2b5c0175023da459324f907c",
+    "private_dsp_sha256": "379ff0d8ed57f74665f27b26a4cea4534d902b9e677f7df6aed6cf5e86135bf5",
+    "changes": "Added read-only stage statistics; retained exact positive saturation operations; negative coefficient selects private continuous mapping."
+  },
+  "harness_sha256": {
+    "src\\runner.rs": "da5b799a197e93d67b4777e3ef051f26a7464d301a5950e97b406bbdfb384b66",
+    "src\\src_fixed.rs": "ece0007a81c2e57dfc2de2cab0768196d328294d4204f96a5b3b4d27033d579e",
+    "Cargo.toml": "914b36e59f601c99b062585daf6271087fc0bf849228fd69dd7888bb32821e27",
+    "extend.py": "f8c20c68f135f632fc4332ececaffc1532a843d8a9ab8923c5b0d1ecd838e0d2"
+  }
+}

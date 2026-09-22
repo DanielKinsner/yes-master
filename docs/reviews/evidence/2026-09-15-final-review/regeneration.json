@@ -1,0 +1,27 @@
+[
+  {
+    "file": "defect_clip50ms_streaming_24.wav",
+    "sha256": "9cd31b3a31af6e3895f7bef718b37138a1eb205a2637cfdb1eeca412ef873755",
+    "matches_pruned_record": true
+  },
+  {
+    "file": "defect_input04_custom_notarget_24.wav",
+    "sha256": "bda37dfed794ead5c6aa080b666b1d713b51fbce29ba6d17c0f966abfcabfd8c",
+    "matches_pruned_record": true
+  },
+  {
+    "file": "defect_input04_custom_notarget_f32.wav",
+    "sha256": "3ed22207706f1789f767410a79cb9dfcd115249706ed611f5b60651303f44bfa",
+    "matches_pruned_record": true
+  },
+  {
+    "file": "regrow_input04_chain441.f32.wav",
+    "sha256": "5c9b4ac584569333fca0345cfd10185b5faae12e5fbf4c3d242ca195a8962762",
+    "matches_pruned_record": true
+  },
+  {
+    "file": "regrow_input04_prod48.f32.wav",
+    "sha256": "2b99ba85daf96d05057c74df5d872c9991301452525c0e6bc351473e4bd4dee9",
+    "matches_pruned_record": true
+  }
+]

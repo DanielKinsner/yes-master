@@ -45,6 +45,19 @@ fn measure(samples: &[f32], sr: u32, channels: u32) -> (f64, f64) {
     (ebu.loudness_global().unwrap(), 20.0 * peak.log10())
 }
 
+// Receipt contract: fresh read of delivered samples with the declared meter.
+// Independent finite reconstruction/ceiling tests remain in the qualification
+// suite. Keep the preexisting limiter-specific library checks separate.
+fn measure_delivery(samples: &[f32], sr: u32, channels: u32) -> (f64, f64) {
+    (
+        measure(samples, sr, channels).0,
+        peak_meter::measure(samples, channels as usize, || false)
+            .unwrap()
+            .upper_dbtp()
+            .unwrap_or(-60.),
+    )
+}
+
 fn analyze(path: &Path) -> AnalysisResult {
     analyze_tracks_core_with_progress_sync(
         vec![AnalyzeRequest {
@@ -55,6 +68,102 @@ fn analyze(path: &Path) -> AnalysisResult {
     )
     .unwrap()
     .remove(0)
+}
+
+#[test]
+fn short_and_no_target_exports_still_apply_known_peak_protection() {
+    let dir = tempfile::tempdir().unwrap();
+    for duration_ms in [50, 1000] {
+        let path = dir.path().join(format!("short-{duration_ms}.wav"));
+        let samples: Vec<f32> = (0..48 * duration_ms)
+            .flat_map(|i| {
+                let x =
+                    (0.85 * (std::f64::consts::TAU * 997.0 * f64::from(i) / 48000.0).cos()) as f32;
+                [x, -x * 0.8]
+            })
+            .collect();
+        write(&path, 48_000, &samples);
+        for profile in [DeliveryProfile::Custom, DeliveryProfile::StreamingUniversal] {
+            for bits in [16, 24, 32] {
+                let mut settings = common::default_master_settings();
+                settings.delivery_profile = profile;
+                settings.advanced.ceiling_dbtp = Some(-3.0);
+                settings.advanced.bit_depth = Some(bits);
+                settings.output_gain_db = 12.0;
+                let landing = preview_landing(&samples, 48_000, 2, &settings).unwrap();
+                assert!(landing.gain_lin < 1.0, "short/no-target peak bypass");
+                if duration_ms == 50 {
+                    assert!(!landing.mastered_lufs.is_finite());
+                }
+                let job = mastering_render(
+                    TrackId("peak-bypass".into()),
+                    &path,
+                    &settings,
+                    dir.path(),
+                    RenderKind::Master,
+                )
+                .unwrap();
+                let output = decode::decode_full(Path::new(&job.output_paths[0])).unwrap();
+                assert_eq!(output.samples.len(), samples.len());
+                let (lufs, peak) = measure_delivery(&output.samples, 48_000, 2);
+                assert!(
+                    peak <= f64::from(settings.effective_ceiling_dbtp()) + 0.002,
+                    "B1 measured peak {peak}, bits {bits}"
+                );
+                assert!(output.samples.iter().all(|x| x.abs() < 1.0));
+                let receipt = job.measurements.unwrap();
+                assert!(
+                    (f64::from(receipt.true_peak_dbtp) - peak).abs() < 0.002,
+                    "receipt {} versus fresh {peak}; {duration_ms} ms, {profile:?}, PCM{bits}",
+                    receipt.true_peak_dbtp
+                );
+                if lufs.is_finite() {
+                    assert!((f64::from(receipt.lufs_integrated) - lufs).abs() < 0.002);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn hot_start_cd_export_retains_exact_frame_count_and_tail() {
+    let dir = tempfile::tempdir().unwrap();
+    for rate in [48_000, 96_000] {
+        let path = dir.path().join(format!("hot-start-{rate}.wav"));
+        let samples: Vec<f32> = (0..rate * 2 + 1)
+            .flat_map(|i| {
+                let x = (0.3
+                    * (std::f64::consts::TAU * 100.0 * f64::from(i) / f64::from(rate)).cos())
+                    as f32;
+                [x, 0.0]
+            })
+            .collect();
+        write(&path, rate, &samples);
+        let mut settings = common::default_master_settings();
+        settings.delivery_profile = DeliveryProfile::Cd;
+        settings.advanced.adaptive_strength = Some(0.0);
+        settings.advanced.width = Some(1.0);
+        let job = mastering_render(
+            TrackId("cd-src".into()),
+            &path,
+            &settings,
+            dir.path(),
+            RenderKind::Master,
+        )
+        .unwrap();
+        let out = decode::decode_full(Path::new(&job.output_paths[0])).unwrap();
+        assert_eq!(out.sample_rate, 44_100);
+        assert_eq!(out.samples.len(), 88_201 * 2);
+        assert!(out.samples[..20].iter().any(|x| x.abs() > 0.01));
+        assert!(out.samples[out.samples.len() - 20..]
+            .iter()
+            .any(|x| x.abs() > 0.01));
+        // Stereo-linked dynamics cannot invent right-channel programme.
+        assert!(out
+            .samples
+            .chunks_exact(2)
+            .all(|f| f[1].abs() <= 1.0 / 32768.0));
+    }
 }
 
 #[test]
@@ -182,7 +291,7 @@ fn adaptive_spectrum_preserves_stereo_side_energy() {
 }
 
 #[test]
-fn float_export_preserves_headroom_and_receipt_matches_saved_file() {
+fn no_target_float_export_uses_scalar_protection_and_receipt_matches_saved_file() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("float.wav");
     write(&path, 44100, &sine(44100, 2, 1000.0, 0.5));
@@ -203,12 +312,28 @@ fn float_export_preserves_headroom_and_receipt_matches_saved_file() {
     )
     .unwrap();
     let output = decode::decode_full(Path::new(&job.output_paths[0])).unwrap();
-    assert!(
-        output.samples.iter().any(|x| x.abs() > 1.5),
-        "float export silently clipped headroom"
-    );
-    let actual = measure(&output.samples, output.sample_rate, 2);
+    // B1 intentionally removes the no-target bypass, including float exports.
+    // Verify uniform scaling of the above-full-scale chain, not sample clipping.
+    // Direct writer float-headroom regressions remain in wav_writer.rs.
+    let mut raw = sine(44100, 2, 1000.0, 0.5);
+    let mut chain = MasteringChain::new(44100, 2, &settings);
+    chain.process_interleaved(&mut raw, 2);
+    chain.flush_render_tail(&mut raw, 2);
+    assert!(raw.iter().any(|x| x.abs() > 1.5));
+    let (index, peak) = raw
+        .iter()
+        .enumerate()
+        .max_by(|(_, a), (_, b)| a.abs().total_cmp(&b.abs()))
+        .unwrap();
+    let gain = output.samples[index] / peak;
+    assert!(gain > 0.0 && gain < 1.0);
+    assert!(raw
+        .iter()
+        .zip(&output.samples)
+        .all(|(before, after)| (*before * gain - after).abs() < 2e-7));
+    let actual = measure_delivery(&output.samples, output.sample_rate, 2);
     let receipt = job.measurements.unwrap();
+    assert!(actual.1 <= f64::from(settings.effective_ceiling_dbtp()) + 0.002);
     assert!((actual.0 - receipt.lufs_integrated as f64).abs() < 0.02);
     assert!((actual.1 - receipt.true_peak_dbtp as f64).abs() < 0.02);
 }
@@ -254,7 +379,7 @@ fn integer_export_receipt_measures_the_quantized_delivered_signal() {
         )
         .unwrap();
         let decoded = decode::decode_full(Path::new(&job.output_paths[0])).unwrap();
-        let actual = measure(&decoded.samples, decoded.sample_rate, 2);
+        let actual = measure_delivery(&decoded.samples, decoded.sample_rate, 2);
         let reported = job.measurements.unwrap();
         assert!(
             (actual.0 - reported.lufs_integrated as f64).abs() < 0.02,

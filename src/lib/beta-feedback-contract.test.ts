@@ -261,10 +261,11 @@ describe("U4 — the beta guide is discoverable and honest", () => {
     expect(guide).toMatch(/mobile is not part of this beta/i);
   });
 
-  it("names no concrete beta end date while that is unanswered", () => {
-    // OWNER_INPUT_QUEUE: the beta end date is not decided. Public copy stays
-    // time-boxed-but-undated until it is.
-    expect(guide).toMatch(/time-boxed|limited period/i);
+  it("uses the owner-approved eight weeks from launch without inventing a launch date", () => {
+    // OWNER_INPUT_QUEUE, September 14: duration answered, actual publication
+    // still pending. This checks that decision without changing public copy.
+    expect(guide).toMatch(/free for eight weeks from launch/i);
+    expect(guide).toMatch(/exact end date is announced/i);
     expect(guide).not.toMatch(/\b20\d\d-\d\d-\d\d\b/);
   });
 });

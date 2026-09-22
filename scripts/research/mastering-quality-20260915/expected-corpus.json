@@ -1,0 +1,526 @@
+{
+  "acquired_utc": "2026-09-15T00:57:19.887898+00:00",
+  "changes_notice": "Decoded to float PCM; three stem sums peak-normalized to -6 dBFS without mastering. Experimental renders apply documented YES candidates. No creator endorsement implied.",
+  "sources": [
+    {
+      "id": "coat",
+      "title": "It's a coat",
+      "artist": "Owner-supplied",
+      "split": "development",
+      "kind": "owner_source_mastering_history_unspecified",
+      "license": "Private owner-authorized research, no redistribution here",
+      "sha256": "0b39d396856d38c0d927986e0bb45058e7a92c378dac4bcf27ddcf1552e651c9",
+      "changes": "Unchanged PCM16 source",
+      "path": "tests for presets\\It\u2019s a coat-original-test.wav",
+      "decoded_parts": []
+    },
+    {
+      "id": "piano",
+      "title": "In This Moment",
+      "artist": "Scott Buckley",
+      "split": "development",
+      "kind": "finished_mix",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "page": "https://www.scottbuckley.com.au/library/in-this-moment/",
+      "urls": [
+        "https://www.scottbuckley.com.au/library/wp-content/uploads/2026/08/InThisMoment.mp3"
+      ],
+      "originals": [
+        {
+          "url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2026/08/InThisMoment.mp3",
+          "path": "originals\\piano\\InThisMoment.mp3",
+          "sha256": "83cbc46b22660533d814a6dba29d50bc02e0ccb102561017e6533fb2db917b9a",
+          "bytes": 7984316
+        }
+      ],
+      "changes": "FFmpeg decoded to stereo float WAV at original rate; no gain or mastering.",
+      "scalar_gain_db": 0.0,
+      "sha256": "41400345e20b1577a4c14e55ee571bf3182b5be1dbf22a4af9f8286bc142ea2b",
+      "rate": 44100,
+      "frames": 8798386,
+      "duration_seconds": 199.5098866213152,
+      "path": "sources\\piano.wav",
+      "decoded_parts": [
+        {
+          "path": "originals\\piano\\InThisMoment.mp3",
+          "sha256": "83cbc46b22660533d814a6dba29d50bc02e0ccb102561017e6533fb2db917b9a",
+          "frames": 8798386,
+          "decoded_peak": 0.8920838236808777,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "id": "aphelion",
+      "title": "Aphelion",
+      "artist": "Scott Buckley",
+      "split": "holdout",
+      "kind": "finished_mix",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "page": "https://www.scottbuckley.com.au/library/aphelion/",
+      "urls": [
+        "https://www.scottbuckley.com.au/library/wp-content/uploads/2026/04/Aphelion.mp3"
+      ],
+      "originals": [
+        {
+          "url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2026/04/Aphelion.mp3",
+          "path": "originals\\aphelion\\Aphelion.mp3",
+          "sha256": "57ae03dbc122f0859e0f9a273e59503e34883728ddb5b06761fbf8244b0eb23e",
+          "bytes": 16894139
+        }
+      ],
+      "changes": "FFmpeg decoded to stereo float WAV at original rate; no gain or mastering.",
+      "scalar_gain_db": 0.0,
+      "sha256": "ba25305aa489f07ba89795da82d02fc99476179176786c4cd50d64c16abe91df",
+      "rate": 44100,
+      "frames": 18621225,
+      "duration_seconds": 422.25,
+      "path": "sources\\aphelion.wav",
+      "decoded_parts": [
+        {
+          "path": "originals\\aphelion\\Aphelion.mp3",
+          "sha256": "57ae03dbc122f0859e0f9a273e59503e34883728ddb5b06761fbf8244b0eb23e",
+          "frames": 18621225,
+          "decoded_peak": 0.9013408422470093,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "id": "funk",
+      "title": "Funkorama",
+      "artist": "Kevin MacLeod",
+      "split": "development",
+      "kind": "finished_mix",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "page": "https://incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1100474",
+      "urls": [
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Funkorama.mp3"
+      ],
+      "originals": [
+        {
+          "url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Funkorama.mp3",
+          "path": "originals\\funk\\Funkorama.mp3",
+          "sha256": "6be229815d85a0b99382b944d31098b882702c04ac7ad899e44ab7f8ba89b5ad",
+          "bytes": 8199078
+        }
+      ],
+      "changes": "FFmpeg decoded to stereo float WAV at original rate; no gain or mastering.",
+      "scalar_gain_db": 0.0,
+      "sha256": "436970f5fc25c79989891e48243a00d6daa99ae03eeda6b27f767af9a78326a5",
+      "rate": 44100,
+      "frames": 8884224,
+      "duration_seconds": 201.45632653061224,
+      "path": "sources\\funk.wav",
+      "decoded_parts": [
+        {
+          "path": "originals\\funk\\Funkorama.mp3",
+          "sha256": "6be229815d85a0b99382b944d31098b882702c04ac7ad899e44ab7f8ba89b5ad",
+          "frames": 8884224,
+          "decoded_peak": 1.0094730854034424,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "id": "metal",
+      "title": "Metalmania",
+      "artist": "Kevin MacLeod",
+      "split": "development",
+      "kind": "finished_mix",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "page": "https://incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1700023",
+      "urls": [
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Metalmania.mp3"
+      ],
+      "originals": [
+        {
+          "url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Metalmania.mp3",
+          "path": "originals\\metal\\Metalmania.mp3",
+          "sha256": "fe6298b6f9fed30870d21edd97d9be4f35de271789e648eee14a3e8472b6ee4a",
+          "bytes": 6096909
+        }
+      ],
+      "changes": "FFmpeg decoded to stereo float WAV at original rate; no gain or mastering.",
+      "scalar_gain_db": 0.0,
+      "sha256": "f1f1bb3fe485397dca9ef364ef9d805b1433ae5e8701247a47bfd4a55dac48c6",
+      "rate": 44100,
+      "frames": 8399232,
+      "duration_seconds": 190.45877551020408,
+      "path": "sources\\metal.wav",
+      "decoded_parts": [
+        {
+          "path": "originals\\metal\\Metalmania.mp3",
+          "sha256": "fe6298b6f9fed30870d21edd97d9be4f35de271789e648eee14a3e8472b6ee4a",
+          "frames": 8399232,
+          "decoded_peak": 1.09861421585083,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "id": "baby",
+      "title": "Baby Bird",
+      "artist": "Admiral Bob",
+      "split": "development",
+      "kind": "constructed_unmastered_stem_sum",
+      "license": "https://creativecommons.org/licenses/by/3.0/",
+      "page": "https://ccmixter.org/files/admiralbob77/25039",
+      "urls": [
+        "https://ccmixter.org/content/admiralbob77/admiralbob77_-_Baby_Bird_(vocals_and_stems).zip",
+        "https://ccmixter.org/content/admiralbob77/admiralbob77_-_Baby_Bird_(vocals_and_stems)_1.zip"
+      ],
+      "originals": [
+        {
+          "url": "https://ccmixter.org/content/admiralbob77/admiralbob77_-_Baby_Bird_(vocals_and_stems).zip",
+          "path": "originals\\baby\\admiralbob77_-_Baby_Bird_(vocals_and_stems).zip",
+          "sha256": "f10e051a50cb55270ed000c747e8096fecb5912c7143c4229778b666fb780ca3",
+          "bytes": 38757554
+        },
+        {
+          "url": "https://ccmixter.org/content/admiralbob77/admiralbob77_-_Baby_Bird_(vocals_and_stems)_1.zip",
+          "path": "originals\\baby\\admiralbob77_-_Baby_Bird_(vocals_and_stems)_1.zip",
+          "sha256": "25dc6d66b4be9f658b79f4710b4e7ffdc9780a6abec2ef7d46ecb1bac8d78b0a",
+          "bytes": 6112097
+        }
+      ],
+      "changes": "All available stems summed from time zero at unity relative gain; shorter stems zero padded; scalar peak normalization to -6 dBFS; no bus EQ/compression/limiter. Constructed balance, not artist premaster.",
+      "scalar_gain_db": -9.162496137288283,
+      "sha256": "9662eae234edf131d1538a13c7fdb3b1b505d8082dafbadbd773dd057339fd47",
+      "rate": 44100,
+      "frames": 13436928,
+      "duration_seconds": 304.6922448979592,
+      "path": "sources\\baby.wav",
+      "decoded_parts": [
+        {
+          "path": "originals\\baby\\admiralbob77_-_Baby_Bird_(vocals_and_stems)\\acousticguitar.mp3",
+          "sha256": "6d281c27f2c90dc8aac2e2676b2d2332856c9cdfcbff2f02b70ed74ea6f18400",
+          "frames": 13307904,
+          "decoded_peak": 0.840911865234375,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\baby\\admiralbob77_-_Baby_Bird_(vocals_and_stems)\\bass.mp3",
+          "sha256": "80c8738b842f0adf306b9a6e4498af5979161bdb2233097b9717d7ea1dfe06b1",
+          "frames": 13290624,
+          "decoded_peak": 0.2711361050605774,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 1
+        },
+        {
+          "path": "originals\\baby\\admiralbob77_-_Baby_Bird_(vocals_and_stems)\\drums.mp3",
+          "sha256": "c4638f06eb0d7fe7a5514694028f8276148c8a0df2e8146718436fe539bda7eb",
+          "frames": 13109760,
+          "decoded_peak": 1.0099151134490967,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\baby\\admiralbob77_-_Baby_Bird_(vocals_and_stems)\\leadguitar.mp3",
+          "sha256": "2fceb3444c47f4562950e05a2b507a1632875b9331ec9d40e8d01ef318d25ea1",
+          "frames": 13436928,
+          "decoded_peak": 0.3939303159713745,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\baby\\admiralbob77_-_Baby_Bird_(vocals_and_stems)\\organ.mp3",
+          "sha256": "33d5b6be7dcc62cfa775c5305cd478b82b952914a56351386217fe8d120d6ec8",
+          "frames": 13372416,
+          "decoded_peak": 0.9860550761222839,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\baby\\admiralbob77_-_Baby_Bird_(vocals_and_stems)\\piano.mp3",
+          "sha256": "67dab56c452294b37d4dd4c2cde1f2bdd366f00607989e4fa96d4f0a0f45e156",
+          "frames": 13307904,
+          "decoded_peak": 0.4266887903213501,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\baby\\admiralbob77_-_Baby_Bird_(vocals_and_stems)_1\\bgvox.mp3",
+          "sha256": "3d431ab4ca733a5b9a180d720578d33e8c3b264fd410fc871aafc85997a1529c",
+          "frames": 8052480,
+          "decoded_peak": 0.4325524568557739,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\baby\\admiralbob77_-_Baby_Bird_(vocals_and_stems)_1\\vocal.mp3",
+          "sha256": "19c087769894a933716739fad35859c2cf03d10117c26441a5fd99415684f23b",
+          "frames": 8588160,
+          "decoded_peak": 0.7079657316207886,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 1
+        }
+      ]
+    },
+    {
+      "id": "rich",
+      "title": "Rich",
+      "artist": "Hans Atom featuring Adisa McKenzie",
+      "split": "holdout",
+      "kind": "constructed_unmastered_stem_sum",
+      "license": "https://creativecommons.org/licenses/by/3.0/",
+      "page": "https://ccmixter.org/files/hansatom/32556",
+      "urls": [
+        "https://ccmixter.org/content/hansatom/hansatom_-_Rich.zip"
+      ],
+      "originals": [
+        {
+          "url": "https://ccmixter.org/content/hansatom/hansatom_-_Rich.zip",
+          "path": "originals\\rich\\hansatom_-_Rich.zip",
+          "sha256": "cedd39ee6c8dbafaa5cb440a07c607db5ce70368dbf8d7414f0dc9a881f1dde7",
+          "bytes": 43023191
+        }
+      ],
+      "changes": "All available stems summed from time zero at unity relative gain; shorter stems zero padded; scalar peak normalization to -6 dBFS; no bus EQ/compression/limiter. Constructed balance, not artist premaster.",
+      "scalar_gain_db": -8.749139156537636,
+      "sha256": "76dba53d89c6995960726c484bc4d23b3c6aa7fd44459ced4f02d3e2a61f92e3",
+      "rate": 44100,
+      "frames": 10481615,
+      "duration_seconds": 237.6783446712018,
+      "path": "sources\\rich.wav",
+      "decoded_parts": [
+        {
+          "path": "originals\\rich\\hansatom_-_Rich\\stems\\bass.mp3",
+          "sha256": "f108bfbf71c95a177f74d3400361d0fd8f9bfe51e8dbe07d8d0731890d454d2a",
+          "frames": 10481615,
+          "decoded_peak": 0.13846805691719055,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\rich\\hansatom_-_Rich\\stems\\choir.mp3",
+          "sha256": "f0be9a6133aee6148e38babae8514fb7544d6e2be64512a738eb40ade29bb5f9",
+          "frames": 9236946,
+          "decoded_peak": 0.9680494070053101,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\rich\\hansatom_-_Rich\\stems\\drums.mp3",
+          "sha256": "362da6689500befa7de566f7a623b0e65fa5a5e22476eb16d37f174cc6f00bb7",
+          "frames": 10481615,
+          "decoded_peak": 0.2428119033575058,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\rich\\hansatom_-_Rich\\stems\\gitar1.mp3",
+          "sha256": "1320d7d68808df57b6611b6c327de64e23e4afd4d964866eb289b5635a062fd7",
+          "frames": 10481615,
+          "decoded_peak": 0.06187029927968979,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\rich\\hansatom_-_Rich\\stems\\gitar2.mp3",
+          "sha256": "34e387ece73d273c2eabaefca613038fa17e938dbc2ea465e3fc2fa3f1f240d3",
+          "frames": 10481615,
+          "decoded_peak": 0.06981544196605682,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\rich\\hansatom_-_Rich\\stems\\strings.mp3",
+          "sha256": "9e86558cfee8852426f6e280e821b18649a663773e457060f7ff53641a941a1d",
+          "frames": 9236946,
+          "decoded_peak": 0.976752519607544,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\rich\\hansatom_-_Rich\\stems\\synth.mp3",
+          "sha256": "77026ae18f2905f8feecd4dcafa966e8e4b4e7159a6e556ef44ab79fd99491e1",
+          "frames": 10481615,
+          "decoded_peak": 0.06943316012620926,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        },
+        {
+          "path": "originals\\rich\\hansatom_-_Rich\\stems\\vocoder.mp3",
+          "sha256": "f6785e99df7c674006496a1406c7a7bc67ec078ab05dbb8a2adc4403641c66bc",
+          "frames": 10481615,
+          "decoded_peak": 0.07630469650030136,
+          "format": "mp3",
+          "rate": "44100",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "id": "imaginal",
+      "title": "Imagining Imaginal",
+      "artist": "SackJo22",
+      "split": "holdout",
+      "kind": "constructed_unmastered_stem_sum",
+      "license": "https://creativecommons.org/licenses/by/3.0/",
+      "page": "https://ccmixter.org/files/SackJo22/64781",
+      "urls": [
+        "https://ccmixter.org/content/SackJo22/SackJo22_-_Imagining_Imaginal_(Stems).zip",
+        "https://ccmixter.org/content/SackJo22/SackJo22_-_Imagining_Imaginal_(Stems)_1.zip",
+        "https://ccmixter.org/content/SackJo22/SackJo22_-_Imagining_Imaginal_(Stems).flac",
+        "https://ccmixter.org/content/SackJo22/SackJo22_-_Imagining_Imaginal_(Stems)_1.flac",
+        "https://ccmixter.org/content/SackJo22/SackJo22_-_Imagining_Imaginal_(Stems)_2.flac"
+      ],
+      "originals": [
+        {
+          "url": "https://ccmixter.org/content/SackJo22/SackJo22_-_Imagining_Imaginal_(Stems).zip",
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems).zip",
+          "sha256": "0d37fae48d453bd2393bd43f294141fb47d39237b85c9121aef020a54f6f16bd",
+          "bytes": 49222890
+        },
+        {
+          "url": "https://ccmixter.org/content/SackJo22/SackJo22_-_Imagining_Imaginal_(Stems)_1.zip",
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)_1.zip",
+          "sha256": "a380c3689f16f9381a13ae9e021512ad1207a8f76f16b3ab38296de6cbb0d828",
+          "bytes": 32184928
+        },
+        {
+          "url": "https://ccmixter.org/content/SackJo22/SackJo22_-_Imagining_Imaginal_(Stems).flac",
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems).flac",
+          "sha256": "7506223e2f9047b01142f3ec4536bef6c75514a8103484612e2ffa616bf04e77",
+          "bytes": 15255205
+        },
+        {
+          "url": "https://ccmixter.org/content/SackJo22/SackJo22_-_Imagining_Imaginal_(Stems)_1.flac",
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)_1.flac",
+          "sha256": "cdc07c3a627f88db722aa20065c07505464a9ae79b02147958ade4bb68916f9d",
+          "bytes": 20004980
+        },
+        {
+          "url": "https://ccmixter.org/content/SackJo22/SackJo22_-_Imagining_Imaginal_(Stems)_2.flac",
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)_2.flac",
+          "sha256": "daec31a1f6e68c2722b36000ddc85d50c126c65f53b6911f28f57bf1f71a05cd",
+          "bytes": 9133295
+        }
+      ],
+      "changes": "All available stems summed from time zero at unity relative gain; shorter stems zero padded; scalar peak normalization to -6 dBFS; no bus EQ/compression/limiter. Constructed balance, not artist premaster.",
+      "scalar_gain_db": -10.522069130634293,
+      "sha256": "c7f3a8db696e3b65246de493ef3dc5d6f8db3083a1239d73b588edf58030c591",
+      "rate": 48000,
+      "frames": 16978042,
+      "duration_seconds": 353.7092083333333,
+      "path": "sources\\imaginal.wav",
+      "decoded_parts": [
+        {
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)\\bg vox 1.flac",
+          "sha256": "103e1d577469e873ae5443402ae0ec682447da52ed05e625a725edbe1c3ab732",
+          "frames": 14896244,
+          "decoded_peak": 0.381561279296875,
+          "format": "flac",
+          "rate": "48000",
+          "channels": 2
+        },
+        {
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)\\bg vox 2.flac",
+          "sha256": "27956f1fff5e4ae7ad333b7c03dcb58a28c45c8d9cbc160f7b6e95566632e143",
+          "frames": 15272404,
+          "decoded_peak": 0.4774169921875,
+          "format": "flac",
+          "rate": "48000",
+          "channels": 2
+        },
+        {
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)\\bg vox 3.flac",
+          "sha256": "e1846cabc64d93fd21b80e495289d8eb10a48acd18b09ff97290c60d9d62e2e6",
+          "frames": 15237511,
+          "decoded_peak": 0.3736572265625,
+          "format": "flac",
+          "rate": "48000",
+          "channels": 2
+        },
+        {
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)\\bg vox 4.flac",
+          "sha256": "f335525e1dcdcd760dbda2c1e95fa92ec96701691dfac5fca37de44a7d97fc30",
+          "frames": 15316801,
+          "decoded_peak": 0.3446044921875,
+          "format": "flac",
+          "rate": "48000",
+          "channels": 2
+        },
+        {
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)\\spoken word.flac",
+          "sha256": "491d37fad84f54c47157d9acb7d920b526a0e6570197598914a0cf3d80eb058e",
+          "frames": 13757966,
+          "decoded_peak": 0.247772216796875,
+          "format": "flac",
+          "rate": "48000",
+          "channels": 2
+        },
+        {
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems).flac",
+          "sha256": "7506223e2f9047b01142f3ec4536bef6c75514a8103484612e2ffa616bf04e77",
+          "frames": 15288564,
+          "decoded_peak": 0.8907470703125,
+          "format": "flac",
+          "rate": "48000",
+          "channels": 2
+        },
+        {
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)_1\\singing bowls 1 dbgf 432 hz.flac",
+          "sha256": "5ed8b1fd8ea7f4f5a7968a9b3fab886dffc11c147024805865433265d5296dd2",
+          "frames": 15168451,
+          "decoded_peak": 0.45013427734375,
+          "format": "flac",
+          "rate": "48000",
+          "channels": 2
+        },
+        {
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)_1\\singing bowls 2 dbgf 432hz.flac",
+          "sha256": "97335ba4ebf449fd38a469867737e0024c52a3fe47fe17f0db899f2ec5487b04",
+          "frames": 16978042,
+          "decoded_peak": 0.617218017578125,
+          "format": "flac",
+          "rate": "48000",
+          "channels": 2
+        },
+        {
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)_1.flac",
+          "sha256": "cdc07c3a627f88db722aa20065c07505464a9ae79b02147958ade4bb68916f9d",
+          "frames": 15143881,
+          "decoded_peak": 1.0,
+          "format": "flac",
+          "rate": "48000",
+          "channels": 2
+        },
+        {
+          "path": "originals\\imaginal\\SackJo22_-_Imagining_Imaginal_(Stems)_2.flac",
+          "sha256": "daec31a1f6e68c2722b36000ddc85d50c126c65f53b6911f28f57bf1f71a05cd",
+          "frames": 15618321,
+          "decoded_peak": 0.70709228515625,
+          "format": "flac",
+          "rate": "48000",
+          "channels": 2
+        }
+      ]
+    }
+  ]
+}

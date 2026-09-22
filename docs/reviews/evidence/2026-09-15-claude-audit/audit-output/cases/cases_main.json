@@ -1,0 +1,794 @@
+[
+ {
+  "id": "M_input01_universal",
+  "group": "main",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input01_clarity",
+  "group": "main",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "clarity",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input01_tape",
+  "group": "main",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "tape",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input01_spatial",
+  "group": "main",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "spatial",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input01_oomph",
+  "group": "main",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "oomph",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input01_warmth",
+  "group": "main",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "warmth",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input01_punch",
+  "group": "main",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "punch",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input01_loud",
+  "group": "main",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input01_custom",
+  "group": "main",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input02_universal",
+  "group": "main",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input02_clarity",
+  "group": "main",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "clarity",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input02_tape",
+  "group": "main",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "tape",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input02_spatial",
+  "group": "main",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "spatial",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input02_oomph",
+  "group": "main",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "oomph",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input02_warmth",
+  "group": "main",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "warmth",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input02_punch",
+  "group": "main",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "punch",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input02_loud",
+  "group": "main",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input02_custom",
+  "group": "main",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input03_universal",
+  "group": "main",
+  "input": "fixtures/inputs/input03.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input03_clarity",
+  "group": "main",
+  "input": "fixtures/inputs/input03.wav",
+  "spec": {
+   "preset": "clarity",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input03_tape",
+  "group": "main",
+  "input": "fixtures/inputs/input03.wav",
+  "spec": {
+   "preset": "tape",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input03_spatial",
+  "group": "main",
+  "input": "fixtures/inputs/input03.wav",
+  "spec": {
+   "preset": "spatial",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input03_oomph",
+  "group": "main",
+  "input": "fixtures/inputs/input03.wav",
+  "spec": {
+   "preset": "oomph",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input03_warmth",
+  "group": "main",
+  "input": "fixtures/inputs/input03.wav",
+  "spec": {
+   "preset": "warmth",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input03_punch",
+  "group": "main",
+  "input": "fixtures/inputs/input03.wav",
+  "spec": {
+   "preset": "punch",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input03_loud",
+  "group": "main",
+  "input": "fixtures/inputs/input03.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input03_custom",
+  "group": "main",
+  "input": "fixtures/inputs/input03.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input04_universal",
+  "group": "main",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input04_clarity",
+  "group": "main",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "clarity",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input04_tape",
+  "group": "main",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "tape",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input04_spatial",
+  "group": "main",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "spatial",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input04_oomph",
+  "group": "main",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "oomph",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input04_warmth",
+  "group": "main",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "warmth",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input04_punch",
+  "group": "main",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "punch",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input04_loud",
+  "group": "main",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input04_custom",
+  "group": "main",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input05_universal",
+  "group": "main",
+  "input": "fixtures/inputs/input05.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input05_clarity",
+  "group": "main",
+  "input": "fixtures/inputs/input05.wav",
+  "spec": {
+   "preset": "clarity",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input05_tape",
+  "group": "main",
+  "input": "fixtures/inputs/input05.wav",
+  "spec": {
+   "preset": "tape",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input05_spatial",
+  "group": "main",
+  "input": "fixtures/inputs/input05.wav",
+  "spec": {
+   "preset": "spatial",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input05_oomph",
+  "group": "main",
+  "input": "fixtures/inputs/input05.wav",
+  "spec": {
+   "preset": "oomph",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input05_warmth",
+  "group": "main",
+  "input": "fixtures/inputs/input05.wav",
+  "spec": {
+   "preset": "warmth",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input05_punch",
+  "group": "main",
+  "input": "fixtures/inputs/input05.wav",
+  "spec": {
+   "preset": "punch",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input05_loud",
+  "group": "main",
+  "input": "fixtures/inputs/input05.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input05_custom",
+  "group": "main",
+  "input": "fixtures/inputs/input05.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input06_universal",
+  "group": "main",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input06_clarity",
+  "group": "main",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "clarity",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input06_tape",
+  "group": "main",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "tape",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input06_spatial",
+  "group": "main",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "spatial",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input06_oomph",
+  "group": "main",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "oomph",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input06_warmth",
+  "group": "main",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "warmth",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input06_punch",
+  "group": "main",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "punch",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input06_loud",
+  "group": "main",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input06_custom",
+  "group": "main",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input07_universal",
+  "group": "main",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input07_clarity",
+  "group": "main",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "clarity",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input07_tape",
+  "group": "main",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "tape",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input07_spatial",
+  "group": "main",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "spatial",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input07_oomph",
+  "group": "main",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "oomph",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input07_warmth",
+  "group": "main",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "warmth",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input07_punch",
+  "group": "main",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "punch",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input07_loud",
+  "group": "main",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input07_custom",
+  "group": "main",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input08_universal",
+  "group": "main",
+  "input": "fixtures/inputs/input08.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input08_clarity",
+  "group": "main",
+  "input": "fixtures/inputs/input08.wav",
+  "spec": {
+   "preset": "clarity",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input08_tape",
+  "group": "main",
+  "input": "fixtures/inputs/input08.wav",
+  "spec": {
+   "preset": "tape",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input08_spatial",
+  "group": "main",
+  "input": "fixtures/inputs/input08.wav",
+  "spec": {
+   "preset": "spatial",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input08_oomph",
+  "group": "main",
+  "input": "fixtures/inputs/input08.wav",
+  "spec": {
+   "preset": "oomph",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input08_warmth",
+  "group": "main",
+  "input": "fixtures/inputs/input08.wav",
+  "spec": {
+   "preset": "warmth",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input08_punch",
+  "group": "main",
+  "input": "fixtures/inputs/input08.wav",
+  "spec": {
+   "preset": "punch",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input08_loud",
+  "group": "main",
+  "input": "fixtures/inputs/input08.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "M_input08_custom",
+  "group": "main",
+  "input": "fixtures/inputs/input08.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ }
+]

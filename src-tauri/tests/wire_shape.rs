@@ -233,6 +233,15 @@ fn landing_status_sample() -> LandingStatus {
 
 fn render_job_sample() -> RenderJob {
     RenderJob {
+        delivered_format: Some(
+            yes_master_lib::export_format::ExportEncoding::Wav.delivered(
+                48_000,
+                2,
+                24,
+                Some(48_000),
+                24,
+            ),
+        ),
         id: "wire-job".to_string(),
         job_id: "wire-job".to_string(),
         kind: RenderKind::Master,
@@ -247,6 +256,8 @@ fn render_job_sample() -> RenderJob {
 
 fn guardrail_readout_sample() -> GuardrailReadout {
     GuardrailReadout {
+        compression: yes_master_lib::guardrails::readout_for(&mastering_settings_sample())
+            .compression,
         signal_chain: Some(yes_master_lib::guardrails::SignalChainReadout {
             eq_active: true,
             warmth_active: false,
@@ -278,6 +289,10 @@ fn guardrail_readout_sample() -> GuardrailReadout {
 
 fn playback_tick_sample() -> PlaybackTick {
     PlaybackTick {
+        playback_error: Some(yes_master_lib::types::PlaybackError {
+            generation: 2,
+            message: "Playback stopped while processing audio.".into(),
+        }),
         track_id: Some(TrackId("wire-sample".to_string())),
         position_sec: 1.5,
         is_playing: true,
@@ -355,6 +370,15 @@ fn quality_check_sample() -> QualityCheck {
 
 fn export_report_sample() -> ExportReport {
     ExportReport {
+        delivered_format: Some(
+            yes_master_lib::export_format::ExportEncoding::Wav.delivered(
+                48_000,
+                2,
+                24,
+                Some(48_000),
+                24,
+            ),
+        ),
         track_id: TrackId("wire-sample".to_string()),
         output_path: "out/wire-sample.master.wav".to_string(),
         measured_lufs: -13.5,
@@ -402,6 +426,19 @@ fn album_track_render_record_sample() -> AlbumTrackRenderRecord {
 
 fn album_render_report_sample() -> AlbumRenderReport {
     AlbumRenderReport {
+        continuous_peak: Some(yes_master_lib::engine::AlbumPeakResult {
+            true_peak_dbtp: -1.25,
+            ceiling_dbtp: -1.0,
+        }),
+        delivered_format: Some(
+            yes_master_lib::export_format::ExportEncoding::Wav.delivered(
+                48_000,
+                2,
+                24,
+                Some(48_000),
+                24,
+            ),
+        ),
         mp3_bitrate_kbps: None,
         job_id: "wire-album-job".to_string(),
         status: JobStatus::Done,

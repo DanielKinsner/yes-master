@@ -1,5 +1,53 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **2026-09-14 main integration checkpoint — NO-GO for release.** The owner
+> authorized main integration and repository hygiene. All three encoder and
+> source-relink jobs passed at `f5976299`; downstream decoder-environment and
+> beta-date doc-contract failures are corrected for the next run. Intel Mac
+> strict Album PCM equality failed intermittently at `cf1ddc21`; no tolerance
+> was relaxed and diagnosis remains open. The resumed installed Windows pass
+> completed Track/Album M4A and live cancellation/retry plus external playback.
+> Full keyboard/screen-reader, offline, by-ear, Mac installed and final release
+> evidence remain open. See the [launch ledger](2026-09-14-launch-readiness.md).
+
+> **2026-09-14 follow-through — still NO-GO.** The demo link and encoder defects
+> are repaired on the launch branch. Windows candidate `cf3ddcc9` is built,
+> installed and signed, with exact-source modified-library rebuild proof.
+> Both Mac encoder qualification jobs passed in run `34861723641`; Windows,
+> downstream CI and the newer cross-platform source-rebuild run remain pending.
+> [Candidate identity and remaining checks](../listening/2026-09-14-windows-launch-candidate.md).
+> The beta duration is settled: actual publication date plus 56 calendar days.
+> Desktop input stopped after the owner's physical Escape; installed interaction
+> and accessibility checks remain open. No release or deployment was activated.
+
+> **2026-09-14 live refresh — NO-GO.** Exact-main CI at `af406855` completed
+> failure in both Mac encoder builds and Windows encoder qualification; desktop
+> integration jobs were skipped. GitHub still lists only the blocked beta.1 draft.
+> The owner requested launch preparation without a demo. See the
+> [current findings and launch sequence](2026-09-14-launch-readiness.md).
+
+> **2026-09-09 — Windows export candidate prepared; release remains NO-GO.**
+> [Implementation evidence](2026-09-09-export-formats-evidence.md) records the
+> new Windows source-built encoder and completed desktop implementation.
+> [Installed candidate `7cd36ab6`](../listening/2026-09-09-export-candidate.md)
+> has native Track/Album output proof, exact installer hashes, updater-signature
+> verification and a modified-LAME source rebuild. The earlier beta.1 identity
+> below remains historical; it is not the current local implementation candidate.
+> Mac execution/installed checks are pending the owner's later Mac session.
+> Remaining Windows audition/offline/player/listening/accessibility evidence,
+> exact remote CI, relink permission and key recovery still prevent readiness.
+> [Concrete release checkpoint](2026-09-09-export-release-checkpoint.md): no
+> public transaction is authorized by this work.
+
+> **2026-09-09 — Installed Windows baseline owner PASS.** The owner completed
+> all five targeted checks on installed 0.9.2 / `07021f1b` and reported all passed.
+> This covers the listed A/B, Volume Match settings edits, transport, heavier
+> import/playback and saved-file/Album checks. [Exact artifact and evidence](../listening/2026-09-09-installed-check.md).
+> The September 5 "Not ready / stopped here" verdict remains historical and
+> must not override this later pass. Broader export formats, Mac candidate
+> validation, distribution requirements and updater/publication gates remain
+> separate; a future launch artifact needs checks appropriate to its changes.
+
 > **September 6 Mac audit evidence:** a local Apple Silicon app and DMG build
 > succeeded with MP3, strict ad hoc signature verification passed, and actual
 > Track/Album MP3 exports passed independent delivered-file checks. See the

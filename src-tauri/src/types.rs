@@ -149,17 +149,37 @@ impl SourceProfile {
     /// guardrails would have nothing to compare against in that case. Falls
     /// back to LRA when the P95-P10 dynamic-range measure is missing.
     pub fn from_analysis(a: &AnalysisResult) -> Option<Self> {
-        let spectral_6 = a.spectral_balance_6band?;
+        Self::from_measurements(
+            a.spectral_balance_6band,
+            a.dynamic_range_p95_p10_db,
+            a.dynamic_range_lu,
+            a.stereo_correlation,
+            a.stereo_width,
+        )
+    }
+
+    /// The one place the raw measurements become a profile. `from_analysis`
+    /// and the browser try-it engine (which measures the same whole-track
+    /// values without an `AnalysisResult`) both route through here so the
+    /// sentinels below cannot drift between the two.
+    pub fn from_measurements(
+        spectral_6: Option<SpectralBalance6>,
+        dynamic_range_p95_p10_db: Option<f32>,
+        dynamic_range_lu: f32,
+        stereo_correlation: Option<f32>,
+        stereo_width: f32,
+    ) -> Option<Self> {
+        let spectral_6 = spectral_6?;
         Some(Self {
             spectral_6,
             // When P95-P10 DR is missing, do NOT fall back to LRA — that aliases
             // an LU value into the dB DR ramp (B11). Use a "no DR trigger" dB
             // sentinel (100.0) so density rests entirely on the LRA ramp, which
             // has its own LU thresholds.
-            dynamic_range_p95_p10_db: a.dynamic_range_p95_p10_db.unwrap_or(100.0),
-            dynamic_range_lu: a.dynamic_range_lu,
-            stereo_correlation: a.stereo_correlation,
-            stereo_width: a.stereo_width,
+            dynamic_range_p95_p10_db: dynamic_range_p95_p10_db.unwrap_or(100.0),
+            dynamic_range_lu,
+            stereo_correlation,
+            stereo_width,
         })
     }
 
@@ -826,6 +846,9 @@ pub enum JobStatus {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RenderJob {
+    /// File identity survives unavailable measurements. Absent in older jobs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delivered_format: Option<crate::export_format::DeliveredFormat>,
     pub id: String,
     pub job_id: String,
     pub kind: RenderKind,
@@ -891,6 +914,8 @@ pub struct QualityCheck {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ExportReport {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delivered_format: Option<crate::export_format::DeliveredFormat>,
     pub track_id: TrackId,
     pub output_path: String,
     pub measured_lufs: f32,
@@ -1083,6 +1108,13 @@ pub struct PlaybackDeviceLost {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PlaybackError {
+    /// Unique failed-source epoch, including retries and recreated devices.
+    pub generation: u64,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PlaybackTick {
     pub track_id: Option<TrackId>,
     pub position_sec: f64,
@@ -1090,6 +1122,8 @@ pub struct PlaybackTick {
     pub is_loaded: bool,
     #[serde(default)]
     pub device_lost: bool,
+    #[serde(default)]
+    pub playback_error: Option<PlaybackError>,
     /// Post-output-gain peak across all channels since the last tick, in dBFS.
     /// `-120.0` is the silence sentinel (no signal in the window). Values
     /// above `-0.1` indicate clipping risk; values above `0.0` are clipping.

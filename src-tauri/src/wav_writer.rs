@@ -95,6 +95,122 @@ fn quantize_24_tpdf(sample: f32, rng: &mut DitherRng) -> i32 {
     scaled.clamp(-INT24_SCALE, INT24_PEAK_POS) as i32
 }
 
+/// Replay the exact PCM written by `write_samples_into_writer`, including its
+/// deterministic dither. Four bytes of PRNG state per 4096 frames replace a
+/// second track-sized quantized buffer. The source remains borrowed/immutable.
+pub struct DeliveryPcm<'a> {
+    samples: &'a [f32],
+    channels: usize,
+    bit_depth: u16,
+    seeds: Vec<u32>,
+}
+
+impl<'a> DeliveryPcm<'a> {
+    pub fn new(
+        samples: &'a [f32],
+        channels: u16,
+        bit_depth: u16,
+        cancelled: impl Fn() -> bool,
+    ) -> CommandResult<Self> {
+        let channels = usize::from(channels);
+        if channels == 0 || samples.len() % channels != 0 {
+            return Err(CommandError::Render("invalid delivery PCM layout".into()));
+        }
+        if !matches!(bit_depth, 16 | 24 | 32) {
+            return Err(CommandError::Other(format!(
+                "unsupported bit depth: {bit_depth}"
+            )));
+        }
+        let mut seeds = Vec::new();
+        if bit_depth != 32 {
+            seeds
+                .try_reserve_exact((samples.len() / channels).div_ceil(4096))
+                .map_err(|_| CommandError::Render("dither checkpoint allocation failed".into()))?;
+        }
+        let mut rng = DitherRng::new(0x000A_11CE);
+        if cancelled() {
+            return Err(CommandError::Render(
+                "delivery measurement cancelled".into(),
+            ));
+        }
+        for chunk in samples.chunks(4096 * channels) {
+            if cancelled() {
+                return Err(CommandError::Render(
+                    "delivery measurement cancelled".into(),
+                ));
+            }
+            if bit_depth != 32 {
+                seeds.push(rng.state);
+            }
+            for &sample in chunk {
+                if !sample.is_finite() {
+                    return Err(CommandError::Render("non-finite delivery PCM".into()));
+                }
+                if bit_depth != 32 {
+                    rng.tpdf_lsb();
+                }
+            }
+        }
+        Ok(Self {
+            samples,
+            channels,
+            bit_depth,
+            seeds,
+        })
+    }
+
+    pub fn checkpoint_bytes(&self) -> usize {
+        self.seeds.len() * std::mem::size_of::<u32>()
+    }
+}
+
+impl crate::peak_meter::pcm::PcmSource for DeliveryPcm<'_> {
+    fn frames(&self) -> usize {
+        self.samples.len() / self.channels
+    }
+    fn channels(&self) -> usize {
+        self.channels
+    }
+    fn read_channel(
+        &self,
+        channel: usize,
+        start: usize,
+        out: &mut [f64],
+    ) -> Result<(), &'static str> {
+        if channel >= self.channels || start > self.frames() || out.len() > self.frames() - start {
+            return Err("delivery PCM read out of range");
+        }
+        if out.is_empty() {
+            return Ok(());
+        }
+        if self.bit_depth == 32 {
+            for (i, value) in out.iter_mut().enumerate() {
+                *value = f64::from(self.samples[(start + i) * self.channels + channel]);
+            }
+        } else {
+            let mut rng = DitherRng::new(self.seeds[start / 4096]);
+            for _ in 0..(start % 4096) * self.channels {
+                rng.tpdf_lsb();
+            }
+            for (i, value) in out.iter_mut().enumerate() {
+                for c in 0..self.channels {
+                    if c == channel {
+                        let sample = self.samples[(start + i) * self.channels + c];
+                        *value = if self.bit_depth == 16 {
+                            f64::from(quantize_16_tpdf(sample, &mut rng)) / f64::from(INT16_SCALE)
+                        } else {
+                            f64::from(quantize_24_tpdf(sample, &mut rng)) / f64::from(INT24_SCALE)
+                        };
+                    } else {
+                        rng.tpdf_lsb();
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 pub(crate) fn wav_spec(
     channels: u16,
     sample_rate: u32,
@@ -121,27 +237,42 @@ pub(crate) fn wav_spec(
 /// Meter the exact deterministic PCM representation the writer delivers.
 /// Integer dither/clipping and the loudness absolute gate invalidate simply
 /// shifting pre-landing measurements. Scratch space is bounded, not track-sized.
-pub(crate) fn measure_delivery(
+pub fn measure_delivery(
     samples: &[f32],
     sample_rate: u32,
     channels: u16,
     bit_depth: u16,
 ) -> CommandResult<(f32, f32, f32)> {
+    measure_delivery_with_cancel(samples, sample_rate, channels, bit_depth, None)
+}
+
+pub fn measure_delivery_with_cancel(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    bit_depth: u16,
+    cancel: Option<&std::sync::atomic::AtomicBool>,
+) -> CommandResult<(f32, f32, f32)> {
     use ebur128::{EbuR128, Mode};
+    let cancelled = || cancel.is_some_and(|f| f.load(std::sync::atomic::Ordering::Relaxed));
     wav_spec(channels, sample_rate, bit_depth)?;
-    let mut ebu = EbuR128::new(
-        u32::from(channels),
-        sample_rate,
-        Mode::I | Mode::LRA | Mode::TRUE_PEAK,
-    )
-    .map_err(|e| CommandError::Render(e.to_string()))?;
+    let mut ebu = EbuR128::new(u32::from(channels), sample_rate, Mode::I | Mode::LRA)
+        .map_err(|e| CommandError::Render(e.to_string()))?;
     if bit_depth == 32 {
-        ebu.add_frames_f32(samples)
-            .map_err(|e| CommandError::Render(e.to_string()))?;
+        for chunk in samples.chunks(4096 * channels as usize) {
+            if cancelled() {
+                return Err(CommandError::Render("PCM measurement cancelled".into()));
+            }
+            ebu.add_frames_f32(chunk)
+                .map_err(|e| CommandError::Render(e.to_string()))?;
+        }
     } else {
         let mut rng = DitherRng::new(0x000A_11CE);
         let mut scratch = Vec::with_capacity(4096 * channels as usize);
         for chunk in samples.chunks(4096 * channels as usize) {
+            if cancelled() {
+                return Err(CommandError::Render("PCM measurement cancelled".into()));
+            }
             scratch.clear();
             scratch.extend(chunk.iter().map(|&sample| {
                 if bit_depth == 16 {
@@ -160,13 +291,10 @@ pub(crate) fn measure_delivery(
     let lra = ebu
         .loudness_range()
         .map_err(|e| CommandError::Render(e.to_string()))? as f32;
-    let mut peak = 0.0_f64;
-    for channel in 0..u32::from(channels) {
-        peak = peak.max(
-            ebu.true_peak(channel)
-                .map_err(|e| CommandError::Render(e.to_string()))?,
-        );
-    }
+    let source = DeliveryPcm::new(samples, channels, bit_depth, cancelled)?;
+    let peak = crate::peak_meter::measure_source(&source, cancelled)
+        .map_err(|e| CommandError::Render(e.into()))?
+        .upper();
     Ok((
         lufs,
         if peak > 0.0 {
@@ -229,13 +357,24 @@ pub(crate) fn write_wav(
     channels: u16,
     bit_depth: u16,
 ) -> CommandResult<std::path::PathBuf> {
+    write_wav_with_cancel(path, samples, sample_rate, channels, bit_depth, None)
+}
+
+pub(crate) fn write_wav_with_cancel(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    bit_depth: u16,
+    cancel: Option<&std::sync::atomic::AtomicBool>,
+) -> CommandResult<std::path::PathBuf> {
     if let Some(index) = samples.iter().position(|sample| !sample.is_finite()) {
         return Err(CommandError::Render(format!(
             "rendered samples contain non-finite value at index {index}"
         )));
     }
     let tmp_path = unique_tmp_path(path)?;
-    let result = write_wav_direct(&tmp_path, samples, sample_rate, channels, bit_depth)
+    let result = write_wav_direct(&tmp_path, samples, sample_rate, channels, bit_depth, cancel)
         .and_then(|_| finalize_never_overwrite(&tmp_path, path));
     if result.is_err() {
         let _ = std::fs::remove_file(&tmp_path);
@@ -292,21 +431,44 @@ pub(crate) fn unique_sibling(path: &Path) -> CommandResult<std::path::PathBuf> {
 /// fallback), silently destroying a prior render and violating the
 /// "exports never overwrite by default" non-negotiable. Now the newcomer
 /// diverts to a `__{n}` sibling and the actual path is returned. The
-/// remaining exists→rename gap is microseconds (down from render
-/// duration); the retry loop absorbs even that.
+/// final persistence is atomic and refuses replacement on Windows and Unix.
 pub(crate) fn finalize_never_overwrite(
     tmp_path: &Path,
     final_path: &Path,
 ) -> CommandResult<std::path::PathBuf> {
     let mut target = final_path.to_path_buf();
+    // tempfile calls Win32 directly without std's long-path conversion. Resolve
+    // existing parents to verbatim paths for persistence, keeping user-facing
+    // returned paths unchanged. The destination itself must not be created.
+    #[cfg(windows)]
+    let tmp_path = std::fs::canonicalize(tmp_path).map_err(|e| CommandError::Io(e.to_string()))?;
+    let mut temporary = tempfile::TempPath::try_from_path(tmp_path.to_path_buf())
+        .map_err(|e| CommandError::Io(e.to_string()))?;
     for _ in 0..8 {
         if target.exists() {
             target = unique_sibling(&target)?;
             continue;
         }
-        return match std::fs::rename(tmp_path, &target) {
+        #[cfg(windows)]
+        let persistence_target = {
+            let parent = target
+                .parent()
+                .filter(|p| !p.as_os_str().is_empty())
+                .unwrap_or(Path::new("."));
+            std::fs::canonicalize(parent)
+                .map_err(|e| CommandError::Io(e.to_string()))?
+                .join(
+                    target
+                        .file_name()
+                        .ok_or_else(|| CommandError::Io("Missing output filename".into()))?,
+                )
+        };
+        #[cfg(not(windows))]
+        let persistence_target = target.clone();
+        return match temporary.persist_noclobber(&persistence_target) {
             Ok(()) => Ok(target),
-            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+            Err(err) if err.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                temporary = err.path;
                 // Lost the microsecond race too — pick a fresh sibling.
                 target = unique_sibling(&target)?;
                 continue;
@@ -325,6 +487,7 @@ fn write_wav_direct(
     sample_rate: u32,
     channels: u16,
     bit_depth: u16,
+    cancel: Option<&std::sync::atomic::AtomicBool>,
 ) -> CommandResult<()> {
     let (bits, fmt) = match bit_depth {
         16 => (16u16, hound::SampleFormat::Int),
@@ -355,21 +518,36 @@ fn write_wav_direct(
     let mut rng = DitherRng::new(0x000A_11CE);
     match bit_depth {
         16 => {
-            for &s in samples {
+            for (index, &s) in samples.iter().enumerate() {
+                if index % 8192 == 0
+                    && cancel.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Relaxed))
+                {
+                    return Err(CommandError::Render("export cancelled".into()));
+                }
                 writer
                     .write_sample(quantize_16_tpdf(s, &mut rng))
                     .map_err(|e| CommandError::Io(e.to_string()))?;
             }
         }
         24 => {
-            for &s in samples {
+            for (index, &s) in samples.iter().enumerate() {
+                if index % 8192 == 0
+                    && cancel.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Relaxed))
+                {
+                    return Err(CommandError::Render("export cancelled".into()));
+                }
                 writer
                     .write_sample(quantize_24_tpdf(s, &mut rng))
                     .map_err(|e| CommandError::Io(e.to_string()))?;
             }
         }
         32 => {
-            for &s in samples {
+            for (index, &s) in samples.iter().enumerate() {
+                if index % 8192 == 0
+                    && cancel.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Relaxed))
+                {
+                    return Err(CommandError::Render("export cancelled".into()));
+                }
                 writer
                     .write_sample(s)
                     .map_err(|e| CommandError::Io(e.to_string()))?;
@@ -386,9 +564,119 @@ fn write_wav_direct(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::peak_meter::pcm::PcmSource;
     use sha2::{Digest, Sha256};
     use std::collections::HashSet;
     use std::fs;
+
+    #[test]
+    fn delivery_replay_matches_written_pcm_at_arbitrary_read_boundaries() {
+        for channels in [1, 2] {
+            for bits in [16, 24, 32] {
+                let samples: Vec<_> = (0..8193 * channels)
+                    .map(|i| {
+                        if i % 7 == 0 {
+                            1e-6
+                        } else {
+                            (i as f32 * 0.217).sin() * 1.4
+                        }
+                    })
+                    .collect();
+                let dir = tempfile::tempdir().unwrap();
+                let path = write_wav(
+                    &dir.path().join("exact.wav"),
+                    &samples,
+                    48_000,
+                    channels as u16,
+                    bits,
+                )
+                .unwrap();
+                let mut reader = hound::WavReader::open(path).unwrap();
+                let decoded: Vec<f64> = match bits {
+                    16 => reader
+                        .samples::<i16>()
+                        .map(|v| f64::from(v.unwrap()) / 32768.)
+                        .collect(),
+                    24 => reader
+                        .samples::<i32>()
+                        .map(|v| f64::from(v.unwrap()) / 8388608.)
+                        .collect(),
+                    _ => reader
+                        .samples::<f32>()
+                        .map(|v| f64::from(v.unwrap()))
+                        .collect(),
+                };
+                let source = DeliveryPcm::new(&samples, channels as u16, bits, || false).unwrap();
+                assert_eq!(source.checkpoint_bytes(), if bits == 32 { 0 } else { 12 });
+                for channel in 0..channels {
+                    for chunk_size in [1, 257, 4096, 8193] {
+                        let mut got = vec![0.; 8193];
+                        for (i, chunk) in got.chunks_mut(chunk_size).enumerate() {
+                            source.read_channel(channel, i * chunk_size, chunk).unwrap();
+                        }
+                        for (frame, value) in got.iter().enumerate() {
+                            assert_eq!(
+                                *value,
+                                decoded[frame * channels + channel],
+                                "bits={bits} channel={channel} frame={frame}"
+                            );
+                        }
+                    }
+                }
+                let decoded_float: Vec<_> = decoded.iter().map(|v| *v as f32).collect();
+                let measured = crate::peak_meter::measure_source(&source, || false).unwrap();
+                let direct =
+                    crate::peak_meter::measure(&decoded_float, channels, || false).unwrap();
+                assert_eq!(
+                    serde_json::to_value(measured).unwrap(),
+                    serde_json::to_value(direct).unwrap()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn delivery_replay_rejects_bad_layout_nonfinite_and_cancellation() {
+        assert!(DeliveryPcm::new(&[0.], 0, 16, || false).is_err());
+        assert!(DeliveryPcm::new(&[0.], 2, 16, || false).is_err());
+        assert!(DeliveryPcm::new(&[0.], 1, 8, || false).is_err());
+        assert!(DeliveryPcm::new(&[], 1, 16, || true).is_err());
+        for sample in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            for bits in [16, 24, 32] {
+                assert!(DeliveryPcm::new(&[sample], 1, bits, || false).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn simultaneous_finalization_never_replaces_another_writer() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("master.wav");
+        let barrier = std::sync::Barrier::new(4);
+        let results = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..4)
+                .map(|index| {
+                    let source = dir.path().join(format!("owned-{index}.tmp"));
+                    fs::write(&source, [index]).unwrap();
+                    let target = &target;
+                    let barrier = &barrier;
+                    scope.spawn(move || {
+                        barrier.wait();
+                        (index, finalize_never_overwrite(&source, target).unwrap())
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| handle.join().unwrap())
+                .collect::<Vec<_>>()
+        });
+        let paths: HashSet<_> = results.iter().map(|(_, path)| path).collect();
+        assert_eq!(paths.len(), 4);
+        for (index, path) in results {
+            assert_eq!(fs::read(path).unwrap(), [index]);
+        }
+    }
 
     fn sha256_file(path: &Path) -> String {
         let bytes = fs::read(path).expect("read wav bytes");

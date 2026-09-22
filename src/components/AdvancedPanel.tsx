@@ -1,4 +1,5 @@
 import { ExportEncodingControls, type ExportEncodingChoice } from "./ExportEncodingControls";
+import { EXPORT_FORMATS } from "../lib/export-formats";
 import { useState } from "react";
 import { ChromeDialog } from "./ChromeDialog";
 import { Knob } from "./Knob";
@@ -11,6 +12,7 @@ import type {
   GuardrailReadout,
   MasteringSettings,
   Preset,
+  ResolvedCompressionReadout,
 } from "../bindings";
 import {
   ADAPTIVE_STRENGTH_DEFAULT,
@@ -179,6 +181,7 @@ export function AdvancedPanel({
         onAdvanced={onAdvanced}
         onUpdate={update}
         compressionPlan={compressionPlan}
+        resolvedCompression={adaptiveReadout?.compression}
         liveGr={liveGr}
         isPlayingMaster={isPlayingMaster}
       />
@@ -548,6 +551,7 @@ function PerBandCompressorCard({
   onAdvanced,
   onUpdate,
   compressionPlan,
+  resolvedCompression,
   liveGr,
   isPlayingMaster,
 }: {
@@ -560,13 +564,18 @@ function PerBandCompressorCard({
     value: number | boolean | null,
   ) => void;
   compressionPlan?: CompressionPlan | null;
+  resolvedCompression?: ResolvedCompressionReadout | null;
   liveGr: { low: number; mid: number; high: number } | null;
   isPlayingMaster: boolean;
 }) {
   type Band = "low" | "mid" | "high";
   const [active, setActive] = useState<Band>("low");
   const autoReadouts = compressorAutoReadouts(settings);
-  const presetSummary = presetCompressionSummary(settings, autoReadouts.low);
+  const presetSummary = resolvedCompression
+    ? resolvedCompression.active
+      ? "Resolved compression after Adapt. Band values include source adjustments."
+      : "Resolved compression: inactive."
+    : presetCompressionSummary(settings, autoReadouts.low);
   const compressorMode: CompressionMode = a.compression_mode ?? "preset";
   const manualEnabled = compressorMode === "manual";
   const adaptivePlan =
@@ -683,18 +692,18 @@ function PerBandCompressorCard({
             // to live gain reduction while the master plays.
             const manualThreshold = bandFields[band].threshold;
             const manualRatio = bandFields[band].ratio;
-            const thresholdDb =
+            const thresholdDb = resolvedCompression?.[band].threshold_db ?? (
               manualEnabled && manualThreshold != null
                 ? manualThreshold
-                : autoReadouts[band].thresholdDb;
-            const ratio =
-              manualEnabled && manualRatio != null ? manualRatio : autoReadouts[band].ratio;
+                : autoReadouts[band].thresholdDb);
+            const ratio = resolvedCompression?.[band].ratio ?? (
+              manualEnabled && manualRatio != null ? manualRatio : autoReadouts[band].ratio);
             // Density 0 in Preset mode = the preset compressor is inactive;
             // identity values ("0.0 dB · 1.0:1") would read as real settings.
-            const presetInactive =
+            const presetInactive = resolvedCompression ? !resolvedCompression.active : (
               !manualEnabled &&
               (settings.advanced.compression_density ??
-                (settings.preset.kind === "custom" ? 0 : 0.5)) <= 0.001;
+                (settings.preset.kind === "custom" ? 0 : 0.5)) <= 0.001);
             const idleText = presetInactive
               ? "inactive"
               : `${thresholdDb.toFixed(1)} dB · ${ratio.toFixed(1)}:1`;
@@ -705,7 +714,9 @@ function PerBandCompressorCard({
                 title={
                   isPlayingMaster
                     ? `${bandLabel(band)} gain reduction (live)`
-                    : `${bandLabel(band)} threshold · ratio — live gain reduction shows here while Mastered plays`
+                    : resolvedCompression
+                      ? `${bandLabel(band)} resolved threshold · ratio; attack ${resolvedCompression[band].attack_ms.toFixed(1)} ms, release ${resolvedCompression[band].release_ms.toFixed(1)} ms, makeup ${resolvedCompression[band].makeup_db.toFixed(1)} dB. Live gain reduction shows here while Mastered plays.`
+                      : `${bandLabel(band)} ${manualEnabled ? "requested Manual" : "preset before Adapt"} threshold · ratio; resolved values unavailable. Live gain reduction shows here while Mastered plays.`
                 }
               >
                 <span className="gr-meter-label">{bandLabel(band)}</span>
@@ -723,6 +734,8 @@ function PerBandCompressorCard({
           <NumberField
             label="Preset density"
             value={a.compression_density}
+            sliderAutoValue={settings.preset.kind === "custom" ? 0 : 0.5}
+            autoReadout={settings.preset.kind === "custom" ? "0.00" : "0.50"}
             step={0.05}
             min={0}
             max={1}
@@ -949,7 +962,7 @@ function presetCompressionSummary(
   if (density <= 0.001) {
     return `Preset compression inactive · Density ${density.toFixed(2)}`;
   }
-  return `Effective compression · ${readout.thresholdLabel} · ${readout.ratioLabel} · ${readout.attackLabel} · ${readout.releaseLabel}`;
+  return `Preset compression before Adapt · ${readout.thresholdLabel} · ${readout.ratioLabel} · ${readout.attackLabel} · ${readout.releaseLabel}`;
 }
 
 function materializeManualCompressor(
@@ -1056,13 +1069,18 @@ function DeliveryFormatCard({
     bitDepth === undefined ? effectiveBitDepth(settings) : bitDepth;
   const effectiveSampleRateValue =
     sampleRate === undefined ? effectiveSampleRate(settings) : sampleRate;
+  const format = exportEncoding?.format ?? "wav";
+  const lossy = EXPORT_FORMATS[format].lossy;
+  const integerConversion = (format === "flac" || format === "aiff") && effectiveBitDepthValue === 32;
+  const deliveredRate = effectiveSampleRateValue == null ? null
+    : effectiveSampleRateValue % 44_100 === 0 ? 44_100 : format === "mp3" && effectiveSampleRateValue === 32_000 ? 32_000 : 48_000;
   return (
     <section className="rail-section rail-card-format">
       <header className="panel-head rail-section-head">
         <span className="panel-title">DELIVERY FORMAT</span>
       </header>
       {exportEncoding && <ExportEncodingControls choice={exportEncoding} />}
-      {exportEncoding?.format !== "mp3" && <div className="rail-card-body rail-format-grid">
+      {!lossy && <div className="rail-card-body rail-format-grid">
         <SelectField
           label="Bit depth"
           value={effectiveBitDepthValue}
@@ -1070,7 +1088,7 @@ function DeliveryFormatCard({
             { value: null, label: "Auto" },
             { value: 16, label: "16-bit" },
             { value: 24, label: "24-bit" },
-            { value: 32, label: "32-bit float" },
+            { value: 32, label: format === "flac" || format === "aiff" ? "32-bit float → 24-bit" : "32-bit float" },
           ]}
           onChange={onBitDepth}
         />
@@ -1087,7 +1105,10 @@ function DeliveryFormatCard({
         />
       </div>
       }
-      <p className="format-note">{exportEncoding?.format === "mp3" ? "MP3 master · compatible sample rate · smaller file" : note}</p>
+      <p className="format-note">{lossy
+        ? `${EXPORT_FORMATS[format].label} · ${deliveredRate ? `${deliveredRate / 1000} kHz delivery` : "compatible delivery rate"}. Saved rate and precision settings are retained.${format === "aac" ? " Includes codec delay and padding." : ""}`
+        : integerConversion ? `${EXPORT_FORMATS[format].label} delivers 24-bit integer from your 32-bit float setting.`
+        : format === "wav" ? note : `${EXPORT_FORMATS[format].label} master · lossless integer delivery.`}</p>
     </section>
   );
 }

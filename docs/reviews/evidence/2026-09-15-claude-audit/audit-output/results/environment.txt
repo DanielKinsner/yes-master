@@ -1,0 +1,14 @@
+date: 2026-09-15T02:40:31Z
+os: Microsoft Windows 11 Pro 10.0.26200
+cpu: 13th Gen Intel(R) Core(TM) i9-13900K
+cargo 1.95.0 (f2d3ce0bd 2026-03-21)
+rustc 1.95.0 (59807616e 2026-04-14)
+Python 3.13.5
+numpy 2.2.6 scipy 1.17.1 soundfile 0.12.1 libsndfile 1.2.0
+ffmpeg version 7.1.1-full_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers
+harness features: yes-master path dep, default-features=false, release opt-level 3
+name = "ebur128"	version = "0.1.10"
+name = "hound"	version = "3.5.1"
+name = "rubato"	version = "1.0.1"
+name = "rustfft"	version = "6.4.1"
+name = "symphonia"	version = "0.5.5"

@@ -18,6 +18,56 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 16 integration follow-through:** owner review has authorized the
+> tested fixes to enter local main, followed by sound research on a separate
+> branch. The [integration record](../reviews/2026-09-16-mastering-fixes-integration.md)
+> is current; the pause below is historical. The selected result passes local
+> integration checks, with Realtek-specific, broader B3 and release limits
+> explicitly retained. No release/publication or sonic-policy adoption follows.
+
+> **September 16 owner sequencing:** local mastering correctness/playback/readout
+> changes are prepared for owner review at `f88f042b`; see the
+> [review guide](../reviews/2026-09-16-mastering-fixes-review.md) and
+> [implementation ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
+> This supersedes the earlier statement that SRC/ceiling fixes are only proposed:
+> they are implemented locally, with stated verification limits, and remain
+> unmerged. Dan expects reviewed fixes may enter the beta. Sound experiments are
+> paused until approval and main integration, then continue on a separate branch.
+> Unfinished C/E research is not a new blanket beta requirement; the existing
+> release gate remains unchanged. No merge or publication is authorized now.
+
+> **September 15 final reconciliation:** [the final synthesis](../reviews/2026-09-15-mastering-quality-final-synthesis.md)
+> supersedes the pilot recommendation where they differ. Both sealed Claude
+> phases and raw evidence are preserved; the final pass corrects reference-meter
+> errors, source-count/residual overclaims and the explanation of the SRC peak
+> example. [Tomorrow's planning handoff](../prompts/2026-09-15-mastering-quality-planning-handoff.md)
+> defines small implementation slices and their acceptance evidence. Confirmed
+> SRC/ceiling corrections are proposed, not integrated. Defaults, calibration
+> gates, installed listening scope and release disposition remain unchanged.
+
+> **September 15 UTC mastering research:** [the completed pilot recommendation](../reviews/2026-09-15-mastering-quality-recommendation.md)
+> supports source/target-aware drive and retains separate Density/Adapt controls.
+> Native SRC buffer/short-input defects and independent peak-ceiling failures
+> have reproducible isolated evidence. The SRC prototype is not integrated;
+> objective corrections need the affected application/bridge/fixture lanes.
+> Defaults/calibration gates, prior listening passes and release disposition are
+> unchanged. This closes the requested investigation, not production adoption.
+
+> **September 14 launch assessment:** [current findings](2026-09-14-launch-readiness.md)
+> replace the pending-CI assumption with verified failures at remote main
+> `af406855` (Mac encoder shell error and Windows M4A frame check). Demo placeholder
+> removal is prepared locally and passes `verify:headless`, including 38 app
+> checks. Release remains NO-GO; existing owner listening passes stay intact.
+
+> **September 9 export implementation:** U2–U5 of the
+> [export plan](2026-09-09-0857-feat-export-formats-beta-launch-plan.md) are
+> implemented; [the live evidence ledger](2026-09-09-export-formats-evidence.md)
+> records the installed Windows `7cd36ab6` candidate and source/relink proof.
+> The owner passed all five baseline checks on `07021f1b`; preserve that evidence.
+> Mac access is deferred by the owner. Remaining installed accessibility,
+> affected listening/player/offline, one unexplained audition pause, exact CI and
+> release/updater requirements remain open. Do not restart historical queues.
+
 > **2026-09-06 audit checkpoint:** current local end-to-end and visual review is
 > in [the launch audit](../reviews/2026-09-06-launch-readiness.md). Computer Use
 > covered real Mac workflows; objective UI/recovery gaps were fixed and

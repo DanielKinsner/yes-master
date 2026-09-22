@@ -1,5 +1,6 @@
 import { invoke, listen } from "./tauri-runtime";
 import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { ExportEncoding } from "./export-formats";
 import type {
   AlbumArc,
   AlbumPlan,
@@ -54,6 +55,9 @@ export interface AlbumTrackRenderRecord {
 }
 
 export interface AlbumRenderReport {
+  /** Actual continuous-file measurement; absent in older receipts. */
+  continuous_peak?: { true_peak_dbtp: number; ceiling_dbtp: number } | null;
+  delivered_format?: import("./export-formats").DeliveredFormat | null;
   mp3_bitrate_kbps?: number | null;
   job_id: string;
   status: JobStatus;
@@ -102,7 +106,7 @@ export const api = {
       settings,
     }),
 
-  preparePreviewLevel: (requestId: string, trackId: TrackId, trackPath: string, settings: MasteringSettings, album: boolean) => invoke<void>("prepare_preview_level", {requestId, trackId, trackPath, settings, album}),
+  preparePreviewLevel: (requestId: string, trackId: TrackId, trackPath: string, settings: MasteringSettings, album: boolean, encoding?: ExportEncoding) => invoke<void>("prepare_preview_level", {requestId, trackId, trackPath, settings, album, ...(encoding ? {encoding} : {})}),
   cancelPreviewPreparation: (requestId: string) => invoke<void>("cancel_preview_preparation", {requestId}),
 
   renderTrackMaster: (
@@ -111,6 +115,7 @@ export const api = {
     settings: MasteringSettings,
     outputPath?: string,
     mp3Bitrate?: number,
+    encoding?: import("./export-formats").ExportEncoding,
   ) =>
     invoke<RenderJob>("render_track_master", {
       trackId,
@@ -118,6 +123,7 @@ export const api = {
       settings,
       outputPath: outputPath ?? null,
       ...(mp3Bitrate === undefined ? {} : {mp3Bitrate}),
+      ...(encoding === undefined ? {} : { encoding }),
     }),
 
   prepareWaveform: (
@@ -242,6 +248,7 @@ export const api = {
     // B2: album mode is non-adaptive; the backend derives + injects the profile
     // and caches album-ness for the subsequent settings-only update_chain calls.
     album = false,
+    encoding?: ExportEncoding,
   ) =>
     invoke<null>("play_master", {
       trackId,
@@ -250,6 +257,7 @@ export const api = {
       startPositionSec: startPositionSec ?? null,
       previewLufsLanding,
       album,
+      ...(encoding ? {encoding} : {}),
     }),
 
   updateChain: (
@@ -259,8 +267,9 @@ export const api = {
     // edit so a Track<->Album switch mid-Mastered-audition resolves correctly
     // (album mode stays non-adaptive) without waiting for the next playMaster.
     album = false,
+    encoding?: ExportEncoding,
   ) =>
-    invoke<null>("update_chain", { settings, previewLufsLanding, album }),
+    invoke<null>("update_chain", { settings, previewLufsLanding, album, ...(encoding ? {encoding} : {}) }),
 
   /// Read-only per-axis adaptive-trim summary. B2: the backend resolves the
   /// profile from its store (keyed by trackId); album mode is non-adaptive. The
@@ -338,11 +347,13 @@ export const api = {
     tracks: AlbumTrackRenderInput[],
     outputDir?: string,
     mp3Bitrate?: number,
+    encoding?: import("./export-formats").ExportEncoding,
   ) =>
     invoke<AlbumRenderReport>("render_album_plan", {
       request: { plan, tracks },
       outputDir: outputDir ?? null,
       ...(mp3Bitrate === undefined ? {} : {mp3Bitrate}),
+      ...(encoding === undefined ? {} : { encoding }),
     }),
 
   cancelRender: (jobId: string) =>

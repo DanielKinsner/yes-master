@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save, getCurrentWebview } from "../lib/tauri-runtime";
 import { rememberView, rememberedView } from "../lib/view-by-track";
+import { EXPORT_FORMATS, ensureExportExtension, exportEncoding, exportApiArgs, previewEncodingArgs, type ExportEncoding, type ExportFormat } from "../lib/export-formats";
 import {
   ADAPTIVE_COMPRESSION_GATE_EVENT,
   api,
@@ -170,10 +171,6 @@ function suggestedMasterFilename(track: ImportedTrack): string {
     withoutExtension.replace(/[^a-z0-9-_]+/gi, "_").replace(/^_+|_+$/g, "") ||
     "master";
   return `${safeBase}_mastered.wav`;
-}
-
-function ensureWavExtension(path: string): string {
-  return /\.wav$/i.test(path) ? path : `${path}.wav`;
 }
 
 function projectDisplayName(path: string): string {
@@ -355,6 +352,7 @@ export function useTrackMaster() {
   const [isRendering, setIsRendering] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reportedPlaybackFailure = useRef<string | null>(null);
   const [projectFeedback, setProjectFeedback] = useState<ProjectFeedback | null>(null);
   const [transport, setTransport] = useState({
     isPlaying: false,
@@ -441,8 +439,12 @@ export function useTrackMaster() {
   );
   // Requested preview landing or Volume Match is being measured in the
   // background. Edge-triggered from the backend, including while paused.
-  const [exportFormat,setExportFormat] = useState<"wav" | "mp3">("wav");
+  const [exportFormat,setExportFormat] = useState<ExportFormat>("wav");
   const [mp3Bitrate,setMp3Bitrate] = useState(320);
+  const [aacBitrate,setAacBitrate] = useState(256);
+  const [vorbisQuality,setVorbisQuality] = useState(6);
+  const previewEncoding = useMemo(() => exportEncoding(exportFormat, exportFormat === "mp3" ? mp3Bitrate : aacBitrate, vorbisQuality),
+    [exportFormat,mp3Bitrate,aacBitrate,vorbisQuality]);
   const [landingPending, setLandingPending] = useState(false);
   // Real analysis progress from the backend's "analysis:progress" events
   // (actual phase boundaries). Queued tracks wait at zero until their first
@@ -632,6 +634,7 @@ export function useTrackMaster() {
     settings: MasteringSettings;
     preview: boolean;
     album: boolean;
+    encoding: ExportEncoding;
   } | null>(null);
   const updateChainRafScheduled = useRef(false);
   const lastPlaybackTickRef = useRef<{
@@ -656,6 +659,7 @@ export function useTrackMaster() {
         settings,
         preview,
         album: mode === "album",
+        encoding: previewEncoding,
       };
       const drain = () => {
         const next = updateChainPending.current;
@@ -666,7 +670,7 @@ export function useTrackMaster() {
         updateChainPending.current = null;
         updateChainInFlight.current = true;
         api
-          .updateChain(next.settings, next.preview, next.album)
+          .updateChain(next.settings, next.preview, next.album, ...previewEncodingArgs(next.encoding))
           .then(() => {
             drain();
           })
@@ -692,7 +696,7 @@ export function useTrackMaster() {
         setTimeout(scheduleDrain, 16);
       }
     },
-    [mode],
+    [mode,previewEncoding],
   );
 
   useEffect(() => {
@@ -737,12 +741,26 @@ export function useTrackMaster() {
       unlistenAnalysis = fn;
     });
     onPlaybackTick((tick) => {
-      setLoadedTrackId(tick.is_loaded ? tick.track_id : null);
       const selectedId = selectedTrackIdRef.current;
+      if (tick.playback_error && selectedId && tick.track_id !== selectedId) {
+        return;
+      }
+      setLoadedTrackId(tick.is_loaded ? tick.track_id : null);
       if (tick.is_loaded && selectedId && tick.track_id !== selectedId) {
         return;
       }
       const deviceLost = tick.device_lost ?? false;
+      const playbackFailure = tick.playback_error;
+      if (playbackFailure) {
+        const key = JSON.stringify([tick.track_id, playbackFailure.generation, playbackFailure.message]);
+        if (reportedPlaybackFailure.current !== key) {
+          reportedPlaybackFailure.current = key;
+          setError(playbackFailure.message);
+        }
+        setLandingPending(false);
+      } else {
+        reportedPlaybackFailure.current = null;
+      }
       if (deviceLost) {
         setPlaybackDeviceLost({
           track_id: tick.track_id,
@@ -754,13 +772,13 @@ export function useTrackMaster() {
       lastPlaybackTickRef.current = {
         trackId: tick.track_id,
         positionSec: tick.position_sec,
-        isPlaying: tick.is_playing && !deviceLost,
+        isPlaying: tick.is_playing && !deviceLost && !playbackFailure,
         receivedAtMs: Date.now(),
       };
       setTransport((t) => ({
         ...t,
         currentTimeSec: tick.position_sec,
-        isPlaying: tick.is_playing && !deviceLost,
+        isPlaying: tick.is_playing && !deviceLost && !playbackFailure,
         deviceLost,
         peakDbfs: tick.peak_dbfs,
         peakLeftDbfs: tick.peak_left_dbfs ?? tick.peak_dbfs,
@@ -1048,13 +1066,20 @@ export function useTrackMaster() {
   // non-adaptive. Recomputes on settings/analysis/mode change with a latest-wins
   // guard; depends on selectedAnalysis so a late-arriving analysis refetches.
   // Optional-chained so it is inert wherever the command isn't available (tests).
-  const [guardrailReadout, setGuardrailReadout] = useState<GuardrailReadout | null>(
-    null,
-  );
+  const [resolvedReadout, setResolvedReadout] = useState<{
+    value: GuardrailReadout; settings: MasteringSettings;
+    analysis: typeof selectedAnalysis; surface: string;
+  } | null>(null);
   const [compressionPlan, setCompressionPlan] = useState<CompressionPlan | null>(null);
   const [adaptiveCompressionGate, setAdaptiveCompressionGate] = useState(false);
   const guardrailReadoutReq = useRef(0);
   const widthSurface = `${selectedTrackId}:${mode}:${adaptiveCompressionGate}`;
+  // Reject stale values during render, including the render before an effect
+  // can clear them. The request's source/settings/analysis identity is retained
+  // with its response; a pending or unavailable response is never "resolved".
+  const guardrailReadout = resolvedReadout?.surface === widthSurface &&
+    resolvedReadout.settings === selectedSettings && resolvedReadout.analysis === selectedAnalysis
+    ? resolvedReadout.value : null;
   const [lastAutoWidth, setLastAutoWidth] = useState<{
     trackId: TrackId; surface: string; settings: MasteringSettings; value: number;
   } | null>(null);
@@ -1106,13 +1131,13 @@ export function useTrackMaster() {
   useEffect(() => {
     const reqId = ++guardrailReadoutReq.current;
     if (!selectedTrackId) {
-      setGuardrailReadout(null);
+      setResolvedReadout(null);
       setLastAutoWidth(null);
       setCompressionPlan(null);
       compressionPlanSurface.current = null;
       return;
     }
-    setGuardrailReadout(null);
+    setResolvedReadout(null);
     void selectedAnalysis; // dep: refetch when analysis lands so the store is ready
     const album = mode === "album";
     const surface = `${selectedTrackId}:${album}:${adaptiveCompressionGate}`;
@@ -1124,7 +1149,9 @@ export function useTrackMaster() {
     )
       .then((r) => {
         if (guardrailReadoutReq.current === reqId) {
-          setGuardrailReadout(r ?? null);
+          setResolvedReadout(r ? {
+            value: r, settings: selectedSettings, analysis: selectedAnalysis, surface: widthSurface,
+          } : null);
           setLastAutoWidth(r && typeof r.effective_auto_width === "number" && Number.isFinite(r.effective_auto_width)
             ? { trackId: selectedTrackId, surface: widthSurface, settings: selectedSettings, value: r.effective_auto_width }
             : null);
@@ -1132,7 +1159,7 @@ export function useTrackMaster() {
       })
       .catch(() => {
         if (guardrailReadoutReq.current === reqId) {
-          setGuardrailReadout(null);
+          setResolvedReadout(null);
           setLastAutoWidth(null);
         }
       });
@@ -2027,7 +2054,8 @@ export function useTrackMaster() {
             override_album: isOverride,
           };
         });
-      const report = await api.renderAlbumPlan(plan, renderTracks, outputDir, ...(exportFormat === "mp3" ? [mp3Bitrate] : []));
+      const report = await api.renderAlbumPlan(plan, renderTracks, outputDir,
+        ...exportApiArgs(exportEncoding(exportFormat, exportFormat === "mp3" ? mp3Bitrate : aacBitrate, vorbisQuality)));
       setAlbumExportReport(report);
       if (isCancelledStatus(report.status)) {
         setRenderFeedback({
@@ -2043,7 +2071,7 @@ export function useTrackMaster() {
       setAlbumRendering(false);
     }
   }, [
-    exportFormat,mp3Bitrate,
+    exportFormat,mp3Bitrate,aacBitrate,vorbisQuality,
     tracks,
     analysisMap,
     settingsMap,
@@ -2181,10 +2209,10 @@ export function useTrackMaster() {
           : baseFilename;
         const chosenPath = await save({
           defaultPath: defaultExportPath(store, "track", uniqueFilename),
-          filters: [{ name: `${exportFormat.toUpperCase()} audio`, extensions: [exportFormat] }],
+          filters: [{ name: `${EXPORT_FORMATS[exportFormat].label} audio`, extensions: [EXPORT_FORMATS[exportFormat].extension] }],
         });
         if (!chosenPath) return;
-        const chosenOutputPath = exportFormat === "wav" ? ensureWavExtension(chosenPath) : /\.mp3$/i.test(chosenPath) ? chosenPath : chosenPath.replace(/\.wav$/i, "") + ".mp3";
+        const chosenOutputPath = ensureExportExtension(chosenPath, exportFormat);
         rememberExportDirectory(store, "track", chosenOutputPath);
         setIsExporting(true);
         setRenderFeedback(null);
@@ -2196,7 +2224,7 @@ export function useTrackMaster() {
           selectedTrack.path,
           exportSettings,
           chosenOutputPath,
-          ...(exportFormat === "mp3" ? [mp3Bitrate] : []),
+          ...exportApiArgs(exportEncoding(exportFormat, exportFormat === "mp3" ? mp3Bitrate : aacBitrate, vorbisQuality)),
         );
         if (isCancelledStatus(job.status)) {
           setRenderFeedback({
@@ -2240,7 +2268,7 @@ export function useTrackMaster() {
         setIsExporting(false);
       }
     },
-    [selectedTrackId, selectedAnalysis, selectedTrack, clearIncompleteRenderProgress,exportFormat,mp3Bitrate],
+    [selectedTrackId, selectedAnalysis, selectedTrack, clearIncompleteRenderProgress,exportFormat,mp3Bitrate,aacBitrate,vorbisQuality],
   );
 
   const exportMaster = useCallback(
@@ -2291,6 +2319,7 @@ export function useTrackMaster() {
             // B2: album mode is non-adaptive. The backend caches this and reuses
             // it for the settings-only update_chain dispatches that follow.
             mode === "album",
+            ...previewEncodingArgs(previewEncoding),
           );
         } catch (err) {
           throw new Error(playbackErrorMessage(err, kind));
@@ -2308,6 +2337,7 @@ export function useTrackMaster() {
       withSourceLufs,
       mode,
       effectivePreviewLanding,
+      previewEncoding,
     ],
   );
 
@@ -2737,6 +2767,17 @@ export function useTrackMaster() {
     ],
   );
 
+  const previousPreviewEncoding = useRef(previewEncoding);
+  useEffect(() => {
+    if (previousPreviewEncoding.current === previewEncoding) return;
+    previousPreviewEncoding.current = previewEncoding;
+    if (shouldPushLiveChainForSettingsEdit({trackId:selectedTrackId,
+      editingAlbumIntent:mode === "album" && !selectedIsOverriding, loadedTrackId, loadedKindByTrack, overrideAlbum})) {
+      sendUpdateChain(withSourceLufs(selectedTrackId,selectedSettings),effectivePreviewLanding());
+    }
+  },[previewEncoding,selectedTrackId,mode,selectedIsOverriding,loadedTrackId,loadedKindByTrack,overrideAlbum,
+    sendUpdateChain,withSourceLufs,selectedSettings,effectivePreviewLanding]);
+
   useEffect(() => {
     const enabled=transport.exportLufsPreview || (forceWysiwyg && !transport.volumeMatch);
     if (!enabled || !selectedTrack || !selectedAnalysis || !api.preparePreviewLevel) {
@@ -2747,7 +2788,7 @@ export function useTrackMaster() {
     const requestId=`preview-${Date.now()}-${Math.random()}`;
     setPreviewPreparing(true);
     const timer=setTimeout(() => {
-      void api.preparePreviewLevel(requestId,selectedTrack.id,selectedTrack.path,selectedSettings,mode === "album")
+      void api.preparePreviewLevel(requestId,selectedTrack.id,selectedTrack.path,selectedSettings,mode === "album",...previewEncodingArgs(previewEncoding))
         .catch(err => { if(active) console.warn("Preview level preparation failed",err); })
         .finally(() => { if(active) setPreviewPreparing(false); });
     },180);
@@ -2755,7 +2796,7 @@ export function useTrackMaster() {
       active=false; clearTimeout(timer);
       void api.cancelPreviewPreparation?.(requestId).catch(() => {});
     };
-  },[selectedTrack?.id,selectedTrack?.path,selectedAnalysis,selectedSettings,mode,transport.exportLufsPreview,transport.volumeMatch,forceWysiwyg]);
+  },[selectedTrack?.id,selectedTrack?.path,selectedAnalysis,selectedSettings,mode,transport.exportLufsPreview,transport.volumeMatch,forceWysiwyg,previewEncoding]);
 
   const clearError = useCallback(() => setError(null), []);
   const clearProjectFeedback = useCallback(() => setProjectFeedback(null), []);
@@ -3146,7 +3187,7 @@ export function useTrackMaster() {
     setAlbumSampleRate,
     setAlbumBitDepth,
     exportAlbumPlan,
-    exportEncoding: {format:exportFormat,bitrate:mp3Bitrate,onFormat:setExportFormat,onBitrate:setMp3Bitrate},
+    exportEncoding: {format:exportFormat,bitrate:exportFormat === "mp3" ? mp3Bitrate : aacBitrate,quality:vorbisQuality,onFormat:setExportFormat,onBitrate:exportFormat === "mp3" ? setMp3Bitrate : setAacBitrate,onQuality:setVorbisQuality},
     updatePreview,
     guardrailReadout,
     autoWidthReadout,

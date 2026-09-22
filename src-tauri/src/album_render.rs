@@ -4,13 +4,17 @@ use crate::analysis::{
 };
 use crate::engine::{
     comparable_existing_or_parent_path, measure_and_apply_ceiling_bounded_landing,
-    measure_integrated_lufs, render_cancelled, AlbumPlanRenderRequest, AlbumRenderReport,
-    AlbumTrackRenderInput, AlbumTrackRenderRecord,
+    measure_integrated_lufs, render_cancelled, AlbumPeakResult, AlbumPlanRenderRequest,
+    AlbumRenderReport, AlbumTrackRenderInput, AlbumTrackRenderRecord,
+};
+use crate::peak_meter::{
+    self,
+    pcm::{PcmSource, WavPcm},
 };
 use crate::sample_rate::convert_interleaved;
 use crate::types::*;
 use crate::wav_writer::{
-    finalize_never_overwrite, unique_tmp_path, wav_spec, write_samples_into_writer, write_wav,
+    finalize_never_overwrite, wav_spec, write_samples_into_writer, write_wav_with_cancel,
 };
 use serde::Serialize;
 use std::io::Write;
@@ -52,6 +56,103 @@ fn append_delivered_track<W: std::io::Write + std::io::Seek>(
         hound::SampleFormat::Float => copy_samples(reader.samples::<f32>(), writer, cancel_flag),
         hound::SampleFormat::Int => copy_samples(reader.samples::<i32>(), writer, cancel_flag),
     }
+}
+
+struct StagedTrack {
+    float_path: PathBuf,
+    delivery_path: PathBuf,
+    destination: PathBuf,
+    frames: usize,
+    peak_upper: f64,
+}
+
+fn assemble_programme(
+    path: &Path,
+    tracks: &[StagedTrack],
+    request: &AlbumPlanRenderRequest,
+    spec: hound::WavSpec,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<()> {
+    let file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|e| CommandError::Io(e.to_string()))?;
+    let mut writer = hound::WavWriter::new(std::io::BufWriter::with_capacity(1 << 20, file), spec)
+        .map_err(|e| CommandError::Io(e.to_string()))?;
+    for (i, track) in tracks.iter().enumerate() {
+        append_delivered_track(&mut writer, &track.delivery_path, cancel)?;
+        if i + 1 < tracks.len() {
+            if let Some(transition) = request.plan.transitions.get(i) {
+                if matches!(transition.kind, TransitionKind::Gap) {
+                    let frames = (transition.duration_seconds.clamp(0., 5.)
+                        * spec.sample_rate as f32) as usize;
+                    // Preserve the existing gap quantizer/seed exactly.
+                    write_samples_into_writer(
+                        &mut writer,
+                        &vec![0.; frames * usize::from(spec.channels)],
+                        spec.bits_per_sample,
+                    )?;
+                }
+            }
+        }
+    }
+    writer
+        .finalize()
+        .map_err(|e| CommandError::Io(e.to_string()))
+}
+
+/// A single bounded re-quantization from the retained floats. The current PCM
+/// differs from those floats by <=q. New PCM differs from gain*current PCM by
+/// <=2q+r, including unchanged dithered gaps. K is the qualified reconstruction
+/// operator norm. Reserve its measured interval width as well: a fresh upper
+/// bound can be at most 0.0501 dB above a valid lower bound. Thus
+/// g <= (ceiling / interval_ratio - K*(2q+r)) / current_upper.
+/// This reserve depends on format, programme length and estimator uncertainty;
+/// it is used only after a demonstrated programme failure.
+fn programme_correction_gain(
+    upper: f64,
+    frames: usize,
+    bits: u16,
+    ceiling_db: f32,
+) -> CommandResult<f32> {
+    let ceiling = 10_f64.powf(f64::from(ceiling_db) / 20.);
+    let sample_limit = if bits == 32 { ceiling } else { ceiling.min(1.) };
+    let lsb = match bits {
+        16 => 1. / 32768.,
+        24 => 1. / 8388608.,
+        _ => 0.,
+    };
+    let q = if bits == 32 {
+        0.
+    } else {
+        1.5 * lsb + f64::from(f32::EPSILON) * (sample_limit + lsb)
+    };
+    let r = f64::from(f32::EPSILON) * (sample_limit + q);
+    let reserve = peak_meter::reconstruction_error_gain(frames) * (2. * q + r);
+    let candidate = ((ceiling / 10_f64.powf(0.0501 / 20.) - reserve) / upper).min(1.);
+    if !candidate.is_finite() || candidate <= 0. {
+        return Err(CommandError::Render(
+            "album ceiling is below the verified re-quantization bound".into(),
+        ));
+    }
+    let mut gain = candidate as f32;
+    if f64::from(gain) > candidate {
+        gain = f32::from_bits(gain.to_bits() - 1);
+    }
+    Ok(gain)
+}
+
+fn measure_programme(path: &Path, cancel: Option<&AtomicBool>) -> CommandResult<(usize, f64)> {
+    let source = WavPcm::open(path).map_err(|e| CommandError::Render(e.into()))?;
+    let measured = peak_meter::measure_source(&source, || render_cancelled(cancel))
+        .map_err(|e| CommandError::Render(e.into()))?;
+    if measured.widest_interval_db() > 0.0501 || !measured.upper().is_finite() {
+        return Err(CommandError::Render(
+            "album peak measurement remains too uncertain".into(),
+        ));
+    }
+    Ok((source.frames(), measured.upper()))
 }
 
 /// Resolve the album-wide delivery sample rate. An explicit request wins;
@@ -113,11 +214,11 @@ fn convert_channel_count(
     for frame in samples.chunks_exact(source_channels) {
         if target_channels > source_channels {
             if source_channels == 1 {
-                converted.extend(std::iter::repeat(frame[0]).take(target_channels));
+                converted.extend(std::iter::repeat_n(frame[0], target_channels));
             } else {
                 converted.extend_from_slice(frame);
                 let fill = *frame.last().unwrap_or(&0.0);
-                converted.extend(std::iter::repeat(fill).take(target_channels - source_channels));
+                converted.extend(std::iter::repeat_n(fill, target_channels - source_channels));
             }
         } else if target_channels == 2 && source_channels > 2 {
             converted.extend_from_slice(&downmix_frame_to_stereo(frame));
@@ -137,6 +238,7 @@ fn convert_channel_count(
 
 #[derive(Debug, Serialize)]
 struct AlbumManifest<'a> {
+    continuous_peak: &'a AlbumPeakResult,
     plan: &'a AlbumPlan,
     rendered_at_iso: String,
     sample_rate: u32,
@@ -651,20 +753,15 @@ pub fn render_album_plan_impl_with_cancel(
         ));
     }
 
-    // Two passes:
-    //   Pass 1 - decode + render each track into samples in memory, write
-    //   the per-track WAV named NN-<source-file-stem>_mastered.wav into the album's
-    //   <AlbumTitle>/ subfolder (Q25 option ii, decided 2026-07-07: the album
-    //   title names the FOLDER, not the per-track filenames), measure
-    //   post-render
-    //   LUFS, and remember the rendered samples + transition spec for the
-    //   continuous writer in pass 2. Memory cost is the full album in f32;
-    //   for a typical 60-min album at 48k stereo that's ~1.3 GB which is
-    //   acceptable on modern desktop. Future optimization can stream
-    //   directly without staging.
-    //
-    //   Pass 2 - open the album writer, stream each track's samples in,
-    //   inject Gap silence frames per TransitionSpec, finalize.
+    // Stage one track at a time in a private directory. Keep pre-quantization
+    // floats on disk so a programme correction never attenuates quantized PCM.
+    // Verify the assembled programme before publishing either form. Memory is
+    // bounded by one decoded/rendered track plus the peak meter's workspace.
+    let staging = tempfile::Builder::new()
+        .prefix(".album-preparation-")
+        .tempdir_in(out_dir)
+        .map_err(|e| CommandError::Io(e.to_string()))?;
+    let mut staged_tracks = Vec::with_capacity(total_tracks);
     let mut track_records: Vec<AlbumTrackRenderRecord> = Vec::with_capacity(total_tracks);
 
     // Per-stage wall-time aggregates across all tracks (F9/F11, mirrors the
@@ -680,10 +777,9 @@ pub fn render_album_plan_impl_with_cancel(
     let mut track_write_ms: u128 = 0;
     let mut last_emitted_overall = 0.0_f32;
 
-    // Pass-1 hostile-input hygiene (2026-07-03 A5b): if any track fails
-    // mid-album, best-effort remove the per-track WAVs already written so a
-    // failed export can't leave misleading partial output behind. (Pass 2
-    // already cleans its own tmp file on failure.)
+    // Private staging is removed by its TempDir guard on every exit. Track
+    // public files only after verified finalization so failures can sweep our
+    // own outputs without touching source files or concurrent writers.
     let mut written_paths: Vec<PathBuf> = Vec::with_capacity(total_tracks);
     let pass1_result = (|| -> CommandResult<()> {
         for (i, entry) in request.plan.tracks.iter().enumerate() {
@@ -849,11 +945,13 @@ pub fn render_album_plan_impl_with_cancel(
             // the raw album-intent target - preserving the album-arc story.
             // The B6 ceiling-bounded math is shared with the track-export
             // and album-simple paths via the helper.
-            measure_and_apply_ceiling_bounded_landing(
+            let protected = measure_and_apply_ceiling_bounded_landing(
                 &mut samples,
                 album_sample_rate,
                 rendered_channel_count,
                 &shadowed,
+                bit_depth,
+                cancel_flag,
             )?;
             src_land_ms += t_src_land.elapsed().as_millis();
 
@@ -867,29 +965,36 @@ pub fn render_album_plan_impl_with_cancel(
             let per_track_name = format!("{:02}-{}_mastered.wav", entry.position, safe);
             let per_track_path =
                 unique_child_path_avoiding_sources(out_dir, &per_track_name, &source_paths)?;
-            // write_wav diverts to a `__{n}` sibling if the chosen path
-            // gained a file mid-render; track the ACTUAL path for both
-            // the record and the on-error cleanup sweep.
             let t_write = std::time::Instant::now();
-            let per_track_path = write_wav(
-                &per_track_path,
+            let float_path = write_wav_with_cancel(
+                &staging.path().join(format!("{i}-float.wav")),
+                &samples,
+                album_sample_rate,
+                rendered_channel_count,
+                32,
+                cancel_flag,
+            )?;
+            let delivery_path = write_wav_with_cancel(
+                &staging.path().join(format!("{i}-delivery.wav")),
                 &samples,
                 album_sample_rate,
                 rendered_channel_count,
                 bit_depth,
+                cancel_flag,
             )?;
+            staged_tracks.push(StagedTrack {
+                float_path,
+                delivery_path,
+                destination: per_track_path.clone(),
+                frames: samples.len() / usize::from(rendered_channel_count),
+                peak_upper: protected.peak_upper,
+            });
             track_write_ms += t_write.elapsed().as_millis();
-            written_paths.push(per_track_path.clone());
             if render_cancelled(cancel_flag) {
                 return Err(CommandError::Other("album render cancelled".to_string()));
             }
 
-            let (delivered_lufs, delivered_tp, _) = crate::wav_writer::measure_delivery(
-                &samples,
-                album_sample_rate,
-                rendered_channel_count,
-                bit_depth,
-            )?;
+            let (delivered_lufs, delivered_tp) = (protected.lufs, protected.true_peak_dbtp);
             let measured_lufs = sanitize_lufs(delivered_lufs);
             track_records.push(AlbumTrackRenderRecord {
                 track_id: entry.track_id.clone(),
@@ -947,55 +1052,98 @@ pub fn render_album_plan_impl_with_cancel(
         ));
     }
     let t_pass2 = std::time::Instant::now();
-    let pass2_result = (|| -> CommandResult<(PathBuf, PathBuf)> {
+    let pass2_result = (|| -> CommandResult<(PathBuf, PathBuf, AlbumPeakResult)> {
         let album_path = unique_album_path(out_dir, &source_paths)?;
         let spec = wav_spec(album_channels, album_sample_rate, bit_depth)?;
-        let album_tmp_path = unique_tmp_path(&album_path)?;
-        let album_write_result = (|| -> CommandResult<()> {
-            // 1 MiB BufWriter (hound defaults to 8 KiB): the continuous album
-            // file is the longest write in the app — at 8 KiB it flushes once
-            // per ~11 ms of audio, which is exactly where a sync-monitored or
-            // slow destination bleeds time (owner smoke F9/F11). Byte output
-            // is unchanged; only flush cadence differs.
-            let album_file = std::fs::File::create(&album_tmp_path)
-                .map_err(|e| CommandError::Io(e.to_string()))?;
-            let album_buf = std::io::BufWriter::with_capacity(1 << 20, album_file);
-            let mut album_writer = hound::WavWriter::new(album_buf, spec)
-                .map_err(|e| CommandError::Io(e.to_string()))?;
-            for (i, track) in track_records.iter().enumerate() {
-                if render_cancelled(cancel_flag) {
-                    return Err(CommandError::Other("album render cancelled".to_string()));
-                }
-                append_delivered_track(
-                    &mut album_writer,
-                    Path::new(&track.output_path),
-                    cancel_flag,
-                )?;
-                if i + 1 < track_records.len() {
-                    // Transition slot between track i and track i+1.
-                    if let Some(t) = request.plan.transitions.get(i) {
-                        if matches!(t.kind, TransitionKind::Gap) {
-                            let gap_seconds = t.duration_seconds.clamp(0.0, 5.0);
-                            let gap_frames = (gap_seconds * album_sample_rate as f32) as usize;
-                            let gap_samples = gap_frames * album_channels as usize;
-                            let zeros = vec![0.0_f32; gap_samples];
-                            write_samples_into_writer(&mut album_writer, &zeros, bit_depth)?;
-                        }
-                    }
+        let mut album_tmp_path = staging.path().join("programme.wav");
+        assemble_programme(&album_tmp_path, &staged_tracks, request, spec, cancel_flag)?;
+        let (programme_frames, upper) = measure_programme(&album_tmp_path, cancel_flag)?;
+        // Per-track overrides retain their own ceiling. The programme cannot
+        // promise a stricter global ceiling than its least restrictive member.
+        let programme_ceiling = track_records
+            .iter()
+            .map(|t| t.ceiling_dbtp)
+            .fold(f32::NEG_INFINITY, f32::max);
+        let ceiling = 10_f64.powf(f64::from(programme_ceiling) / 20.);
+        let mut programme_upper = upper;
+        if upper > ceiling {
+            let mut gain =
+                programme_correction_gain(upper, programme_frames, bit_depth, programme_ceiling)?;
+            for (track, record) in staged_tracks.iter().zip(&track_records) {
+                if track.peak_upper > 0. {
+                    gain = gain.min(programme_correction_gain(
+                        track.peak_upper,
+                        track.frames,
+                        bit_depth,
+                        record.ceiling_dbtp,
+                    )?);
                 }
             }
-            album_writer
-                .finalize()
-                .map_err(|e| CommandError::Io(e.to_string()))?;
-            Ok(())
-        })();
-        if let Err(err) = album_write_result {
-            let _ = std::fs::remove_file(&album_tmp_path);
-            return Err(err);
+            for (i, (track, record)) in staged_tracks.iter_mut().zip(&mut track_records).enumerate()
+            {
+                if render_cancelled(cancel_flag) {
+                    return Err(CommandError::Other("album render cancelled".into()));
+                }
+                let mut pcm = crate::decode::decode_full(&track.float_path)?;
+                for chunk in pcm.samples.chunks_mut(4096 * usize::from(album_channels)) {
+                    if render_cancelled(cancel_flag) {
+                        return Err(CommandError::Other("album render cancelled".into()));
+                    }
+                    for sample in chunk {
+                        *sample *= gain;
+                    }
+                }
+                let (lufs, peak, _) = crate::wav_writer::measure_delivery_with_cancel(
+                    &pcm.samples,
+                    album_sample_rate,
+                    album_channels,
+                    bit_depth,
+                    cancel_flag,
+                )?;
+                if peak > record.ceiling_dbtp + 1e-5 {
+                    return Err(CommandError::Render(
+                        "corrected album component exceeds its ceiling".into(),
+                    ));
+                }
+                track.delivery_path = write_wav_with_cancel(
+                    &staging.path().join(format!("{i}-corrected.wav")),
+                    &pcm.samples,
+                    album_sample_rate,
+                    album_channels,
+                    bit_depth,
+                    cancel_flag,
+                )?;
+                record.measured_lufs = sanitize_lufs(lufs);
+                record.true_peak_dbtp = peak;
+            }
+            album_tmp_path = staging.path().join("programme-corrected.wav");
+            assemble_programme(&album_tmp_path, &staged_tracks, request, spec, cancel_flag)?;
+            programme_upper = measure_programme(&album_tmp_path, cancel_flag)?.1;
+            crate::diagnostics::info(format!(
+                "Album join correction: gain_db={:.6} before_dbtp={:.6} after_dbtp={:.6}",
+                20. * gain.log10(),
+                20. * upper.log10(),
+                20. * programme_upper.log10()
+            ));
         }
+        if programme_upper > ceiling * (1. + 1e-10) {
+            return Err(CommandError::Render(
+                "album programme exceeds its ceiling after bounded correction".into(),
+            ));
+        }
+        crate::diagnostics::info(format!(
+            "Album programme verified: estimator={} frames={programme_frames} ceiling_dbtp={programme_ceiling} peak_dbtp={:.6}",
+            peak_meter::VERSION, 20. * programme_upper.log10()));
         if render_cancelled(cancel_flag) {
-            let _ = std::fs::remove_file(&album_tmp_path);
-            return Err(CommandError::Other("album render cancelled".to_string()));
+            return Err(CommandError::Other("album render cancelled".into()));
+        }
+        for (track, record) in staged_tracks.iter().zip(&mut track_records) {
+            if render_cancelled(cancel_flag) {
+                return Err(CommandError::Other("album render cancelled".into()));
+            }
+            let path = finalize_never_overwrite(&track.delivery_path, &track.destination)?;
+            record.output_path = path.to_string_lossy().into_owned();
+            written_paths.push(path);
         }
         let album_path = match finalize_never_overwrite(&album_tmp_path, &album_path) {
             Ok(p) => p,
@@ -1010,7 +1158,16 @@ pub fn render_album_plan_impl_with_cancel(
 
         let manifest_path =
             unique_child_path_avoiding_sources(&metadata_dir, "manifest.json", &source_paths)?;
+        let continuous_peak = AlbumPeakResult {
+            true_peak_dbtp: if programme_upper > 0. {
+                (20. * programme_upper.log10()) as f32
+            } else {
+                -120.
+            },
+            ceiling_dbtp: programme_ceiling,
+        };
         let manifest = AlbumManifest {
+            continuous_peak: &continuous_peak,
             plan: &request.plan,
             rendered_at_iso: now_iso(),
             sample_rate: album_sample_rate,
@@ -1035,9 +1192,9 @@ pub fn render_album_plan_impl_with_cancel(
         if render_cancelled(cancel_flag) {
             return Err(CommandError::Other("album render cancelled".to_string()));
         }
-        Ok((album_path, manifest_path))
+        Ok((album_path, manifest_path, continuous_peak))
     })();
-    let (album_path, manifest_path) = match pass2_result {
+    let (album_path, manifest_path, continuous_peak) = match pass2_result {
         Ok(paths) => paths,
         Err(err) => {
             for p in &written_paths {
@@ -1076,6 +1233,14 @@ pub fn render_album_plan_impl_with_cancel(
     ));
 
     Ok(AlbumRenderReport {
+        continuous_peak: Some(continuous_peak),
+        delivered_format: Some(crate::export_format::ExportEncoding::Wav.delivered(
+            album_sample_rate,
+            album_channels,
+            bit_depth,
+            request.plan.delivery_sample_rate,
+            request.plan.delivery_bit_depth.unwrap_or(bit_depth),
+        )),
         mp3_bitrate_kbps: None,
         job_id,
         status: JobStatus::Done,
@@ -1101,6 +1266,8 @@ fn cancelled_album_report(
     source_channels: Vec<u16>,
 ) -> AlbumRenderReport {
     AlbumRenderReport {
+        continuous_peak: None,
+        delivered_format: None,
         mp3_bitrate_kbps: None,
         job_id,
         status: JobStatus::Cancelled,

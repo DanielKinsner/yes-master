@@ -1,0 +1,118 @@
+[
+ {
+  "source": "drums_60s.wav",
+  "preset": "loud",
+  "L1": -12.139758996500111,
+  "P": {
+   "trim": 0.0,
+   "lufs": -13.999999046325684,
+   "tp": -1.0069429874420166,
+   "lra": 0.17219360172748566,
+   "checks": [
+    "dynamic_range_low",
+    "comp_density_on_compressed_source"
+   ],
+   "sha256": "1dd87ab26021fe571df5ff40724589abadc90b8331f5a3efaafe913923be2f68"
+  },
+  "A": {
+   "trim": -1.8602410034998886,
+   "lufs": -14.907322883605957,
+   "tp": -0.9999985694885254,
+   "lra": 0.18582914769649506,
+   "checks": [
+    "streaming_headroom_low",
+    "target_not_reached",
+    "dynamic_range_low",
+    "comp_density_on_compressed_source"
+   ],
+   "sha256": "15e31098416ee637b81df4e10cc1b5b4617652708efaf53c5c90b4dbd5d1554e"
+  },
+  "A2": {
+   "trim": -0.9529181198939316,
+   "lufs": -14.478988647460938,
+   "tp": -0.9999985694885254,
+   "lra": 0.17051780223846436,
+   "checks": [
+    "streaming_headroom_low",
+    "target_not_reached",
+    "dynamic_range_low",
+    "comp_density_on_compressed_source"
+   ],
+   "sha256": "3f731e012a4a23e2ea9b4da2be682bce94cddcdd249de79ea7402adbf512b662"
+  },
+  "A3": {
+   "trim": -0.4739294724329941,
+   "lufs": -14.238151550292969,
+   "tp": -0.9999997019767761,
+   "lra": 0.18219681084156036,
+   "checks": [
+    "streaming_headroom_low",
+    "dynamic_range_low",
+    "comp_density_on_compressed_source"
+   ],
+   "sha256": "a2c8054bae58f7eeb2f4b5a0ea635242df2ac820ed96205bc9c4c99b3c9db795"
+  }
+ },
+ {
+  "source": "drums_60s.wav",
+  "preset": "universal",
+  "L1": -16.798290608676893,
+  "P": {
+   "trim": 0.0,
+   "lufs": -18.20751190185547,
+   "tp": -0.9999997019767761,
+   "lra": 0.2373877614736557,
+   "checks": [
+    "streaming_headroom_low",
+    "target_not_reached",
+    "dynamic_range_low",
+    "comp_density_on_compressed_source"
+   ],
+   "sha256": "77a83db04688f903fce87e957fc95623215b16b799d17933fa67abbd26050d3e"
+  },
+  "A": {
+   "trim": 0.0,
+   "lufs": -18.20751190185547,
+   "tp": -0.9999997019767761,
+   "lra": 0.2373877614736557,
+   "checks": [
+    "streaming_headroom_low",
+    "target_not_reached",
+    "dynamic_range_low",
+    "comp_density_on_compressed_source"
+   ],
+   "sha256": "77a83db04688f903fce87e957fc95623215b16b799d17933fa67abbd26050d3e"
+  },
+  "A2": null,
+  "A3": null
+ },
+ {
+  "source": "pink_-20_60s.wav",
+  "preset": "loud",
+  "L1": -7.4146068405507135,
+  "P": {
+   "trim": 0.0,
+   "lufs": -13.999999046325684,
+   "tp": -7.065145969390869,
+   "lra": 0.0743522197008133,
+   "checks": [
+    "dynamic_range_low",
+    "comp_density_on_compressed_source"
+   ],
+   "sha256": "bbc36e2e9c8b5917bd570c9a17eb41b09ca447a20ab6d29eba5784a7b658da07"
+  },
+  "A": {
+   "trim": -6.5853931594492865,
+   "lufs": -14.0,
+   "tp": -3.9760076999664307,
+   "lra": 0.07851038128137589,
+   "checks": [
+    "dynamic_range_low",
+    "comp_density_on_compressed_source"
+   ],
+   "sha256": "29d2a2e22d602e4e8195fffe1904e11acadc44643f43a054dbe4a558808ce17c"
+  },
+  "A2": null,
+  "A3": null
+ }
+]

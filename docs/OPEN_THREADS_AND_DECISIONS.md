@@ -1,5 +1,463 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-21 — Completed research main push authorized.** Dan requested
+> committing and pushing the completed checkpoint. The [integration record](reviews/2026-09-21-research-main-integration.md)
+> reviews the 16-commit research delta, verification and existing remote CI
+> failures. A main-branch Vercel guard preserves the no-deployment boundary.
+> Subsequent experiments remain local on a separate research branch; no sonic
+> policy, release, private-audio commit or deployment is authorized.
+
+> **2026-09-18 — Broader coverage and Metal follow-up verified.**
+> Dan authorized continuing evidence collection. The [completed results](reviews/2026-09-18-universal50-and-metal-results.md)
+> add 24 independently verified whole files and reuse eight Funk/Rich outputs,
+> completing original-level Universal 50 current/single pairs at -14/-9 across
+> all eight development sources. The fixed selector yields four qualified targets,
+> five character-qualified shortfalls and seven explicit character fallbacks.
+> All eight -9 singles fail a character limit. A separate two-file reproduction
+> of the retained Metal +3 dB lead passes every unchanged limit at Universal 50/75
+> and -14, preserving more attack than current processing while clearing the
+> zero-offset candidate's tone failure. Tone margins are narrow (0.031/0.028 dB).
+> This supports a future bounded search in both directions, with processing
+> choice separate from delivery gain. It does not rewrite the fixed selector
+> or adopt +3 as a shipping constant. Native evaluation costs, whole-file checks,
+> source/settings hashes and preflight corrections are recorded. C1's final
+> source/preset/control contract, quiet-copy coverage for the corrected policy,
+> runtime freeze, C2 holdout and C3 adoption remain open. Main stays `ab420654`;
+> normal app behavior, preset intent, gated features and release status are unchanged.
+
+> **2026-09-16 — Broader presets, target reuse and recovery verified.**
+> The [new results](reviews/2026-09-16-preset-and-target-reuse-results.md) complete
+> sixteen broader preset/target outputs and four prepared-target outputs, all
+> independently checked whole files. Only one of eight broader control/single
+> pairs meets both the frozen character and target limits; two retain qualified
+> character with a shortfall and five remain explicit character fallbacks.
+> Dense-preset intent is preserved; no universal shipping constraint is inferred.
+> Reusing prepared PCM preserves its character across a target change. Retaining
+> the existing prepared peak/loudness facts then cuts paired finalization means
+> from 7.636–8.272 s to 0.256–0.319 s with **16 bit-identical complete outputs**.
+> Including one-time preparation, two evaluations use 40.0–52.7% less observed work.
+> These are offline stage measurements, not an app-wide speedup. Develop processing
+> choice separately from delivery gain and retain valid buffer/facts; C1's final
+> source/preset contract, C2 and C3 remain open. No new shipping policy is enabled.
+> After the power interruption, Realtek opens and fresh muted callback checks
+> pass (659 gain / 609 EQ callbacks, zero misses/errors). Earlier endpoint-open
+> failures remain preserved with cause unresolved; fixed-256/listening proof is
+> not inferred. Local main stays `ab420654`, with experiments on the separate branch.
+
+> **2026-09-16 — Dynamics research checkpoint verified; experimental direction chosen.**
+> Dan chose the recommended dynamics-preserving direction for experiments when
+> reaching a target would flatten punch/section contrast. He wants a polished
+> result without routine explanatory caveats for users. Keep diagnostics in
+> research evidence, retain accurate meters/results and deliberate strong-processing
+> controls. This does not adopt shipping thresholds, a selector or a UI redesign.
+> The [new results](reviews/2026-09-16-single-first-development-results.md) record
+> 12 single-first and 10 follow-up rows passing complete independent output checks
+> (16 new WAVs, preserved/reused anchors). Funk, Aphelion and Baby satisfy the
+> frozen single-candidate character/target limits; Metal and Rich retain tradeoffs.
+> Extra search costs 74.707 s of evaluation without a clear replacement for their
+> current processing under those limits. Include the corrected control among
+> eligible results in the next frozen selector. That [selector](reviews/2026-09-16-control-inclusive-selector-protocol.md)
+> is now implemented and verified by 11 regressions plus existing whole-file
+> reselection: Rich keeps current processing; Metal remains an explicit character
+> fallback; the three qualifying singles remain selected. C1 contract/regression work,
+> C2 holdout and C3 adoption remain open. The power-outage recovery verified all
+> saved report hashes; no completed audio experiment needs restarting.
+
+> **2026-09-16 — Local fixes merged; separate dynamics research resumed.**
+> Local main is `ab420654` after verified selective integration. No push occurred.
+> `codex/mastering-dynamics-research` starts at that exact main state; the original
+> `codex/mastering-quality` remains at `03df038a`. The next
+> [frozen development checkpoint](reviews/2026-09-16-single-first-development-protocol.md)
+> measures current processing and the existing single candidate on the remaining
+> five development sources, with two retained reproduction anchors. Existing
+> character limits remain experimental. Comparison-control cost is counted;
+> native response, offline evaluation and independent verification stay separate.
+
+> **2026-09-16 — Selective local integration authorized.** Dan approved preparing
+> and testing the fixes, merging the verified selection into local main, then
+> resuming dynamic-range/quality research on a separate branch. See the
+> [integration record](reviews/2026-09-16-mastering-fixes-integration.md).
+> The selected result on `codex/mastering-fixes-integration` is verified for local
+> main: 897 frontend tests, 716 desktop tests including four private-fixture
+> checks, headless UI, both bridges and Windows packaging pass. Four fresh
+> whole-song device outputs match prior WAVs exactly and pass independent checks.
+> Native lifecycle and callback checks pass on the working monitor fallback;
+> the current default Realtek endpoint refuses stream opening and its cause
+> remains unresolved. The original research branch and evidence are preserved.
+> Resume experiments on `codex/mastering-dynamics-research` after local integration.
+> The review pause below is
+> superseded. No push, release, deployment, spending, private-audio commit or
+> automatic sonic-policy adoption is authorized by this direction.
+
+> **2026-09-16 — Owner review first; sound experiments paused.**
+> Dan wants to review the local correctness, playback, measurement, performance
+> and readout changes before any main integration, with possible beta inclusion.
+> The [review guide](reviews/2026-09-16-mastering-fixes-review.md) pins the current
+> code/research snapshot at `f88f042b` on `codex/mastering-quality`, based on local
+> main `7534f612`, and separates app changes from interleaved experiment tooling.
+> Pause new sound experiments and DSP variations. After the fixes are approved
+> and merged, pursue sound research on a separate branch from verified main.
+> The automatic sound-priority choice is deferred; do not ask for it during this
+> review. The LANDR comparison motivated investigation, and the owner now separates
+> demonstrated defects from broader mastering improvements. It does not establish
+> a fundamental architectural failure or the competitor's internal processing.
+> Preserve all frozen evidence and private fixtures. B3's remaining validation
+> limits and existing release gates remain explicit; unfinished C/E research is
+> not a new blanket beta requirement. No merge/push/release/deployment is authorized
+> now. The active next step is owner review, superseding the continuation below.
+
+> **2026-09-15 — Mastering-quality implementation active locally.**
+> Dan authorized implementation, testing, internal docs and small local commits
+> in the existing checkout. `codex/mastering-quality` starts at local `7534f612`;
+> no push/main merge/release/deployment/spend or private-audio commit is authorized.
+> The [checkpoint ledger](reviews/2026-09-15-mastering-quality-implementation-evidence.md)
+> records A1/A2, B1, D1/D2 and C0 complete locally; B2's qualified core is integrated
+> with explicit reference/official-sequence limits. Frozen evidence/fixtures remain intact.
+>
+> **B3 remains in progress.** Track, rendered preview and Album finalizers pass,
+> including programme joins and component PCM parity. Production Original/Mastered
+> conversion now uses the actual opened device configuration and the encoding's
+> pre-encode PCM rate. [Device preparation](reviews/2026-09-15-device-gain-preparation.md)
+> fixes the independently confirmed whole-Imaginal device-rate ceiling miss.
+> All 32 retained-output core checks and 16 first-placement original-source cases
+> pass whole-file independent verification. The first placement at `9ebd2f81`
+> subsequently exposed brief 9.37-12 dB transition dips. The corrected placement
+> preserves compensated DSP crossfades and verifies actual landed/SRC PCM using
+> cached raw facts; all eight equal-output transition cases now match exactly.
+> Full desktop/private fixtures (505 library tests), strict Clippy, both bridges
+> and 606 loaded native callbacks pass. All **16 corrected whole-source outputs**
+> now match their prepared PCM exactly and independently pass peak/LUFS checks.
+> A subsequent [combined-gain correction](reviews/2026-09-15-combined-gain-transition.md)
+> removes a 1.023 dB bump during inverse device-correction/Volume Match edits.
+> Six normal/interrupted cases now stay within 6.472e-7 dB; 507 library tests,
+> full private fixtures, 655 rapid-gain and 606 EQ-edit native callbacks pass.
+> Broader dynamic boundaries and the final-result UI contract remain open.
+>
+> Latest actual-device preparation/application is **44.962/45.142 s** initially,
+> **2.010/2.244 s** for a new target, and **75/191 ms** for a cached target. Raw DSP
+> is reused; actual gain/SRC and whole-file delivery checks still run on new targets.
+> Source/file and device caches cap retained PCM at 288/192 MiB. The loaded native
+> session observes **48.741 s wall / 47.516 s CPU / 722 MiB peak working set**.
+> Preparation, output application, callback responsiveness and session cost remain
+> separate; these are not isolated speed comparisons or new listening evidence.
+>
+> B4 has 316 independent encoded technical checks, exact FLAC/AIFF PCM parity and
+> unclipped MP3 receipt readback. Lossy ceiling misses remain explicit/advisory;
+> bounded headroom/re-encoding experiments do not justify automatic adoption.
+> [C1 development](reviews/2026-09-15-drive-prototype-protocol.md) has 517 original
+> coarse/refined deliveries plus 960 quiet-copy renders, complete metrics and
+> 243 independently passing quiet-copy selected/control files. The separate filter-precision
+> correction reduces tested normalized-copy differences to at most 5.96e-7 with
+> unchanged coefficients, at 19-29% extra chain CPU in loaded paired trials.
+> Its full validation and preserved old references are recorded in
+> [gain-copy diagnosis](reviews/2026-09-15-drive-gain-consistency.md).
+> A [normalized-reference selector experiment](reviews/2026-09-15-drive-selector-reference-experiment.md)
+> completes all eight sources: preserving candidate/fallback consistency improves
+> from 73/96 to 96/96, while original-group fallbacks increase from 18 to 21.
+> Character/fallback limits remain open. The [actual-analysis diagnostic](reviews/2026-09-15-source-analysis-gain-results.md)
+> completes 48 analyses: normalized-copy coefficients match 48/48, versus 33/48
+> with actual-level analysis. Original versus normalized-source coefficients
+> match 24/24. No analysis policy, automatic sonic policy, control mapping or
+> unseen-holdout result is adopted.
+> A [low-drive diagnostic](reviews/2026-09-15-drive-small-signal-results.md)
+> retains four exact controls and eight new independently protected outputs.
+> Lower drive clears Piano's contrast failure but lands at -18.7 for a -14
+> request; Imaginal's attacks recover with a large miss and changed tone.
+> All four low-drive pairs fail the frozen numerical convergence limit, so no
+> linear reference or revised selection rule is claimed.
+> The subsequent [fixed lower-drive grid](reviews/2026-09-15-drive-lower-grid-results.md)
+> adds three exact controls and nine freshly independently protected whole files.
+> With unchanged character limits, Coat/Piano/Imaginal select -14.000/-14.804/
+> -18.142 LUFS for a -14 request. The single rule suffices for Coat; its other
+> candidates cost 62.405 s of additional audio evaluation. Target-first retains
+> Piano/Imaginal dynamics failures. These are development findings; owner
+> direction, broader corrected-chain validation and C2/C3 remain open.
+> [Saturation calibration](reviews/2026-09-15-saturation-calibration-results.md)
+> retains isolated continuity/antialias comparisons, eight independently verified
+> native finite-filter cases and **16 independently passing whole-song outputs**.
+> Four current controls are exact and four f64-only controls pass numerical
+> isolation. Filters redistribute limiter activity without resolving C1 character
+> failures. The serial long-filter chain costs 68-148 s on these songs; table reuse
+> is negligible. A separate accumulation trial improves long-filter processing
+> 8.12% but regresses the short filter 11.10%.
+> A separate AVX experiment subsequently reduces paired short/long processing
+> cost 16.61/31.79% on this host, with all eight outputs exact against the prior
+> four-accumulator version and independently qualified. Its scalar fallback is
+> also exact; the existing whole-song timings remain serial-filter evidence.
+> Earlier block-interval exceedances,
+> actual-device/selected-C evidence and owner calibration/listening remain open.
+> Preset intent and gated constants are unchanged.
+> No installed/Mac/release verdict follows from this local implementation.
+
+> **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
+> Dan accepts longer initial analysis/preparation for demonstrated audio quality,
+> fidelity and subsequent interaction benefits. The [revised plan](plans/2026-09-15-mastering-quality-implementation-plan.md)
+> makes C0 an early preparation/quality/performance experiment alongside A/B1/D1;
+> offline C no longer waits for B2/B3 production integration. It compares a
+> single-render source-relative rule, attenuate-only processing and bounded
+> search, using checked research references before production adoption. Initial
+> wait, prediction-settling time and live audio responsiveness are separate
+> measures. Numeric sonic limits/control mapping remain open; the agent owns
+> candidate calibration and validation. This request updates the plan, with
+> production implementation and existing calibration gates unchanged.
+
+> **2026-09-15 — Mastering implementation planning draft prepared.**
+> The [code-grounded plan](plans/2026-09-15-mastering-quality-implementation-plan.md)
+> separates SRC correctness, qualified final-output protection, automatic-drive
+> prototyping, existing-control accuracy and saturation calibration. Receiving-
+> machine restoration verified 3,543 objects / 4,507 paths. A fresh locked Windows
+> harness build reproduced On/Off/257-frame WAVs byte for byte after diagnosing
+> source line-ending differences in an isolated copy. Current production is
+> unchanged. Automatic dynamics limits and control mapping remain proposals;
+> planning is not production adoption, new listening approval or release work.
+
+> **2026-09-15 — Final mastering research synthesis; next step is implementation planning.**
+> Claude's blind report and unblinded reconciliation are archived with original
+> seals, scripts/settings and raw measurements. The [authoritative synthesis](reviews/2026-09-15-mastering-quality-final-synthesis.md)
+> resolves disagreements and corrects overclaims/reference-meter errors in both
+> investigations. Recommended order: SRC correctness; final-rate peak protection
+> independent of LUFS targeting; bounded source/target-aware drive; existing
+> Density/readout accuracy; separately calibrated saturation/antialiasing.
+> The [fresh-agent prompt](prompts/2026-09-15-mastering-quality-planning-handoff.md)
+> and [transfer guide](reviews/2026-09-15-mastering-quality-transfer.md) support
+> another machine. Fresh On reproduction and five pruned Claude witnesses match
+> their recorded WAV hashes. Preserve defaults, gates and prior listening verdicts.
+> This closes the requested research/reconciliation, not production implementation
+> or release activation. The independent sibling is a folder without Git; no
+> cleanup was performed by the final pass. Earlier entries below are history.
+
+> **2026-09-15 — Independent report received; targeted follow-up prepared.**
+> Claude Fable completed its report in the separate review workspace. All 18
+> sealed files match their recorded hashes. The report overlaps on excessive
+> upstream processing and peak discrepancies, recommends an attenuate-only
+> policy, and reports additional no-target/short-input ceiling failures; these
+> are its findings, not yet a completed cross-investigation replication.
+> [The explicit unblinded follow-up](prompts/2026-09-15-mastering-quality-targeted-replication.md)
+> directs matched-condition tests and a separate reconciliation report. A verified
+> 74-file text/source checkpoint is retained under ignored `test-output/`; unique
+> rendered audio remains in the review workspace. Keep that workspace through
+> reconciliation and verified evidence preservation. Nothing was deleted or
+> changed in production; the targeted follow-up itself has not been run here.
+
+> **2026-09-15 — Independent review prepared at the owner's request.**
+> A separate source/audio workspace and [neutral question-led prompt](prompts/2026-09-15-independent-mastering-audit.md)
+> support a fresh Claude Fable assessment without earlier findings or experiment
+> tooling. [Coordinator instructions](reviews/2026-09-15-independent-audit-setup.md)
+> explain context isolation, sealing results and later reconciliation. The review
+> itself has not been launched; no independent verdict or production change is claimed.
+
+> **2026-09-15 UTC / September 14 Pacific — Mastering-quality recommendation completed.**
+> [The expanded investigation](reviews/2026-09-15-mastering-quality-recommendation.md)
+> retains byte-identical owner exports and adds seven licensed pieces, 192 pilot
+> delivery measurements, input-level robustness and 504 native mechanism cases.
+> It recommends source/target-aware drive ahead of global density/Adapt retuning;
+> exploratory -14 tests meet target and independent ceiling in all 12 tested
+> source/level conditions. -9 tradeoffs, input bounds and peak failures remain.
+> Separate SRC buffer/short-input defects and native-versus-independent peak
+> discrepancies are demonstrated; an isolated SRC correction passes 45 conditions.
+> Production adoption and its application/bridge/fixture checks remain separate.
+> Defaults, calibration gates and prior listening verdicts are unchanged. No new
+> owner questionnaire is needed. [Portable scripts](../scripts/research/mastering-quality-20260915/README.md)
+> accompany the recorded evidence; the older audio archive remains intact.
+
+> **2026-09-14 — Density Auto thumb question added to the continuation.**
+> The owner asks whether Auto should display the preset's default and how that
+> should interact with Adapt strength. [The UI follow-up](prompts/2026-09-14-mastering-quality-continuation.md#additional-owner-question-where-should-density-auto-place-the-thumb)
+> recommends a thumb tied to requested density (preset default while Auto), with
+> source-adaptive processing shown separately. Adapt must not move the requested
+> value. Preserve null Auto state and current sound; wording/implementation remain
+> pending. No UI or DSP change was made in this handoff update.
+
+> **2026-09-14 — Owner requests an evidence-led quality recommendation.**
+> The owner has limited test music and reports that the five A–E clips are too
+> subtle for a useful naked-ear choice. This is not a listening pass, preference
+> ranking or proof of equivalence. [The continuation prompt](prompts/2026-09-14-mastering-quality-continuation.md)
+> asks the next agent to acquire suitable additional material, run objective
+> mechanism/robustness tests, use LANDR as an empirical benchmark, and make a
+> reasoned recommendation. Do not stop at “it is subjective” or repeat the same
+> listening task as the next gate. Existing defaults and calibration gates remain.
+
+> **2026-09-14 — Research prepared for cross-machine continuation.**
+> [The transfer guide](reviews/2026-09-14-research-handoff.md) indexes the retained
+> pricing, competitor, control and DSP proposals and versioned measurement CSVs.
+> The owner explicitly authorized GitHub transport of the preset audio/evidence.
+> A separate research draft holds the verified archive; ordinary Git clones keep
+> audio/build outputs ignored. This is evidence transport, not preset approval
+> or application release activation. Follow the guide to download and restore.
+
+> **2026-09-14 — Dynamics stages investigated with exact export reproduction.**
+> [Native diagnostic research](reviews/2026-09-14-dynamics-stage-investigation.md)
+> reproduces both owner On/Off WAVs byte for byte. Eighteen local renders isolate
+> compressor/saturation/limiter combinations, density/adaptation settings and
+> input trim. Saturation and limiting contribute more to reduced peak contrast
+> than the compressor switch on this fixture; Adapt demonstrably eases compressor
+> gain reduction. Source/target-aware drive and saturation mapping are the next
+> research priorities. Five anonymous equal-volume clips are ready locally.
+> No DSP/default/gate/UI changes or listening verdict; no repeat owner export needed.
+
+> **2026-09-14 — Density/adaptation integration proposed.**
+> In response to the owner's design question, [the recommendation](reviews/2026-09-14-yes-export-vs-landr.md#proposed-integration-of-density-and-adaptation)
+> keeps compression amount in Advanced and presents global “Adapt to track”
+> primarily as automatic behavior, with strength in expanded controls. Preserve
+> current defaults/saved values, fix the Auto thumb, and show backend-resolved
+> effects. This is a proposal, not an adopted redesign or a DSP change.
+
+> **2026-09-14 — Owner Compressor On/Off comparison completed.**
+> [Measured pair](reviews/2026-09-14-yes-export-vs-landr.md#completed-owner-comparison-compressor-preset-versus-off)
+> holds Universal 75 / Adapt 50% per owner instructions. Both measure -9.0 LUFS;
+> Off raises LRA from 3.1 to 3.6 LU and crest from 8.95 to 9.42 dB. On exactly
+> matches the earlier YES export. Compressor mode contributes to the density,
+> but most source/LANDR peak-contrast difference remains with it Off. Remaining
+> stage attribution is unresolved. These files need not be requested again.
+> No DSP, preset or gate changes; all source files remain unchanged.
+
+> **2026-09-14 — Density/adaptation controls reviewed after export comparison.**
+> [The follow-up](reviews/2026-09-14-yes-export-vs-landr.md#follow-up-preset-density-and-adapt-strength)
+> confirms named-preset density defaults to 0.50, while Adapt strength (default
+> 50%) reduces eligible preset processing. Intensity is separate. Code review
+> found an Auto density thumb parked at zero and an idle “Effective compression”
+> summary that omits adaptive trims; these presentation issues remain unmodified.
+> 24 existing frontend tests passed. The export does not identify which dynamics
+> stage caused its lower peak contrast; no DSP or preset changes were made.
+
+> **2026-09-14 — Actual YES export compared with LANDR references.**
+> [Independent measurements](reviews/2026-09-14-yes-export-vs-landr.md) of the
+> owner's Universal Intensity 75 file show -9.0 LUFS / 3.1 LU LRA / -2.6 dBTP,
+> versus LANDR High at -9.4 to -9.5 LUFS / 3.8 to 3.9 LU / -0.3 dBTP. YES has
+> lower peak contrast and more relative side/upper-treble energy on this source.
+> Exact build and other export settings remain unspecified; no listening winner
+> or general ranking is claimed. DSP and source audio are unchanged.
+
+> **2026-09-14 — LANDR/Waves DSP research and reference measurements refreshed.**
+> The owner supplied the existing reference folder and asked whether competitor
+> analysis time suggests missing processing. [The assessment](reviews/2026-09-14-landr-waves-dsp-assessment.md)
+> remeasures the source plus seven saved masters, checks native source adaptation,
+> and separates vendor disclosures from proprietary unknowns. It recommends a
+> fair current-engine benchmark, then calibrated per-band dynamics and bounded
+> corrective tonal balancing. No fresh YES/Waves render or listening verdict is
+> claimed; DSP, preset voicing and calibration gates remain unchanged.
+
+> **2026-09-14 — Desktop-plus-phone bundle proposed in pricing discussion.**
+> The owner proposed one desktop and one mobile experience for one purchase price,
+> and asked about mechanical competitor audio tests and the perception of $49.
+> [The pricing follow-up](reviews/2026-09-14-pricing-assessment.md#follow-up-mechanical-comparison-a-phone-bundle-and-the-meaning-of-49)
+> records the existing reference runner, a fair benchmark approach and the bundle's
+> value. Final price, purchase/restore terms and availability remain unsettled;
+> this discussion does not certify mobile releases or impose a device-count limit.
+
+> **2026-09-14 — Pricing reopened for competitive assessment.** The owner
+> explicitly said the former $29 founder / $49 standard figures are not fixed.
+> [The product and market assessment](reviews/2026-09-14-pricing-assessment.md)
+> recommends testing $49 introductory / $79 standard for a qualified paid 1.0;
+> that is agent judgment, not an adopted price. The existing free-beta duration
+> is unchanged. Final prices and purchase terms remain open.
+
+> **2026-09-14 (afternoon) — Website try-it rebuilt with the desktop's source analysis.**
+> On `vera/web-tryit`: the browser engine now compiles the desktop's `analysis.rs`,
+> `guardrails.rs` and `confidence.rs` by path, so the demo adapts each style to the
+> whole track exactly as Track Master does (confidence and Adaptive Compressor stay
+> off, as on the desktop). Worker pool + render cache + neighbour prefetch make
+> style/loudness switches ~30 ms once warm; decode is at the file's own rate; seek
+> and keyboard control added; no verdict/warning text anywhere; scratch page and
+> duplicate binaries deleted; `npm test` now fails if the checked-in WASM drifts
+> from the desktop sources (`npm run build:tryit-wasm` fixes it). Six Tauri
+> commands are `cfg`-gated for the wasm target; no desktop behavior changed.
+> Volume Match stays in the card, off by default (owner decision, same day).
+> [Evidence](reviews/2026-09-14-web-tryit-rebuild.md). Not a deployment.
+
+> **2026-09-14 — Website audition improvements authorized and implemented locally.**
+> On `vera/web-tryit`, loading now waits for Play; explicit Original/Mastered,
+> retained pause position, app shortcuts, excerpt/seek controls, compact layout
+> and worker-based preview updates implement the owner's requested follow-through.
+> Desktop DSP simplification stays deferred. The browser preview's source-analysis
+> limits are visible. [Changes and verification](reviews/2026-09-14-web-tryit-audition.md)
+> include a pre-existing beta-copy test mismatch; this does not activate a release.
+
+> **2026-09-14 — Main integration authorized; local production files excluded.**
+> The owner requested all necessary launch changes on main and appropriate ignore
+> rules. The local `YES_Master_Video_Packet/` and private signing/recovery material
+> are ignored; the packet remains on disk. Resumed installed Windows checks passed
+> Standard/Advanced M4A export, Album cancellation/retry with advancing audition,
+> and external playback. The historical pause did not recur; its cause remains open.
+> [Exact installed evidence](listening/2026-09-14-windows-launch-candidate.md).
+> Completed CI at `f5976299` passed all three encoder and archived-source rebuild
+> jobs, but failed downstream on the missing independent-decoder environment and
+> renamed beta-date row. Both setup issues are corrected. Later `cf1ddc21` also
+> exposed an intermittent Intel Mac Album PCM comparison failure; strict equality
+> remains and failed synthetic files will now be retained for diagnosis. Overall
+> CI/release readiness is not green. This integration does not activate downloads
+> or publish a desktop release.
+
+> **2026-09-14 — Launch fixes and replacement Windows review package prepared.**
+> Fixed M4A edit-list duration rounding and both Mac encoder configuration
+> failures. Both Mac architectures passed encoder/application-format qualification
+> in run `34861723641`; the overall CI run remains pending. New source-rebuild
+> coverage runs at `f5976299`. The installed Windows candidate remains exact
+> `cf3ddcc9`, with verified signatures and local modified-library rebuild proof.
+> See [the launch ledger](plans/2026-09-14-launch-readiness.md) and
+> [candidate record](listening/2026-09-14-windows-launch-candidate.md).
+> User Escape stopped desktop input. Preserve the September 9 baseline PASS;
+> the changed installed behavior, Mac hardware, recipient permission, key recovery
+> and actual release/updater transaction still need their applicable evidence.
+
+> **2026-09-14 — Beta duration settled.** The owner selected **eight weeks from
+> actual launch**. This supersedes the provisional October 31 end date. At the
+> verified public release transaction, set the public beta end date to the
+> actual publication date plus 56 calendar days; do not start the clock during
+> candidate preparation. Engineering/CI follow-through is authorized.
+
+> **2026-09-14 — Launch readiness refreshed; demo removal prepared locally.**
+> The owner asked to get YES Master launched without a demo video. Removed the
+> inactive hero demo button and unavailable-video note; release metadata remains
+> closed. Live GitHub main is `af406855`; its CI run `34402480068` completed
+> **failure**, not merely pending: both Mac encoder builds stop at
+> `configure_host[@]: unbound variable`, and Windows encoder qualification reports
+> an M4A frame count of 88332/88337. Desktop/bridge jobs were skipped by dependency.
+> These are observed failures; the Windows decoder/encoder cause is not established.
+> GitHub still has only the frozen beta.1 draft. The production site's HTTP entry
+> point returns 200, which does not prove release availability or browser behavior.
+> See the [current launch assessment](plans/2026-09-14-launch-readiness.md).
+
+> **2026-09-09 — Export formats implemented; Windows candidate installed.**
+> [Live implementation evidence](plans/2026-09-09-export-formats-evidence.md)
+> records U2–U5 completion, the qualified Windows encoder, 859 frontend and 643
+> Rust passes, 38 headless checks and independently verified native Track/Album
+> files. [Candidate `7cd36ab6`](listening/2026-09-09-export-candidate.md) has exact
+> NSIS/MSI hashes, verified updater signatures and source/relink rebuild proof.
+> U1 Mac and U6/U7 release gates remain open, including one unexplained audition
+> pause, disconnected/player/listening/accessibility and exact remote CI evidence.
+> Owner confirmed Mac verification must wait for a later Mac session. Continue
+> Windows and independent release preparation. Existing installed Windows
+> `07021f1b` owner PASS remains valid for its named scope. No release activity authorized.
+
+> **2026-09-09 — Export and beta launch implementation plan written.**
+> [Export formats and public beta launch plan](plans/2026-09-09-0857-feat-export-formats-beta-launch-plan.md)
+> details encoder qualification, all desktop export flows, installed package checks,
+> candidate preparation and activation. The proposed launch set adds FLAC, AAC/M4A,
+> standalone AAC, Ogg Vorbis and AIFF to WAV/MP3; ALAC/Opus are explicit follow-ups.
+> These are planning recommendations, not implemented capabilities or publication approval.
+
+> **2026-09-09 — Installed Windows owner check PASSED, all five checks.**
+> Installed and launched 0.9.2 from exact `07021f1b` with a verified clean build
+> stamp; existing session preserved. 240 focused tests and 19 checks through the
+> real Windows audio output passed, plus independently decoded WAV/MP3 exports.
+> [Five simple owner checks and precise evidence limits](listening/2026-09-09-installed-check.md)
+> replace a broad repeat questionnaire for this sitting. The owner reported
+> "actually ran through all those tests. all 5 passed". The named Windows baseline
+> is approved; do not reopen that same questionnaire. Continue with broader
+> export support and launch preparation, testing the changed behavior. This
+> signoff does not certify a future format expansion or Mac release artifact.
+
+> **2026-09-09 — Owner clarified broader export-format intent.** MP3 was an
+> example of the desired range of delivery formats, not the complete request.
+> The intended product should export the major audio formats users need,
+> covering its supported import formats and additional useful delivery formats.
+> Current picker extensions are WAV, MP3, M4A, AAC, FLAC and OGG; implemented
+> desktop export choices are WAV and MP3. The September 5 MP3 checkpoint remains
+> completed evidence for that increment, not closure of this broader requirement.
+> See [the expanded export scope](plans/2026-09-05-export-options.md#broader-export-format-scope--owner-clarification-2026-09-09)
+> for the distinction between the owner's requirement and the proposed format set.
+
 > **September 6 end-to-end launch audit:** native Mac import/audition, WAV/MP3,
 > Album cancellation/retry/order, project persistence and damaged-input recovery
 > were exercised with Computer Use. Export selectors/title branding, Standard

@@ -1,8 +1,13 @@
 # Preset Reference Analysis - 2026-06-12
 
+> **September 14 refresh:** [The current research assessment](reviews/2026-09-14-landr-waves-dsp-assessment.md)
+> independently remeasures these eight files and checks today's native code.
+> The YES render comparisons below remain historical; they are not evidence of
+> today's engine. Service download dates/engine versions remain unknown.
+
 ## Purpose
 
-This document is the live reference-analysis home for external mastering-service
+This document records the June reference analysis for external mastering-service
 outputs kept under `tests for presets/`. The audio files are private/local; this
 doc keeps only measurement summaries and tuning implications.
 

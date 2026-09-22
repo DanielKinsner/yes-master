@@ -1,4 +1,5 @@
 pub mod album;
+pub mod album_encoding;
 pub mod album_render;
 pub mod analysis;
 pub mod audio;
@@ -6,22 +7,30 @@ pub mod confidence;
 pub mod decode;
 pub mod deep_analysis;
 pub mod demo;
+pub mod device_preparation;
 pub mod diagnostics;
 pub mod dsp;
 pub mod engine;
 pub(crate) mod evidence_lanes;
+pub mod export_encoding;
+pub mod export_format;
 pub mod exports;
 pub mod files;
 pub mod fixture_matrix;
 pub mod guardrails;
 pub mod mp3;
+pub mod output_protection;
+pub mod peak_meter;
 pub mod profile_store;
 pub mod project;
+mod quality_source;
 pub mod reference_tuning;
 pub mod sample_rate;
 pub mod settings;
 pub mod sources;
 pub mod spectrum;
+#[cfg(test)]
+mod test_allocations;
 pub mod types;
 pub mod wav_writer;
 
@@ -374,7 +383,7 @@ pub fn run() {
                         }
                         audio::PlaybackDeviceLossDecision::SuppressStalledTick => continue,
                     }
-                    if !snap.is_loaded {
+                    if !snap.is_loaded && snap.playback_error.is_none() {
                         continue;
                     }
                     let tick = PlaybackTick {
@@ -384,6 +393,7 @@ pub fn run() {
                         is_loaded: snap.is_loaded,
                         peak_dbfs: snap.peak_dbfs,
                         device_lost: snap.device_lost,
+                        playback_error: snap.playback_error,
                         peak_left_dbfs: snap.peak_left_dbfs,
                         peak_right_dbfs: snap.peak_right_dbfs,
                         gr_low_db: snap.gr_low_db,

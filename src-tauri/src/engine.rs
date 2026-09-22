@@ -261,60 +261,43 @@ pub fn populate_profile_store(
 // album-plan copy was missed for almost a full session — exactly the drift the
 // extraction is meant to prevent.
 //
-// Two-tier API:
+// Shared decision and delivery API:
 //   * `ceiling_bounded_landing_delta_db`: pure math. Computes the
 //     applied delta in dB given pre-measured LUFS+TP and the target/
 //     ceiling. Returned value is 0.0 when the landing is a no-op
 //     (silent signal, near-zero delta, or no headroom for upward push).
-//   * `apply_ceiling_bounded_landing_with_measurements`: math + in-place
-//     gain multiply. Returns the applied delta in dB for preview estimates.
-//     Receipts remeasure final delivery PCM.
-//   * `measure_and_apply_ceiling_bounded_landing`: full ebur128 pass +
-//     apply. For callers that don't already have LUFS+TP measurements
-//     in hand (album-simple, album-plan).
+//   * `measure_and_apply_ceiling_bounded_landing`: qualified finite peak,
+//     numeric reserve, scalar protection and exact delivered-PCM verification.
+//     Shared by Track, rendered preview and album per-track output. The old
+//     scalar-only apply helper is retained solely for the pure-math tests.
 //
 // The audio.rs live-preview helper delegates to `preview_landing` below and
 // returns its gain scalar, so desktop and phone audition measure the same
 // whole track at the render rate before applying the pure landing math.
 // ============================================================================
 
-/// Compute the LUFS-landing delta in dB given pre-measured loudness +
-/// true peak. The ceiling is a delivery spec, not advice: the applied
-/// delta is capped so the post-landing true peak never exceeds it —
-/// including a NEGATIVE delta (a uniform safety trim, level-only) when
-/// the chain output itself carries inter-sample peaks above the
-/// ceiling. The limiter caps SAMPLE peaks; hard-driven transient
-/// material can overshoot the ceiling by >1 dB of true peak (B2
-/// landing-matrix finding, 2026-07-03: synthetic drums × Loud ×
-/// LoudRock measured +1.68 dB over a −1 dBTP ceiling pre-fix), which
-/// would clip in every streaming platform's re-encode. Returns 0.0
-/// when:
-///
-///   * the target or measurement is non-finite, or the signal is
-///     effectively silent (measured_lufs <= -70 LUFS),
-///   * the applied delta would be within ±1e-4 dB of zero (numerical
-///     no-op — skip the gain multiply entirely).
-///
-/// The earlier refuse-upward policy (citing the Sonible / Ozone /
-/// Mastering The Mix industry survey) was retired during B6 in favor
-/// of letting the user push toward their stated target. The live
-/// Export LUFS preview shows the resulting level in real time, so
-/// what the user hears is what export writes — no hidden cap.
+/// Optional loudness landing bounded by independently available peak headroom.
+/// Missing/gated LUFS or no target means zero desired gain, NOT a peak bypass.
+/// An unknown peak cannot authorize a boost. Display floors never enter this
+/// decision. Final PCM protection additionally applies an exact scalar cap and
+/// format-specific numeric reserve, then verifies delivered samples.
 pub(crate) fn ceiling_bounded_landing_delta_db(
-    measured_lufs: f32,
-    measured_true_peak_dbtp: f32,
-    target_lufs: f32,
+    measured_lufs: Option<f32>,
+    measured_true_peak_dbtp: Option<f32>,
+    target_lufs: Option<f32>,
     ceiling_dbtp: f32,
 ) -> f32 {
-    if !target_lufs.is_finite() || !measured_lufs.is_finite() || measured_lufs <= -70.0 {
-        return 0.0;
-    }
-    let delta_db = target_lufs - measured_lufs;
+    let delta_db = target_lufs
+        .filter(|v| v.is_finite())
+        .zip(measured_lufs.filter(|v| v.is_finite()))
+        .map_or(0.0, |(target, measured)| target - measured);
     // Max delta that keeps post-landing true peak at or below the
     // ceiling. Negative when the chain output is already over it —
     // the trim case. With an unknown TP, allow attenuation but never
     // boost (the pre-fix conservative behavior).
-    let tp_cap_db = if measured_true_peak_dbtp.is_finite() {
+    let tp_cap_db = if let Some(measured_true_peak_dbtp) =
+        measured_true_peak_dbtp.filter(|v| v.is_finite() && ceiling_dbtp.is_finite())
+    {
         ceiling_dbtp - measured_true_peak_dbtp
     } else {
         0.0
@@ -332,11 +315,12 @@ pub(crate) fn ceiling_bounded_landing_delta_db(
 /// dB (0.0 if no gain was applied). True peak shifts by this amount;
 /// integrated loudness is an estimate because the absolute gate can change
 /// membership. Export receipts remeasure the final delivered PCM.
+#[cfg(test)]
 fn apply_ceiling_bounded_landing_with_measurements(
     samples: &mut [f32],
-    measured_lufs: f32,
-    measured_true_peak_dbtp: f32,
-    target_lufs: f32,
+    measured_lufs: Option<f32>,
+    measured_true_peak_dbtp: Option<f32>,
+    target_lufs: Option<f32>,
     ceiling_dbtp: f32,
 ) -> f32 {
     let applied_delta_db = ceiling_bounded_landing_delta_db(
@@ -354,57 +338,25 @@ fn apply_ceiling_bounded_landing_with_measurements(
     applied_delta_db
 }
 
-/// Full-stack ceiling-bounded LUFS landing: measure integrated LUFS +
-/// BS.1770 true peak via ebur128, compute the bounded delta, apply in
-/// place. Used by render paths that don't already have measurements
-/// in hand (album-simple, album-plan). The track-export path measures
-/// separately so it can also feed the receipt's `RenderedMeasurements`,
-/// and routes through `apply_ceiling_bounded_landing_with_measurements`
-/// directly.
+/// Shared final-rate protection for album per-track delivery. Track export
+/// and preview use the same measurement and gain decision below.
 pub(crate) fn measure_and_apply_ceiling_bounded_landing(
     samples: &mut [f32],
     sample_rate: u32,
     channels: u16,
     settings: &MasteringSettings,
-) -> CommandResult<()> {
-    let Some(target_lufs) = settings.effective_target_lufs() else {
-        return Ok(());
-    };
-    if !target_lufs.is_finite() {
-        return Ok(());
-    }
-    let channels_u32 = u32::from(channels.max(1));
-    let mut ebu = EbuR128::new(channels_u32, sample_rate, Mode::I | Mode::TRUE_PEAK)
-        .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
-    ebu.add_frames_f32(samples)
-        .map_err(|e| CommandError::Render(format!("ebur128 feed: {e}")))?;
-    let measured_lufs = sanitize_lufs(
-        ebu.loudness_global()
-            .map_err(|e| CommandError::Render(format!("ebur128 global: {e}")))? as f32,
-    );
-    let mut peak_lin: f64 = 0.0;
-    for ch in 0..channels_u32 {
-        let tp = ebu
-            .true_peak(ch)
-            .map_err(|e| CommandError::Render(format!("ebur128 tp: {e}")))?;
-        if tp > peak_lin {
-            peak_lin = tp;
-        }
-    }
-    let measured_true_peak_dbtp = if peak_lin > 0.0 {
-        (20.0 * peak_lin.log10()) as f32
-    } else {
-        -60.0
-    };
-    let ceiling_dbtp = settings.effective_ceiling_dbtp();
-    apply_ceiling_bounded_landing_with_measurements(
+    bits: u16,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<crate::output_protection::ProtectedPcm> {
+    crate::output_protection::finalize(
         samples,
-        measured_lufs,
-        measured_true_peak_dbtp,
-        target_lufs,
-        ceiling_dbtp,
-    );
-    Ok(())
+        sample_rate,
+        channels,
+        bits,
+        settings.effective_target_lufs(),
+        settings.effective_ceiling_dbtp(),
+        cancel,
+    )
 }
 
 /// Measure post-render integrated loudness (BS.1770) of an interleaved f32
@@ -442,16 +394,160 @@ pub struct PreviewLanding {
     pub gain_lin: f32,
     /// Estimated integrated LUFS of the mastered track after the landing gain —
     /// used for audition Volume Match. `f32::NEG_INFINITY` when unavailable
-    /// (no target, or an effectively-silent track).
+    /// (gated/short/silent audio). No-target audio can still have usable LUFS.
     pub mastered_lufs: f32,
 }
 
-/// Compute the live-preview loudness landing for `settings`: process the
-/// whole track through the chain, measure integrated LUFS +
-/// BS.1770 true peak, and route through the SAME `ceiling_bounded_landing_delta_db`
-/// the export path uses — so the live preview lands at the same level the full
-/// render will. Mirrors the desktop preview path (`audio.rs`). Returns unity gain
-/// when there's no loudness target or the track is effectively silent. This is
+/// Owned raw response plus whole-file facts. Construction and delivery are
+/// worker-only; the audio thread receives only the resulting scalar plan.
+pub(crate) struct PreparedPreviewAudio {
+    samples: Arc<Vec<f32>>,
+    source_samples: Arc<Vec<f32>>,
+    source_rate: u32,
+    file_rate: u32,
+    channels: u16,
+    measurements: crate::output_protection::PreparedMeasurements,
+}
+
+impl PreparedPreviewAudio {
+    pub(crate) fn raw_pcm(&self) -> &[f32] {
+        &self.samples
+    }
+
+    pub(crate) fn pcm_bytes(&self) -> usize {
+        let source_bytes = if Arc::ptr_eq(&self.samples, &self.source_samples) {
+            0
+        } else {
+            self.source_samples.capacity() * std::mem::size_of::<f32>()
+        };
+        source_bytes + self.samples.capacity() * std::mem::size_of::<f32>()
+    }
+
+    /// Apply the existing source-rate landing rule and run both actual SRCs.
+    /// Raw DSP is reused; converter rounding is subsequently verified in full.
+    pub(crate) fn device_pcm_with_landing(
+        &self,
+        gain: f32,
+        device_rate: u32,
+        cancel: Option<&AtomicBool>,
+    ) -> CommandResult<Vec<f32>> {
+        check_preview_cancel(cancel)?;
+        let mut samples = self.source_samples.as_ref().clone();
+        for chunk in samples.chunks_mut(8192 * usize::from(self.channels)) {
+            check_preview_cancel(cancel)?;
+            for value in chunk {
+                *value *= gain;
+            }
+        }
+        for (from, to) in [
+            (self.source_rate, self.file_rate),
+            (self.file_rate, device_rate),
+        ] {
+            if from != to {
+                samples = crate::sample_rate::convert_interleaved_cancellable(
+                    &samples,
+                    from,
+                    to,
+                    self.channels,
+                    || cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)),
+                )?;
+            }
+        }
+        check_preview_cancel(cancel)?;
+        Ok(samples)
+    }
+
+    pub(crate) fn finish(
+        &self,
+        settings: &MasteringSettings,
+        cancel: Option<&AtomicBool>,
+    ) -> CommandResult<PreviewLanding> {
+        check_preview_cancel(cancel)?;
+        // Keep the cached raw response immutable. The copy and every delivery
+        // scan stay on the background worker, outside any cache lock.
+        let mut delivered = self.samples.as_ref().clone();
+        let result = crate::output_protection::finalize_prepared(
+            &mut delivered,
+            &self.measurements,
+            settings.effective_bit_depth(),
+            settings.effective_target_lufs(),
+            settings.effective_ceiling_dbtp(),
+            cancel,
+        )?;
+        Ok(PreviewLanding {
+            gain_lin: result.gain_lin,
+            mastered_lufs: result.lufs,
+        })
+    }
+
+    pub(crate) fn finish_owned(
+        self,
+        settings: &MasteringSettings,
+        cancel: Option<&AtomicBool>,
+    ) -> CommandResult<PreviewLanding> {
+        drop(self.source_samples);
+        let mut samples =
+            Arc::try_unwrap(self.samples).unwrap_or_else(|shared| shared.as_ref().clone());
+        let result = crate::output_protection::finalize_prepared(
+            &mut samples,
+            &self.measurements,
+            settings.effective_bit_depth(),
+            settings.effective_target_lufs(),
+            settings.effective_ceiling_dbtp(),
+            cancel,
+        )?;
+        Ok(PreviewLanding {
+            gain_lin: result.gain_lin,
+            mastered_lufs: result.lufs,
+        })
+    }
+}
+
+pub(crate) fn prepare_preview_audio(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<PreparedPreviewAudio> {
+    check_preview_cancel(cancel)?;
+    let mut render_settings = settings.clone();
+    render_settings.volume_match = false;
+    let source_samples = Arc::new(render_preview_source(
+        samples,
+        sample_rate,
+        channels,
+        &render_settings,
+        cancel,
+    )?);
+    let rate = settings.effective_sample_rate(sample_rate);
+    let samples = if rate == sample_rate {
+        source_samples.clone()
+    } else {
+        Arc::new(crate::sample_rate::convert_interleaved_cancellable(
+            &source_samples,
+            sample_rate,
+            rate,
+            channels,
+            || cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)),
+        )?)
+    };
+    let measurements = crate::output_protection::prepare(&samples, rate, channels, cancel)?;
+    Ok(PreparedPreviewAudio {
+        samples,
+        source_samples,
+        source_rate: sample_rate,
+        file_rate: rate,
+        channels,
+        measurements,
+    })
+}
+
+/// Compute the background preview's PCM delivery plan: process the whole track
+/// and use the same qualified finalizer as WAV export. Its requested rate/bits
+/// are those of the settings; device/codec-rate differences require separate
+/// coverage. Mirrors the desktop preview path (`audio.rs`). Peak attenuation
+/// remains available without a loudness target or usable LUFS. This is
 /// the off-audio-thread measurement the iPhone bridge calls on settings changes.
 pub fn preview_landing(
     samples: &[f32],
@@ -474,68 +570,19 @@ pub(crate) fn preview_landing_with_cancel(
     check_preview_cancel(cancel)?;
     let mut render_settings = settings.clone();
     render_settings.volume_match = false;
-    let unity = PreviewLanding {
-        gain_lin: 1.0,
-        mastered_lufs: f32::NEG_INFINITY,
-    };
-    let Some(target_lufs) = render_settings.effective_target_lufs() else {
-        return Ok(unity);
-    };
-    if !target_lufs.is_finite() {
-        return Ok(unity);
-    }
-
-    let (rendered, rendered_sample_rate) =
+    let (mut rendered, rendered_sample_rate) =
         render_preview_landing_window(samples, sample_rate, channels, &render_settings, cancel)?;
-
-    let channels_u32 = u32::from(channels.max(1));
-    let mut ebu = EbuR128::new(
-        channels_u32,
+    let measured = measure_and_apply_ceiling_bounded_landing(
+        &mut rendered,
         rendered_sample_rate,
-        Mode::I | Mode::TRUE_PEAK,
-    )
-    .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
-    for block in rendered.chunks(8192 * channels_u32 as usize) {
-        check_preview_cancel(cancel)?;
-        ebu.add_frames_f32(block)
-            .map_err(|e| CommandError::Render(format!("ebur128 feed: {e}")))?;
-    }
-    let measured = sanitize_lufs(
-        ebu.loudness_global()
-            .map_err(|e| CommandError::Render(format!("ebur128 global: {e}")))? as f32,
-    );
-    if !measured.is_finite() || measured <= -70.0 {
-        return Ok(unity);
-    }
-    let mut peak_lin: f64 = 0.0;
-    for ch in 0..channels_u32 {
-        let tp = ebu
-            .true_peak(ch)
-            .map_err(|e| CommandError::Render(format!("ebur128 tp: {e}")))?;
-        if tp > peak_lin {
-            peak_lin = tp;
-        }
-    }
-    let measured_true_peak_dbtp = if peak_lin > 0.0 {
-        (20.0 * peak_lin.log10()) as f32
-    } else {
-        -60.0
-    };
-    let ceiling_dbtp = render_settings.effective_ceiling_dbtp();
-    let applied_delta_db = ceiling_bounded_landing_delta_db(
-        measured,
-        measured_true_peak_dbtp,
-        target_lufs,
-        ceiling_dbtp,
-    );
-    let gain_lin = if applied_delta_db != 0.0 {
-        10.0_f32.powf(applied_delta_db / 20.0)
-    } else {
-        1.0
-    };
+        channels,
+        &render_settings,
+        render_settings.effective_bit_depth(),
+        cancel,
+    )?;
     Ok(PreviewLanding {
-        gain_lin,
-        mastered_lufs: measured + applied_delta_db,
+        gain_lin: measured.gain_lin,
+        mastered_lufs: measured.lufs,
     })
 }
 
@@ -599,6 +646,23 @@ fn render_preview_landing_window(
     settings: &MasteringSettings,
     cancel: Option<&AtomicBool>,
 ) -> CommandResult<(Vec<f32>, u32)> {
+    let mut rendered = render_preview_source(samples, sample_rate, channels, settings, cancel)?;
+    let rendered_sample_rate = settings.effective_sample_rate(sample_rate);
+    if rendered_sample_rate != sample_rate {
+        check_preview_cancel(cancel)?;
+        rendered = convert_interleaved(&rendered, sample_rate, rendered_sample_rate, channels)?;
+    }
+    check_preview_cancel(cancel)?;
+    Ok((rendered, rendered_sample_rate))
+}
+
+fn render_preview_source(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<Vec<f32>> {
     let channels_usize = channels.max(1) as usize;
     // A quiet middle window cannot bound peaks or loudness elsewhere. This
     // runs on the landing worker; mirror export's processing and tail flush.
@@ -613,13 +677,8 @@ fn render_preview_landing_window(
     check_preview_cancel(cancel)?;
     chain.flush_render_tail(&mut rendered, channels_usize);
 
-    let rendered_sample_rate = settings.effective_sample_rate(sample_rate);
-    if rendered_sample_rate != sample_rate {
-        check_preview_cancel(cancel)?;
-        rendered = convert_interleaved(&rendered, sample_rate, rendered_sample_rate, channels)?;
-    }
     check_preview_cancel(cancel)?;
-    Ok((rendered, rendered_sample_rate))
+    Ok(rendered)
 }
 
 fn check_preview_cancel(cancel: Option<&AtomicBool>) -> CommandResult<()> {
@@ -702,10 +761,12 @@ pub async fn render_track_master(
     mut settings: MasteringSettings,
     output_path: Option<String>,
     mp3_bitrate: Option<u16>,
+    encoding: Option<crate::export_format::ExportEncoding>,
     app: tauri::AppHandle,
     profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
     render_jobs: tauri::State<'_, RenderJobRegistry>,
 ) -> CommandResult<RenderJob> {
+    let encoding = crate::export_format::ExportEncoding::resolve(encoding, mp3_bitrate)?;
     // B2: backend-owned profile (override > backend-derived cache; album = false
     // because album exports go through render_album_plan, which strips it).
     let cached_deep = profile_store.get_deep(&track_id);
@@ -741,7 +802,7 @@ pub async fn render_track_master(
     };
     let job_id_for_render = job_id.clone();
     let join_result = tauri::async_runtime::spawn_blocking(move || {
-        mastering_render_encoded_with_cancel(
+        mastering_render_format_with_cancel(
             track_id,
             Path::new(&track_path),
             &settings,
@@ -753,7 +814,7 @@ pub async fn render_track_master(
                 job_id: Some(&job_id_for_render),
                 cancel_flag: Some(cancel_flag.as_ref()),
             },
-            mp3_bitrate,
+            encoding,
         )
     })
     .await;
@@ -855,7 +916,17 @@ pub struct AlbumTrackRenderRecord {
 }
 
 #[derive(Debug, Serialize, Clone)]
+pub struct AlbumPeakResult {
+    pub true_peak_dbtp: f32,
+    pub ceiling_dbtp: f32,
+}
+
+#[derive(Debug, Serialize, Clone)]
 pub struct AlbumRenderReport {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub continuous_peak: Option<AlbumPeakResult>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delivered_format: Option<crate::export_format::DeliveredFormat>,
     pub mp3_bitrate_kbps: Option<u16>,
     pub job_id: String,
     pub status: JobStatus,
@@ -906,9 +977,11 @@ pub async fn render_album_plan(
     request: AlbumPlanRenderRequest,
     output_dir: Option<String>,
     mp3_bitrate: Option<u16>,
+    encoding: Option<crate::export_format::ExportEncoding>,
     app: tauri::AppHandle,
     render_jobs: tauri::State<'_, RenderJobRegistry>,
 ) -> CommandResult<AlbumRenderReport> {
+    let encoding = crate::export_format::ExportEncoding::resolve(encoding, mp3_bitrate)?;
     let out_dir = match output_dir {
         Some(path) => explicit_output_dir(Path::new(&path))?,
         None => render_output_dir(&app, RenderKind::Album)?,
@@ -930,13 +1003,13 @@ pub async fn render_album_plan(
     };
     let job_id_for_render = job_id.clone();
     let join_result = tauri::async_runtime::spawn_blocking(move || {
-        crate::mp3::render_album(
+        crate::album_encoding::render_album(
             &request,
             &out_dir,
             Some(&on_progress),
             Some(cancel_flag.as_ref()),
             Some(&job_id_for_render),
-            mp3_bitrate,
+            encoding,
         )
     })
     .await;
@@ -1093,9 +1166,41 @@ pub fn mastering_render_encoded_with_cancel(
     options: RenderJobOptions<'_>,
     mp3_bitrate: Option<u16>,
 ) -> CommandResult<RenderJob> {
-    if let Some(kbps) = mp3_bitrate {
-        crate::mp3::validate_bitrate(kbps)?;
+    mastering_render_format_with_cancel(
+        track_id,
+        source_path,
+        settings,
+        out_dir,
+        kind,
+        options,
+        crate::export_format::ExportEncoding::resolve(None, mp3_bitrate)?,
+    )
+}
+
+pub fn mastering_render_format_with_cancel(
+    track_id: TrackId,
+    source_path: &Path,
+    settings: &MasteringSettings,
+    out_dir: &Path,
+    kind: RenderKind,
+    options: RenderJobOptions<'_>,
+    encoding: crate::export_format::ExportEncoding,
+) -> CommandResult<RenderJob> {
+    encoding.validate()?;
+    if encoding.needs_sidecar() && !matches!(settings.effective_bit_depth(), 16 | 24 | 32) {
+        return Err(CommandError::Render(
+            "Unsupported requested precision".into(),
+        ));
     }
+    let encoder = if encoding.needs_sidecar() {
+        Some(crate::export_encoding::Encoder::packaged()?)
+    } else {
+        None
+    };
+    let mp3_bitrate = match encoding {
+        crate::export_format::ExportEncoding::Mp3 { bitrate_kbps } => Some(bitrate_kbps),
+        _ => None,
+    };
     let job_id = options
         .job_id
         .map(ToOwned::to_owned)
@@ -1128,6 +1233,11 @@ pub fn mastering_render_encoded_with_cancel(
                 source_path,
             )?
         }
+    };
+    let out_path = if encoding.needs_sidecar() {
+        explicit_output_path(&out_path.with_extension(encoding.extension()), source_path)?
+    } else {
+        out_path
     };
 
     // Per-stage wall-clock markers, logged at the end of the render. F9/F11
@@ -1217,11 +1327,7 @@ pub fn mastering_render_encoded_with_cancel(
     chain.flush_render_tail(&mut samples, channels_max);
 
     let requested_rate = render_settings.effective_sample_rate(pcm.sample_rate);
-    let rendered_sample_rate = if mp3_bitrate.is_some() {
-        crate::mp3::delivery_rate(requested_rate)
-    } else {
-        requested_rate
-    };
+    let rendered_sample_rate = encoding.delivery_rate(requested_rate);
     if rendered_sample_rate != pcm.sample_rate {
         samples = convert_interleaved(
             &samples,
@@ -1233,62 +1339,34 @@ pub fn mastering_render_encoded_with_cancel(
     let tail_and_src_ms = stage_ms(t_stage);
     let t_stage = std::time::Instant::now();
 
-    // Single full BS.1770 pass over the post-chain, post-SRC samples — used both to
-    // decide LUFS landing and to populate the rendered-output measurements
-    // for the export receipt (Codex audit 2026-05-13 P0: the receipt must
-    // describe the rendered output, not the source analysis).
-    //
-    // Measure before landing to choose a ceiling-bounded gain. The receipt
-    // gets a separate measurement of final delivery PCM: quantization and
-    // absolute-gate changes cannot be represented by shifting these values.
-    let channels_u32 = u32::from(pcm.channels.max(1));
-    let mut ebu = EbuR128::new(
-        channels_u32,
+    // Final-rate qualified peak preparation, optional LUFS landing, then exact
+    // deterministic delivery verification. Every delivered sample is scanned;
+    // loudness absolute gating is remeasured rather than shifted arithmetically.
+    let bit_depth = encoding.delivery_bits(render_settings.effective_bit_depth());
+    let measured = match measure_and_apply_ceiling_bounded_landing(
+        &mut samples,
         rendered_sample_rate,
-        Mode::I | Mode::TRUE_PEAK,
-    )
-    .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
-    ebu.add_frames_f32(&samples)
-        .map_err(|e| CommandError::Render(format!("ebur128 feed: {e}")))?;
-    let measured_lufs = sanitize_lufs(
-        ebu.loudness_global()
-            .map_err(|e| CommandError::Render(format!("ebur128 global: {e}")))? as f32,
-    );
-    let mut peak_lin: f64 = 0.0;
-    for ch in 0..channels_u32 {
-        let tp = ebu
-            .true_peak(ch)
-            .map_err(|e| CommandError::Render(format!("ebur128 tp: {e}")))?;
-        if tp > peak_lin {
-            peak_lin = tp;
+        pcm.channels,
+        &render_settings,
+        bit_depth,
+        options.cancel_flag,
+    ) {
+        Ok(measured) => measured,
+        Err(_) if render_cancelled(options.cancel_flag) => {
+            return Ok(cancelled_render_job(
+                job_id,
+                kind,
+                vec![track_id],
+                1.0,
+                started_at_iso,
+            ));
         }
-    }
-    let measured_true_peak_dbtp = if peak_lin > 0.0 {
-        (20.0 * peak_lin.log10()) as f32
-    } else {
-        -60.0
+        Err(error) => return Err(error),
     };
     let measure_ms = stage_ms(t_stage);
 
-    // The same ceiling-bounded landing rule is used by audition and export.
-    if let Some(target_lufs) = render_settings.effective_target_lufs() {
-        let ceiling_dbtp = render_settings.effective_ceiling_dbtp();
-        apply_ceiling_bounded_landing_with_measurements(
-            &mut samples,
-            measured_lufs,
-            measured_true_peak_dbtp,
-            target_lufs,
-            ceiling_dbtp,
-        );
-    }
-
-    let bit_depth = render_settings.effective_bit_depth();
-    let (delivered_lufs, delivered_tp, lra) = crate::wav_writer::measure_delivery(
-        &samples,
-        rendered_sample_rate,
-        pcm.channels,
-        bit_depth,
-    )?;
+    let (delivered_lufs, delivered_tp, lra) =
+        (measured.lufs, measured.true_peak_dbtp, measured.lra);
     // B5 — record what adaptation actually produced this master. `render_settings`
     // already carries the backend-resolved profile (B2), so this mirrors the
     // chain's own gating: a digest is recorded only when a profile was present AND
@@ -1340,7 +1418,25 @@ pub fn mastering_render_encoded_with_cancel(
     // export), the write diverts to a `__{n}` sibling — report where the
     // render actually landed.
     let t_stage = std::time::Instant::now();
-    let actual_out_path = if let Some(kbps) = mp3_bitrate {
+    let actual_out_path = if let Some(encoder) = encoder.as_ref() {
+        crate::export_encoding::write(
+            encoder,
+            &out_path,
+            &samples,
+            rendered_sample_rate,
+            pcm.channels,
+            bit_depth,
+            encoding,
+            options.cancel_flag,
+        )
+        .map(|delivered| {
+            measurements.lufs_integrated = delivered.measurements.0;
+            measurements.true_peak_dbtp = delivered.measurements.1;
+            measurements.dynamic_range_lu = delivered.measurements.2;
+            measurements.bit_depth = if encoding.is_lossy() { 0 } else { bit_depth };
+            delivered.path
+        })
+    } else if let Some(kbps) = mp3_bitrate {
         crate::mp3::write(
             &out_path,
             samples.iter().copied().map(Ok),
@@ -1423,6 +1519,13 @@ pub fn mastering_render_encoded_with_cancel(
     ));
 
     Ok(RenderJob {
+        delivered_format: Some(encoding.delivered(
+            rendered_sample_rate,
+            pcm.channels,
+            bit_depth,
+            settings.requested_delivery_sample_rate(),
+            settings.effective_bit_depth(),
+        )),
         id: job_id.clone(),
         job_id,
         kind,
@@ -1447,6 +1550,7 @@ pub fn cancelled_render_job(
     started_at_iso: String,
 ) -> RenderJob {
     RenderJob {
+        delivered_format: None,
         id: job_id.clone(),
         job_id,
         kind,
@@ -1799,7 +1903,7 @@ mod tests {
     fn ceiling_bounded_landing_downward_applies_full_delta() {
         // measured -10 LUFS, peak -1 dBTP, target -14 LUFS, ceiling -1.
         // delta = target - measured = -4. Should apply in full.
-        let applied = ceiling_bounded_landing_delta_db(-10.0, -1.0, -14.0, -1.0);
+        let applied = ceiling_bounded_landing_delta_db(Some(-10.0), Some(-1.0), Some(-14.0), -1.0);
         assert!(
             (applied - -4.0).abs() < 1.0e-6,
             "downward delta should apply in full; got {applied}"
@@ -1813,7 +1917,7 @@ mod tests {
     fn ceiling_bounded_landing_upward_uses_full_headroom_when_available() {
         // measured -23 LUFS, peak -15 dBTP, target -14, ceiling -1.
         // delta = +9; headroom = 14. Push the full +9.
-        let applied = ceiling_bounded_landing_delta_db(-23.0, -15.0, -14.0, -1.0);
+        let applied = ceiling_bounded_landing_delta_db(Some(-23.0), Some(-15.0), Some(-14.0), -1.0);
         assert!(
             (applied - 9.0).abs() < 1.0e-6,
             "upward delta should apply in full when headroom > delta; got {applied}"
@@ -1826,7 +1930,7 @@ mod tests {
     fn ceiling_bounded_landing_upward_clamped_by_ceiling_headroom() {
         // measured -10 LUFS, peak -3 dBTP, target -6, ceiling -1.
         // delta = +4; headroom = 2. Push only +2.
-        let applied = ceiling_bounded_landing_delta_db(-10.0, -3.0, -6.0, -1.0);
+        let applied = ceiling_bounded_landing_delta_db(Some(-10.0), Some(-3.0), Some(-6.0), -1.0);
         assert!(
             (applied - 2.0).abs() < 1.0e-6,
             "upward delta should clamp to ceiling headroom; got {applied}"
@@ -1841,24 +1945,92 @@ mod tests {
     fn ceiling_bounded_landing_upward_zero_when_no_headroom() {
         // measured -10 LUFS, peak -1 dBTP (at ceiling), target -6.
         // delta = +4; headroom = 0. Push zero.
-        let applied = ceiling_bounded_landing_delta_db(-10.0, -1.0, -6.0, -1.0);
+        let applied = ceiling_bounded_landing_delta_db(Some(-10.0), Some(-1.0), Some(-6.0), -1.0);
         assert_eq!(
             applied, 0.0,
             "no headroom should produce zero applied delta; got {applied}"
         );
     }
 
-    /// Silent signal (-70 LUFS gate) bypasses landing entirely.
-    /// Pre-extraction, every duplicate copy of the math had the
-    /// `measured_lufs > -70.0` guard. Verifies the extracted helper
-    /// inherits it.
+    /// Silence supplies neither usable integrated loudness nor a finite dB peak.
     #[test]
     fn ceiling_bounded_landing_skips_silent_signal() {
-        let applied = ceiling_bounded_landing_delta_db(-80.0, -60.0, -14.0, -1.0);
+        let applied = ceiling_bounded_landing_delta_db(None, None, Some(-14.0), -1.0);
         assert_eq!(
             applied, 0.0,
             "silent signal (-70 LUFS gate) should produce zero delta; got {applied}"
         );
+    }
+
+    #[test]
+    fn peak_attenuation_is_independent_of_loudness_availability() {
+        for lufs in [
+            None,
+            Some(f32::NEG_INFINITY),
+            Some(f32::NAN),
+            Some(-80.0),
+            Some(-14.0),
+        ] {
+            for target in [None, Some(f32::NAN), Some(-14.0)] {
+                assert_eq!(
+                    ceiling_bounded_landing_delta_db(lufs, Some(1.0), target, -1.0),
+                    -2.0
+                );
+            }
+        }
+        assert_eq!(
+            ceiling_bounded_landing_delta_db(Some(-24.0), None, Some(-14.0), -1.0),
+            0.0
+        );
+        assert_eq!(
+            ceiling_bounded_landing_delta_db(Some(-10.0), None, Some(-14.0), -1.0),
+            -4.0
+        );
+    }
+
+    #[test]
+    fn landing_keeps_short_peak_and_silence_distinct_from_invalid_audio() {
+        let settings: MasteringSettings = serde_json::from_value(serde_json::json!({
+            "preset": { "kind": "universal" }, "intensity": 0.5,
+            "eq_low_db": 0.0, "eq_mid_db": 0.0, "eq_high_db": 0.0,
+            "volume_match": false, "delivery_profile": "custom",
+            "advanced": { "ceiling_dbtp": -1.0 }
+        }))
+        .unwrap();
+        // No integrated block exists, but a known sample peak must be reduced.
+        for frames in [1, 17, 2400] {
+            let mut short = vec![1.25; frames];
+            assert!(!measure_integrated_lufs(&short, 48_000, 1)
+                .unwrap()
+                .is_finite());
+            assert!(
+                crate::peak_meter::measure(&short, 1, || false)
+                    .unwrap()
+                    .upper_dbtp()
+                    .unwrap()
+                    > 0.
+            );
+            measure_and_apply_ceiling_bounded_landing(&mut short, 48_000, 1, &settings, 32, None)
+                .unwrap();
+            assert!(short
+                .iter()
+                .all(|v| *v <= 10.0_f32.powf(-1.0 / 20.0) + 1e-7));
+        }
+        let mut silence = vec![0.0; 96000];
+        measure_and_apply_ceiling_bounded_landing(&mut silence, 48_000, 1, &settings, 32, None)
+            .unwrap();
+        assert!(silence.iter().all(|v| *v == 0.0));
+        for sample in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            assert!(measure_and_apply_ceiling_bounded_landing(
+                &mut [sample],
+                48_000,
+                1,
+                &settings,
+                32,
+                None
+            )
+            .is_err());
+        }
     }
 
     /// Non-finite target or measurement bypasses landing — silent
@@ -1866,17 +2038,17 @@ mod tests {
     #[test]
     fn ceiling_bounded_landing_skips_non_finite_inputs() {
         assert_eq!(
-            ceiling_bounded_landing_delta_db(f32::NAN, -1.0, -14.0, -1.0),
+            ceiling_bounded_landing_delta_db(Some(f32::NAN), Some(-1.0), Some(-14.0), -1.0),
             0.0,
             "NaN measured_lufs should produce zero delta"
         );
         assert_eq!(
-            ceiling_bounded_landing_delta_db(-10.0, -1.0, f32::NAN, -1.0),
+            ceiling_bounded_landing_delta_db(Some(-10.0), Some(-1.0), Some(f32::NAN), -1.0),
             0.0,
             "NaN target should produce zero delta"
         );
         assert_eq!(
-            ceiling_bounded_landing_delta_db(-10.0, -1.0, f32::INFINITY, -1.0),
+            ceiling_bounded_landing_delta_db(Some(-10.0), Some(-1.0), Some(f32::INFINITY), -1.0),
             0.0,
             "infinite target should produce zero delta"
         );
@@ -1917,7 +2089,8 @@ mod tests {
     #[test]
     fn ceiling_bounded_landing_skips_negligible_delta() {
         // measured -14.00005, target -14. Delta = -5e-5, abs < 1e-4.
-        let applied = ceiling_bounded_landing_delta_db(-14.00005, -1.0, -14.0, -1.0);
+        let applied =
+            ceiling_bounded_landing_delta_db(Some(-14.00005), Some(-1.0), Some(-14.0), -1.0);
         assert_eq!(
             applied, 0.0,
             "delta below the ±1e-4 dB noise threshold should produce zero; got {applied}"
@@ -1933,7 +2106,7 @@ mod tests {
     fn ceiling_bounded_landing_trims_down_when_true_peak_exceeds_ceiling() {
         // Boost wanted (+3.5 dB toward target) but TP is 1.68 dB OVER
         // the ceiling: the applied delta must be −1.68 (trim), not 0.
-        let applied = ceiling_bounded_landing_delta_db(-14.0, 0.68, -10.5, -1.0);
+        let applied = ceiling_bounded_landing_delta_db(Some(-14.0), Some(0.68), Some(-10.5), -1.0);
         assert!(
             (applied - -1.68).abs() < 1.0e-4,
             "expected a −1.68 dB safety trim; got {applied}"
@@ -1941,7 +2114,7 @@ mod tests {
 
         // Pull-down case that STILL leaves TP over the ceiling: the trim
         // must go past the target delta to honor the ceiling.
-        let applied = ceiling_bounded_landing_delta_db(-13.5, 0.5, -14.0, -1.0);
+        let applied = ceiling_bounded_landing_delta_db(Some(-13.5), Some(0.5), Some(-14.0), -1.0);
         assert!(
             (applied - -1.5).abs() < 1.0e-4,
             "ceiling outranks target: expected −1.5 dB, got {applied}"
@@ -1949,7 +2122,7 @@ mod tests {
 
         // TP safely under the ceiling: boosts remain headroom-bounded
         // exactly as before.
-        let applied = ceiling_bounded_landing_delta_db(-20.0, -4.0, -14.0, -1.0);
+        let applied = ceiling_bounded_landing_delta_db(Some(-20.0), Some(-4.0), Some(-14.0), -1.0);
         assert!(
             (applied - 3.0).abs() < 1.0e-4,
             "boost must cap at TP headroom (3 dB); got {applied}"
@@ -1966,8 +2139,13 @@ mod tests {
         // a -6 dB landing (measured -10 LUFS, target -16, plenty of
         // headroom — but delta is downward so headroom doesn't bind).
         let mut samples = vec![0.5_f32; 1024];
-        let applied =
-            apply_ceiling_bounded_landing_with_measurements(&mut samples, -10.0, -1.0, -16.0, -1.0);
+        let applied = apply_ceiling_bounded_landing_with_measurements(
+            &mut samples,
+            Some(-10.0),
+            Some(-1.0),
+            Some(-16.0),
+            -1.0,
+        );
         assert!(
             (applied - -6.0).abs() < 1.0e-6,
             "expected -6 dB applied delta; got {applied}"
@@ -1995,9 +2173,9 @@ mod tests {
         // Silent signal → math returns 0.
         let applied = apply_ceiling_bounded_landing_with_measurements(
             &mut samples,
-            -80.0,
-            -60.0,
-            -14.0,
+            None,
+            None,
+            Some(-14.0),
             -1.0,
         );
         assert_eq!(applied, 0.0);
