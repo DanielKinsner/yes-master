@@ -30,3 +30,10 @@ and the full headless suite: 40 application scenarios plus responsive and 200%
 zoom landing checks with normal and fallback fonts. Evidence is retained in
 `test-output/launch-website-20260921/` and
 `test-output/headless/2026-09-22T06-20-36-622Z/` in this website worktree.
+
+The subsequent full npm audit also identifies the development-only Vitest
+advisory [GHSA-82fw-gwwq-j7x9](https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9).
+Update Vitest and its companion packages from 4.1.9 to the maintainer's patched
+4.1.11. The complete 903-test frontend suite passes again and npm audit reports
+zero vulnerabilities at every severity. Production package versions/integrity
+hashes remain unchanged; this patch does not alter the frozen installer bytes.
