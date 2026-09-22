@@ -53,11 +53,10 @@ describe("landing document head (U8)", () => {
   });
 
   it("every absolute URL in the head shares one origin", () => {
-    // D1 (2026-09-01): no custom domain exists. Every absolute URL the page
-    // publishes points at the deployed origin, and all four must agree — a
-    // half-updated head (canonical moved, share image not) is exactly the
-    // drift this catches. When a domain is bought, this is the one place to
-    // change the expected origin (docs/OWNER_INPUT_QUEUE.md, "Custom domain?").
+    // September 21 live verification: the owner's existing yesdsp.com domain
+    // redirects to www.yesdsp.com. Canonical and share-image URLs must use
+    // that final production origin together, without a redirect or a stale
+    // Vercel alias in the document head.
     const canonical =
       html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? "";
     const urls: Record<string, string> = {
@@ -71,7 +70,7 @@ describe("landing document head (U8)", () => {
       expect(
         new URL(value).origin,
         `${tag} does not share the deployed origin`,
-      ).toBe("https://yes-master.vercel.app");
+      ).toBe("https://www.yesdsp.com");
     }
   });
 
