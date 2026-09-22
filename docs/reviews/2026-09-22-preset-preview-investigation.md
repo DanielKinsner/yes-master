@@ -168,3 +168,60 @@ Any resulting UI slice needs rendered inspection and `npm run verify:headless`.
 Any DSP/preview change needs meaningful transition regressions, PCM/measurement
 comparisons, native completion-boundary evidence and the applicable fixture
 lane before integration. This investigation does not claim those future gates.
+
+## Follow-up: multi-core peak measurement (implemented)
+
+Owner-approved the same day (option a of the whole-project review). Priority 2
+above is implemented in `peak_meter` (`f34b80e7`); priorities 1, 3 and 4 and the
+hiccup diagnostic remain open.
+
+**Where the time went.** A scratch stage benchmark on the owner fixture
+`Doors Open.wav` (209.5 s, 48 kHz stereo; 96 kHz file, 48 kHz device) measured
+the cold preparation's parts: DSP 2.8 s, both SRC stages 0.4 s, LUFS 0.35 s,
+FIR peak pass 4.8 s and the finite-sinc peak pass 20.7–22.9 s. Release LTO was
+also tried: DSP ran about 10% faster with bit-identical output, but measurement
+did not improve, so it is not part of this change.
+
+**Change.** Both peak passes examine independent 4096-sample blocks and merge
+them by maximum. Each channel's blocks are now split into contiguous ranges on
+worker threads and merged in block order, so every reported value, including
+refinement bookkeeping, equals the single-thread measurement. The
+order-dependent refinement pass stays on the calling thread. Workers come from
+one process-wide budget: logical cores minus two (reserved for the audio
+callback, UI and OS), at most 16, shared by concurrent measurements. Short
+signals stay single-threaded. In-memory and dithered delivery PCM share reads;
+staged WAV readers open one reader per worker. Preview preparation, WAV and
+encoded export receipts and Album measurement all use this path.
+
+**Evidence (office Windows PC, 24 logical cores).**
+
+- Production path before/after, alternating runs, owner fixture with Clarity
+  85%, -11 LUFS, -1 dBTP, 96 kHz file and 48 kHz device: 30.0 s and 29.6 s
+  before, 8.4 s and 8.6 s after. File gain, LUFS, device gain, true peak and a
+  hash of the complete device PCM are identical before and after.
+- Regressions: parallel equals serial exactly for stereo/mono/silent-channel
+  signals that exercise refinement, uneven splits and more workers than blocks;
+  staged 16/24/32-bit WAV workers equal serial delivery reads; ordered, complete
+  block ranges; cancellation never returns a result; bounded shared budget. A
+  deliberately misordered merge fails the ordering regression.
+- Slow fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`, Doors Open): 721
+  passed, 0 failed. Strict Clippy, rustfmt, iPhone (46) and Android (26 plus
+  arm64 check) bridge lanes pass.
+- Native callback bench (`mastering_quality_streaming_callback_bench`, muted,
+  96 kHz file rate, 45 s excerpt of the same fixture so whole preparations run
+  inside its window, Realtek default device at 48 kHz with 480–1056-frame
+  callbacks): three single-thread runs (`YES_MASTER_PEAK_WORKERS=1`) and three
+  budgeted runs each had 0 deadline misses and 0 device errors across 605–606
+  callbacks. The worst callback used 14.5–19.5% of its time budget
+  single-threaded and 18.6–20.4% multi-threaded (p99 12% versus 17%). The
+  multi-threaded worker completed three preparations (1.2 s each) during
+  playback, where the single-thread worker completed one (3.3 s).
+- Local evidence: ignored `test-output/peak-workers-20260922/`.
+
+**Limits.** No installed build, listening check or Mac timing is claimed. The
+native runs used the Realtek device's large callback buffers; a low-latency
+interface (for example the Focusrite at 128–256 frames) was not available on
+this PC and remains a hand check. The bench measures preparation during
+playback; it does not apply the final gain, so the completion-boundary hiccup
+diagnostic above is unchanged and still open. Remaining serial time is mostly
+DSP (2.8 s) and final verification (about 1.8 s).

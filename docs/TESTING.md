@@ -138,6 +138,16 @@ separate stdout/stderr without changing OS volume or opening a visible helper.
 These are process observations under the recorded workload, not DAC latency,
 subjective listening or installer evidence.
 
+Qualified peak passes split independent blocks across a bounded worker budget
+(September 22). `peak_meter` regressions require every reported field to equal
+the single-thread measurement for refinement-exercising signals, uneven splits,
+staged WAV readers and dithered delivery reads; they also cover ordered block
+ranges, cancellation and the shared budget. Test builds read
+`YES_MASTER_PEAK_WORKERS` (for example `1`) so native callback benches can
+compare single-thread and budgeted measurement on the same machine. Record the
+device and granted callback sizes; a large-buffer device does not establish
+low-latency interface headroom.
+
 ## Audio correctness regressions
 
 `cargo test` includes `tests/audio_invariants.rs` without private fixtures or

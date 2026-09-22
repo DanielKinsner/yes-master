@@ -18,6 +18,12 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 22 preview speed:** multi-core qualified peak measurement
+> (`f34b80e7`) cut the owner fixture's cold preview preparation from about 30 s
+> to 8.5 s with identical results; fixture, bridge and native callback evidence
+> pass. Owner hand check and low-latency/Mac checks remain; see
+> [open threads](../OPEN_THREADS_AND_DECISIONS.md).
+
 > **September 22 review fixes:** three owner-approved interface fixes are on
 > `main` (`c3f251de`, `dcc34025`, `6798cb0c`): shortcuts no longer act behind
 > open dialogs, idle playback ticks no longer re-render the app and waveform

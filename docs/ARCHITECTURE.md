@@ -38,6 +38,11 @@ Important frontend helpers:
   may be reused only under a uniform gain plus a verified whole-file residual;
   wide intervals require fresh reconstruction. These modules never run in the
   audio callback. See the September 15 peak/reuse qualification records.
+  The finite-sinc and FIR passes split each channel's independent blocks
+  across worker threads from one process-wide budget (logical cores minus two,
+  at most 16) and merge in block order, so results equal a single-thread
+  measurement; refinement stays serial. Staged WAV readers open one reader per
+  worker. See the [September 22 preview follow-up](reviews/2026-09-22-preset-preview-investigation.md#follow-up-multi-core-peak-measurement-implemented).
 - `src-tauri/src/exports.rs` runs export quality checks.
 - `src-tauri/src/demo.rs` synthesises the empty state's demo track once into
   app-data (`prepare_demo_track`); swap the generator for a bundled file

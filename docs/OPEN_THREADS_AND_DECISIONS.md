@@ -1,5 +1,19 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-22 — Preview wait: peak measurement now uses multiple cores.**
+> Dan chose option (a). Qualified peak passes split independent blocks across a
+> bounded worker budget (logical cores minus two, at most 16) and merge in block
+> order (`f34b80e7`). On the owner fixture with his saved-style settings (Clarity
+> 85%, -11 LUFS, 96 kHz file, 48 kHz device) cold preview preparation fell from
+> 30.0/29.6 s to 8.4/8.6 s on the 24-thread office PC, with identical gains,
+> loudness, peaks and device PCM. Exports and Album receipts use the same path.
+> Exact-equality regressions, the slow fixture lane (721 passed), strict Clippy,
+> iPhone/Android bridge lanes and six muted native callback runs (0 deadline
+> misses, 0 device errors either way) pass. Open: owner hand check of preset
+> switching, a low-latency interface (Focusrite) check, Mac timing, the
+> completion-boundary hiccup and the other preview priorities. See the
+> [follow-up](reviews/2026-09-22-preset-preview-investigation.md#follow-up-multi-core-peak-measurement-implemented).
+
 > **2026-09-22 — Whole-project review fixes (owner option A).** A read-only
 > review found no launch blocker. Dan approved three interface-only fixes, now
 > on `main`: global shortcuts stand down while an aria-modal dialog is open
