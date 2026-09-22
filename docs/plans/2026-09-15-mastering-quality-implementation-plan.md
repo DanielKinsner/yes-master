@@ -21,7 +21,7 @@ Independent checks pass 31/32; Metal -80 current fails the frozen availability
 peak guard. Preserve that failure while testing the availability classifier.
 Next resolve a reproducible comparison reference and explicit fallback contract
 before expanding the grid or opening unseen C2 material.
-Status: **C1 quiet-copy checkpoint complete locally with preserved failures, September 21**. Implementation was authorized
+Status: **C1 reference-headroom checkpoint complete locally; fresh source-analysis audit next, September 21**. Implementation was authorized
 September 15 on local `codex/mastering-quality` from `7534f612`. See the
 [checkpoint ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
 Sonic-policy adoption and calibration remain gated. This file replaces the
@@ -43,6 +43,15 @@ the existing pool; current-control level dependence remains. Continue with a
 separately frozen single-candidate drive rule informed by measured static
 headroom, preserving this diagnostic and all earlier limits/results. Reference
 stability alone does not complete C1 or authorize a production selector.
+
+The [reference-headroom candidate](../reviews/2026-09-21-reference-headroom-results.md)
+now passes all twelve independent outputs and eight numerical copy checks.
+Imaginal/Rich gain qualified normalized candidates; normalized-pool choices
+match on all eight copies, while three source groups retain large target misses.
+The old current-control eligibility/reference policy is unchanged. The next
+[fresh-analysis audit](../reviews/2026-09-21-source-analysis-contract-protocol.md)
+checks the source profiles that the earlier experiments held fixed. C1 remains
+open; no holdout or sonic adoption follows from this diagnostic success.
 
 **Current owner sequencing supersedes the execution order below:** Dan approved
 preparing and testing the selected fixes, merging that verified result into local

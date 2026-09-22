@@ -114,3 +114,12 @@ scoring. These float analysis buffers may exceed full scale and must not be
 presented as delivered masters. Historical master files/limits are reused
 unchanged. See `docs/reviews/2026-09-21-static-reference-results.md`; raw output
 belongs in ignored `test-output/dynamics-research-20260921/static-reference-v1/`.
+
+The completed `reference-headroom-candidate-v1` uses the frozen protocol in
+`docs/reviews/2026-09-21-reference-headroom-protocol.md`. Build the
+`reference_headroom_candidate` example, then use `reference_headroom_research.py`
+prepare/evaluate/summarize and `headroom_reference.py` for independent checks.
+All twelve outputs and eight copy checks pass; the separate normalized-pool
+diagnostic preserves choice identity on all copies but retains major target
+shortfalls. Results and raw paths are in the corresponding results document.
+The original selectors and current-reference qualification remain unchanged.

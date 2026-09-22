@@ -1,5 +1,15 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-21 — Reference-headroom checkpoint verified locally.**
+> [Results](reviews/2026-09-21-reference-headroom-results.md) pass all twelve
+> independent output checks and eight copy comparisons. Imaginal/Rich now have
+> character-qualified normalized candidates, with explicit -23.981/-20.712 LUFS
+> delivery. The separate normalized-pool diagnostic is stable on all eight copies;
+> only Metal reaches -14. Historical current-reference tone failures remain.
+> No control-inclusive selector or shipping policy changed. Continue with the
+> [fresh source-analysis audit](reviews/2026-09-21-source-analysis-contract-protocol.md)
+> before claiming consistency when original source profiles are not retained.
+>
 > **2026-09-21 — Static reference qualified; candidate construction is next.**
 > [Results](reviews/2026-09-21-static-reference-results.md) pass all 24 independent
 > reference comparisons and eight reference-copy invariants. All 24 normalized
