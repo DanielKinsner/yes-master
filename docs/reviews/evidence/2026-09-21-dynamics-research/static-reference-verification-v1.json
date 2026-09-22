@@ -1,0 +1,343 @@
+{
+  "status": "complete",
+  "observed_at": "2026-09-22T05:32:43.888625+00:00",
+  "protocol_commit": "5027a5a6",
+  "tooling_commit": "33d25c89",
+  "branch": "codex/mastering-bidirectional-research",
+  "artifacts": {
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\job.json": "67383afe67b54c53cd6f656031d236657b99a055bc235811be76109ea6af1d2d",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\mechanical.json": "045899a6d7b691a21cb3d4bfcf39b9e08f48f4c0f799dc7b9eb842ddb50ed1a7",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\mechanical.log": "f2b5f9b3e905a7015a0a61fb89f0042be6de259d7cf9c82305398c077890fe2d",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\native.process.json": "ade7898b9d857a5d453c72acc44bf63ef2fc9f25e48ea5933c6059e62a685275",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\native.process.log": "6864532a8771b26339f466a6c41cec2ba0f97393d001c69e2cc7237fc957f95c",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\probe.exe": "a2e57876f3103436307a46e318feea88b776780a69461cfbec4ff88f14eaef46",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\remaining-mechanism.json": "e701e85da429985636bea1e064b181e2105d026bab1f82c2ae480cc6ef41ebd8",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\scoring.json": "6faf1f605405f9def4dfa0508789e74dc45623cee375abb497bac450080eccbd",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\scoring.log": "2e99056a38577a37be0845e8b9cbc143e11480f6ba1e30920225cfe8f354e59e",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\scoring.metrics.json": "e510ee6a3d938b8bff32eba0be3f5e15777819d649d8aa24fc5017fb932b541e",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\stage-timing.json": "d61621a4b6a5b8f4153767ad34147d48055ef7ef57abc9602180e032a07d53bb",
+    "test-output\\dynamics-research-20260921\\static-reference-v1\\native\\report.json": "de499d3f7143d153d2b47db678dfaa23581e6fa32e5656ac54befe28fdaba519",
+    "docs\\reviews\\evidence\\2026-09-21-dynamics-research\\static-reference-v1.json": "6faf1f605405f9def4dfa0508789e74dc45623cee375abb497bac450080eccbd",
+    "docs\\reviews\\2026-09-21-static-reference-protocol.md": "da6e5a58370e2fc4ef1025f0cdca16744636b8644711a600dc54ab4aff36be77",
+    "docs\\reviews\\2026-09-21-static-reference-results.md": "db749b1e8f7505e95247589b5a5f5d3e825b6b188efbda88dd7cb40e27e238f0",
+    "src-tauri\\examples\\static_preset_reference.rs": "cd9e434f4a4836f969d8a81c8dc0ea44fc6c06d2812de74d9211958c468e49a8",
+    "scripts\\research\\mastering-quality-implementation-20260915\\static_reference_research.py": "637bbbfcba2b268760c257cd0d11dae82c9481230a1e94b430f86da186bc19f9"
+  },
+  "mechanical": {
+    "status": "complete",
+    "job": {
+      "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\static-reference-v1\\job.json",
+      "sha256": "67383afe67b54c53cd6f656031d236657b99a055bc235811be76109ea6af1d2d"
+    },
+    "native": {
+      "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\static-reference-v1\\native\\report.json",
+      "sha256": "de499d3f7143d153d2b47db678dfaa23581e6fa32e5656ac54befe28fdaba519"
+    },
+    "rows": [
+      {
+        "id": "piano-impulse",
+        "sha256": "6fa9bb8e3f8a38521e1eb9070b855aa6a999e0c06d81fc93e3bf6125ff2954c4",
+        "independent_relative_pcm_difference": 2.8018470636571044e-11,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.030941299999540206
+      },
+      {
+        "id": "piano-multitone",
+        "sha256": "03aaa96c51fa7563ed8cc9f2af96cc4405306ed4fd993f3f6e4792c96a2bb571",
+        "independent_relative_pcm_difference": 0.0,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.024849299996276386
+      },
+      {
+        "id": "piano-noise",
+        "sha256": "8cf52285193b883940124cef97810e08e23b284e3091c759fd27ea88be1e01f4",
+        "independent_relative_pcm_difference": 5.106547083589682e-08,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.022577800002181903
+      },
+      {
+        "id": "piano-copy0",
+        "sha256": "1aa0d5bdcc3b15fe8f834ebc9a9705f2ecbfeeaacbba87ba882f76c31a3b94fd",
+        "independent_relative_pcm_difference": 1.1563750571442008e-07,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 3.5335424000004423
+      },
+      {
+        "id": "piano-copy-40",
+        "sha256": "f3233433506242a7eeb00182f22814286b5364a6db6ee4baa4861129a625f57b",
+        "independent_relative_pcm_difference": 7.709167047628006e-08,
+        "independent_pass": true,
+        "copy_relative_difference": 3.083666819051202e-07,
+        "copy_pass": true,
+        "work_s": 3.328245500000776
+      },
+      {
+        "id": "piano-copy-80",
+        "sha256": "d1bf0d068d1e64338e866f5fa3d9d73d23823e4f2c8f60d145c9cb36cc283bdb",
+        "independent_relative_pcm_difference": 7.709167047628006e-08,
+        "independent_pass": true,
+        "copy_relative_difference": 2.505479290479102e-07,
+        "copy_pass": true,
+        "work_s": 3.33536119999917
+      },
+      {
+        "id": "imaginal-impulse",
+        "sha256": "1d714138c049cc47bc17abebd88b375a78b86f2413cc2c560527b4a5bc2f808e",
+        "independent_relative_pcm_difference": 1.4702174694949044e-17,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.03438070000265725
+      },
+      {
+        "id": "imaginal-multitone",
+        "sha256": "6398ef0228083365c3001daa5e020019cf19c1e07c810329711b407149b122e0",
+        "independent_relative_pcm_difference": 6.806169547672861e-08,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.02134210000076564
+      },
+      {
+        "id": "imaginal-noise",
+        "sha256": "36af26c70d70568774b13ab57ad1cadd8ee61bb50fa356893769b412833939a6",
+        "independent_relative_pcm_difference": 9.522695821860072e-08,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.02003800000238698
+      },
+      {
+        "id": "imaginal-copy0",
+        "sha256": "205a29914f81dc563d3ea2884a6aaf77ac055023cdee109d0f0c69d155c8fd06",
+        "independent_relative_pcm_difference": 3.275599365896372e-08,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 6.324681500002043
+      },
+      {
+        "id": "imaginal-copy-40",
+        "sha256": "265ee0e6e7c856c472e9fad89c44d121f5e462572ce047857c7765adf116fb80",
+        "independent_relative_pcm_difference": 3.275599365896372e-08,
+        "independent_pass": true,
+        "copy_relative_difference": 1.3102397463585488e-07,
+        "copy_pass": true,
+        "work_s": 6.194369099997857
+      },
+      {
+        "id": "imaginal-copy-80",
+        "sha256": "108ed4c3c0ce1cb8527b3d46b76df3b2d001b521f173a81099bf06acb23770aa",
+        "independent_relative_pcm_difference": 3.2755991513053626e-08,
+        "independent_pass": true,
+        "copy_relative_difference": 1.9653596195378234e-07,
+        "copy_pass": true,
+        "work_s": 6.243575799999235
+      },
+      {
+        "id": "metal-impulse",
+        "sha256": "6f391e6cc6f5d93283232ddea60da58528bd780ab69eabc5fe028acfd0ff7469",
+        "independent_relative_pcm_difference": 4.9233019353241236e-18,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.04153460000088671
+      },
+      {
+        "id": "metal-multitone",
+        "sha256": "3adbd79a128a0299667a728c842dc1a4c51e748a1d906761b87c0baa0f73d08d",
+        "independent_relative_pcm_difference": 0.0,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.022686600001179613
+      },
+      {
+        "id": "metal-noise",
+        "sha256": "9ad6906f929ca646774a3d5d696f0ce2d27454aa04ea64254acb6f53bc74998d",
+        "independent_relative_pcm_difference": 8.7420198471825e-08,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.020646400000259746
+      },
+      {
+        "id": "metal-copy0",
+        "sha256": "a69df32ec0b52dc4bb45c1b4bad31371123e351602c4134c383f29919ec1864b",
+        "independent_relative_pcm_difference": 9.282730816030013e-08,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 3.729908699999214
+      },
+      {
+        "id": "metal-copy-40",
+        "sha256": "fa03e5d5fc3560396cebad464a3075124e1101e6d9593ac6e2b2cf1d0562e046",
+        "independent_relative_pcm_difference": 6.188486444739291e-08,
+        "independent_pass": true,
+        "copy_relative_difference": 1.8565461632060026e-07,
+        "copy_pass": true,
+        "work_s": 3.445301300002029
+      },
+      {
+        "id": "metal-copy-80",
+        "sha256": "04a71665bb2c3bc09d2af996c95911b1b5aab65ade83e775e096a1f4e105e84a",
+        "independent_relative_pcm_difference": 6.18848606176567e-08,
+        "independent_pass": true,
+        "copy_relative_difference": 1.8565461632060026e-07,
+        "copy_pass": true,
+        "work_s": 3.2070334999953047
+      },
+      {
+        "id": "rich-impulse",
+        "sha256": "bf2b76dc43a6e9aebbcffa86b58a5242091ce9e56e0145518fb56029ca32dbcc",
+        "independent_relative_pcm_difference": 4.535736257984923e-18,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.036719000003358815
+      },
+      {
+        "id": "rich-multitone",
+        "sha256": "0b9c99fb6477bce9f4224fc97e35d0c2168b2646e8d5bc705001086bc5bdb5dd",
+        "independent_relative_pcm_difference": 0.0,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.02182870000251569
+      },
+      {
+        "id": "rich-noise",
+        "sha256": "bd438e9378de334cededeb108cf45d1c53d3a5a7748737a4d5e03ba7a66d07b6",
+        "independent_relative_pcm_difference": 1.0147905725955805e-07,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 0.02139010000246344
+      },
+      {
+        "id": "rich-copy0",
+        "sha256": "a83f3f65c99a4796384f21a07a3d186c6def7d16dc2e0eacb87fbfeff34e13ba",
+        "independent_relative_pcm_difference": 5.842174178674438e-08,
+        "independent_pass": true,
+        "copy_relative_difference": null,
+        "copy_pass": null,
+        "work_s": 4.126096200001484
+      },
+      {
+        "id": "rich-copy-40",
+        "sha256": "dfe89de9b20c600dd4b26bd3e4defbc4fd2d4ccb7d2b7d4bb378713636bc5883",
+        "independent_relative_pcm_difference": 4.6737393429395504e-08,
+        "independent_pass": true,
+        "copy_relative_difference": 2.336869671469775e-07,
+        "copy_pass": true,
+        "work_s": 4.077054800000042
+      },
+      {
+        "id": "rich-copy-80",
+        "sha256": "2ff04031669545bede51f6ede6f9339ae3833e91d80ef62fdbe83ad1ff05da01",
+        "independent_relative_pcm_difference": 7.010609014409325e-08,
+        "independent_pass": true,
+        "copy_relative_difference": 2.336869671469775e-07,
+        "copy_pass": true,
+        "work_s": 4.028480900000432
+      }
+    ],
+    "all_pass": true
+  },
+  "process": {
+    "status": "complete",
+    "exit_code": 0,
+    "wall_s": 16.45642450000014,
+    "cpu_s": 15.875,
+    "peak_working_set_bytes": 958652416,
+    "job_sha256": "67383afe67b54c53cd6f656031d236657b99a055bc235811be76109ea6af1d2d",
+    "binary_sha256": "a2e57876f3103436307a46e318feea88b776780a69461cfbec4ff88f14eaef46",
+    "free_bytes_at_launch": 223422369792,
+    "scope": "this offline child only, including file I/O/hash/decode/render; excludes separate metric/reference processes and OS/driver work"
+  },
+  "stage_timing": {
+    "status": "complete",
+    "mechanical_wall_s": 55.0862317,
+    "scoring_wall_s": 34.7852242,
+    "schedule": "Native generation, independent mechanical qualification, then anchored metrics and diagnostic scoring; sequential"
+  },
+  "remaining_mechanism": {
+    "status": "complete",
+    "scope": "Necessary-condition audit; no altered limits or rescoring",
+    "rows": [
+      {
+        "case": "piano",
+        "all_normalized_candidate_statuses_copy_stable": true,
+        "best_single_loss_by_metric": {
+          "section_contrast_delta_db": 0.6763925747722439,
+          "attack_median_delta_db": 0.4107892755963354,
+          "attack_p10_delta_db": 1.378716388958413
+        },
+        "every_single_fails_dynamics": false,
+        "current_selected_original_and_minus40": false,
+        "minus40_selected_lufs_change": 9.5367431640625e-07
+      },
+      {
+        "case": "imaginal",
+        "all_normalized_candidate_statuses_copy_stable": true,
+        "best_single_loss_by_metric": {
+          "section_contrast_delta_db": 0.07196716950362969,
+          "attack_median_delta_db": 1.495885815537454,
+          "attack_p10_delta_db": 4.132508649600856
+        },
+        "every_single_fails_dynamics": true,
+        "current_selected_original_and_minus40": true,
+        "minus40_selected_lufs_change": -4.279088973999023
+      },
+      {
+        "case": "metal",
+        "all_normalized_candidate_statuses_copy_stable": true,
+        "best_single_loss_by_metric": {
+          "section_contrast_delta_db": 0.016123147773070556,
+          "attack_median_delta_db": 0,
+          "attack_p10_delta_db": 0.795342794411352
+        },
+        "every_single_fails_dynamics": false,
+        "current_selected_original_and_minus40": false,
+        "minus40_selected_lufs_change": 0.0
+      },
+      {
+        "case": "rich",
+        "all_normalized_candidate_statuses_copy_stable": true,
+        "best_single_loss_by_metric": {
+          "section_contrast_delta_db": 2.201290239303418,
+          "attack_median_delta_db": 1.1655166501103453,
+          "attack_p10_delta_db": 1.9126495688042764
+        },
+        "every_single_fails_dynamics": true,
+        "current_selected_original_and_minus40": true,
+        "minus40_selected_lufs_change": -1.878305435180664
+      }
+    ]
+  },
+  "validation": {
+    "independent_pcm_passes": 24,
+    "reference_copy_passes": 8,
+    "normalized_candidate_classification_matches": 24,
+    "copy_selection_identity_matches": 6,
+    "original_choices_retained": 3,
+    "reference_regressions": 4,
+    "release_build": "pass",
+    "strict_clippy": "pass",
+    "rust_format": "pass",
+    "python_compile": "pass",
+    "historical_artifacts_unchanged": true,
+    "production_source_unchanged": true,
+    "agents_claude_byte_identical": true
+  },
+  "scope": "Qualified reference component and diagnostic rescoring; no new masters or sonic adoption"
+}

@@ -36,6 +36,14 @@ retain the compressor's static crossover/makeup contribution when isolating
 time-varying processing. Freeze and qualify that reference before new scoring.
 Finite-loudness fallback eligibility, full control mapping, C2 and C3 remain open.
 
+The [static-reference diagnostic](../reviews/2026-09-21-static-reference-results.md)
+is now mechanically qualified and removes the reference-induced Metal choice
+shift. Imaginal/Rich still have no dynamics-qualified normalized candidate in
+the existing pool; current-control level dependence remains. Continue with a
+separately frozen single-candidate drive rule informed by measured static
+headroom, preserving this diagnostic and all earlier limits/results. Reference
+stability alone does not complete C1 or authorize a production selector.
+
 **Current owner sequencing supersedes the execution order below:** Dan approved
 preparing and testing the selected fixes, merging that verified result into local
 main, then resuming sound-quality research on a separate branch from verified main.

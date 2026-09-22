@@ -1,5 +1,16 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-21 — Static reference qualified; candidate construction is next.**
+> [Results](reviews/2026-09-21-static-reference-results.md) pass all 24 independent
+> reference comparisons and eight reference-copy invariants. All 24 normalized
+> quiet candidate classifications match their originals under the new diagnostic
+> reference. Metal now chooses zero at every level, but Imaginal/Rich still lack
+> a dynamics-qualified normalized candidate. Their current controls change
+> delivered level, and -80 controls remain ineligible for finite-LUFS selection.
+> Next: a separately frozen single candidate derived from measured static
+> headroom, not new arbitrary search offsets. No historical bound, selector,
+> production sound or holdout boundary changes; work remains local.
+
 > **2026-09-21 — Availability mechanism resolved in a separate diagnostic.**
 > [Complete-block results](reviews/2026-09-21-loudness-availability-results.md)
 > independently match all 32 retained quiet-copy files: 28 finite and four

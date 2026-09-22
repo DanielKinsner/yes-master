@@ -105,3 +105,12 @@ unavailable, finite and unknown results without changing `quiet_reference.py`,
 the old 31/32 result or either selector. See
 `docs/reviews/2026-09-21-loudness-availability-results.md`. Raw output belongs in
 ignored `test-output/dynamics-research-20260921/block-availability-v1/`.
+
+`static_reference_research.py prepare/verify/score` uses the
+`static_preset_reference` release example. The job freezes twelve source-copy
+references and twelve synthetic outputs. Use `run_single_first.py` for native
+cost, then verify against independent SciPy lfilter before anchored diagnostic
+scoring. These float analysis buffers may exceed full scale and must not be
+presented as delivered masters. Historical master files/limits are reused
+unchanged. See `docs/reviews/2026-09-21-static-reference-results.md`; raw output
+belongs in ignored `test-output/dynamics-research-20260921/static-reference-v1/`.
