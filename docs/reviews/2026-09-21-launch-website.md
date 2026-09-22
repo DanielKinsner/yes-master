@@ -37,3 +37,9 @@ Update Vitest and its companion packages from 4.1.9 to the maintainer's patched
 4.1.11. The complete 903-test frontend suite passes again and npm audit reports
 zero vulnerabilities at every severity. Production package versions/integrity
 hashes remain unchanged; this patch does not alter the frozen installer bytes.
+
+The documentation follow-up also removes obsolete fixed-price and instantaneous
+processing claims from the README/landing brief, updates beta export guidance
+for all seven formats, and marks the old owner checklist's candidate/date
+instructions as historical. The existing documentation contract tests pass
+within the repeated 903-test suite; no new product or pricing decision is made.

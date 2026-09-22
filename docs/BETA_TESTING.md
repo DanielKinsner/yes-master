@@ -29,8 +29,8 @@ Said plainly, because "beta over" usually means something worse than this:
 - New beta downloads stop being offered, and beta support ends.
 - **Your installed build keeps working.** Nothing is deactivated remotely and
   nothing stops opening. There is no kill switch.
-- A paid 1.0 may follow. If it does, upgrading is optional, and beta testers
-  get a founder price. The terms are announced ahead of time — never as a
+- A paid 1.0 may follow. If it does, upgrading is optional. Founder-window
+  dates, pricing and purchase terms are announced when confirmed — never as a
   countdown in the app.
 - You will not be pressured for feedback, and no feature is withheld to
   encourage it.
@@ -47,7 +47,9 @@ You do not need to work through this in order. In rough priority:
    master, or something very dynamic. The app is allowed to let you overcook
    your own track — but it should be honest about what it did.
 3. **Export, then listen to the file.** Not just the in-app audition. Does the
-   exported WAV match what you heard?
+   exported file match what you heard? Try the format you intend to deliver:
+   WAV, MP3, FLAC, AIFF, AAC/M4A, standalone AAC or Ogg Vorbis. Prefer M4A to
+   standalone AAC when exact programme length matters.
 4. **Album mode with a real record.** Ordering, per-track Follow/Override, and
    whether the sequence reads at a glance.
 5. **The awkward paths.** Cancel an export halfway. Export twice to the same

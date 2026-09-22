@@ -58,6 +58,8 @@ Ignored logs and reports: `test-output/launch-20260921/` in this worktree.
 | Android JVM | Exact-head remote lane passes; local Java loopback initialization fails before tests |
 | Encoder package script tests | Both corruption/architecture and missing-runtime dependency tests pass |
 | Try It Rust | Correct `wasm32-unknown-unknown` target check passes; frontend engine-stamp/runtime tests pass |
+| Native callback stress | Three explicit ignored tests pass on Realtek at 48 kHz using device-default buffers; 1,868 callbacks total, zero measured deadline misses, device errors or exhausted samples |
+| Research helper contracts | Seven restore tests and eleven selector tests pass; the latter use the existing hash-bound private inputs from the research checkout without changing shipping policy |
 
 The native lifecycle initially used an 18-second excerpt for a harness that
 seeks to 30 seconds. That input error and log are retained separately; the full
@@ -114,7 +116,7 @@ imports desktop command wrappers on a non-WASM target; it is not a supported
 host test lane. The actual WASM target check and shipped-browser runtime are
 verified separately. No dependency or cfg was weakened to force that command.
 
-## Remaining launch gates
+## Final local Windows candidate `2bc36054`
 
 The Help-only candidate `3078c98f` is built, installed and checked natively;
 its seven-format text and footer identify that exact build. Both updater
@@ -122,9 +124,75 @@ signatures verify and tamper controls fail as expected. Installed executable
 SHA-256: `d8df2775e7d9e4646c0514b3e1d049d2043da1b9749683586244b9e684f50da7`.
 All original session fields match the saved backup, excluding only its save
 timestamp; the eight tracks, selections and settings are preserved. WAV and
-Volume Match off are restored. The later keyboard repair needs its own focused
-installed check; the completed audio pass remains evidence for its unchanged
-engine/export paths, not a claim that the later package was exercised yet.
+Volume Match off are restored.
+
+The subsequent keyboard repair is built and installed at
+`2bc36054a784c1be68c2aefe649806fd76e65bf8`. The native Help footer identifies
+that build. Forward/reverse Tab remains in Help and Settings, Escape closes,
+and focus returns to each opener. Help lists all seven export formats. The
+full original eight-track session again matches the saved backup, excluding
+only the save timestamp. Engine/export paths are unchanged by the Help and
+keyboard commits; the earlier audio pass remains scoped to those paths.
+
+Final local delivery is `test-output/launch-20260921/delivery-2bc36054/`:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| NSIS setup EXE | `e70f0b616568f40099242234dcaea5dd1d00bf09618d0747859d0239e88fd58b` |
+| MSI | `a3f35e19c16ca94ce00d11098cdb7362600921bfa39f5a58b9b66412ba4254ea` |
+| Installed EXE | `6366c17c51783253b0d39715c8b0447087f51d2c8600c6c744cf18f0f75bf565` |
+
+NSIS installation returns zero. Both updater signatures verify and one-byte
+tamper controls fail. Administrative MSI extraction returns zero; its application
+matches the NSIS application except for Tauri's expected three-byte bundle
+marker. Both contain the identical qualified encoder and license notices. MSI
+payload inspection is not a separate MSI installation. These are local build
+artifacts; later CI-built installers require their own byte/installation proof.
+
+The owner review archive `YES-Master-2bc36054-Windows-review-r2.zip` is
+74,670,419 bytes, SHA-256
+`79762bb3fdf087a072d50ce960ae82c4ffbbccb7284164c518a1b3f7bfdf2c13`.
+Its 20 payload files include installers, signatures and corresponding source;
+every inventory hash is verified after ZIP extraction/readback. The README
+states the review-only status and remaining gates. No private audio, rendered
+masters or keys are included. The tracked source includes its historical
+native-dialog smoke project fixture, not the owner's working session.
+
+The three muted callback stress tests use the production native device-default
+buffer policy. The device grants 480–1,056 frames, not a claimed fixed 256.
+Streaming/gain cases exercise 44.1 kHz file conversion into the 48 kHz chain;
+the gain case applies 1,200 edits at 5 ms intervals. Preview work cancels and
+joins in under 3 ms in all three runs. This is a bounded local measurement,
+not a universal latency, listening or installed-interface guarantee.
+
+## Website and repository follow-through
+
+The [website follow-up](2026-09-21-launch-website.md) corrects canonical/share
+URLs to the verified production origin and patches development-only Vitest.
+Its full 903-test frontend suite and production build pass; npm audit reports
+zero advisories. Production package versions and integrity hashes are unchanged.
+
+Repository Dependabot alerts/security updates, secret scanning with push
+protection, and private vulnerability reporting are enabled and read back
+successfully on September 21. No automatic merging is enabled. Existing owner
+launch instructions now point away from beta.1 and the obsolete October 31 date.
+
+## Remote qualification and remaining launch gates
+
+CI run `35693446694` is associated with head `2bc36054`; GitHub checks out its
+synthetic merge `56e92233`. Both have exactly the same Git tree
+`2e54d139a81ae56975e2310004fc137f48308a6c`. Downloaded ARM and Intel Mac
+source/relink evidence names `56e92233`, passes all 21 archive hashes for each
+platform, and proves a full application rebuild plus real MP3 encode with the
+modified library. Do not relabel that
+source commit as the head commit. Manual Release run `35693471170` builds
+`2bc36054` directly and prepares a draft, never a public release.
+
+The historical Intel Mac exact Album PCM failure in run `34864394286` remains
+unexplained. Its retained log ends at the equality assertion; it contains no
+sample vectors or mismatch files from which to prove a cause. Current passing
+qualification demonstrates non-reproduction, not diagnosis. Exact PCM checks
+remain intact and newer failures retain compact mismatch evidence.
 
 Exact-commit cross-platform CI remains in progress. A real Mac install/import/export check, final candidate
 listening, LGPL relinking permission disposition, updater-key recovery evidence

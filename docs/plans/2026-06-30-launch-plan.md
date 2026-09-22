@@ -1,5 +1,11 @@
 # YES Master — Launch Plan (2026-06-30)
 
+> **September 21 reconciliation:** the old $29/$49 amounts below are historical.
+> The owner reopened pricing on September 14; final prices, founder-window
+> dates and purchase terms remain unresolved. The beta lasts 56 days from
+> actual publication. Current execution and remaining gates are in
+> [the launch record](../reviews/2026-09-21-launch-preparation.md).
+>
 > First-launch go-to-market + the engineering work it requires. Strategy decided
 > with the owner on 2026-06-30 after market research (pricing, distribution, GTM,
 > platform sequencing, tiered-pricing, and positioning). This is the working
