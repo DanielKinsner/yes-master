@@ -6,6 +6,30 @@ isolated `codex/launch-sept22` worktree. The active sound-research checkout and
 its unadopted policies are preserved. Existing September 9 Windows listening
 approval remains valid for its recorded scope, not for arbitrary future bytes.
 
+## Current review candidate — September 22
+
+The frozen application/artifact revision is
+`e6db1f467838d94aec9b3cfbc4272e1b977a8adb`. Later documentation updates do not
+change that identity. [PR 47](https://github.com/DanielKinsner/yes-master/pull/47)
+contains the preparation work; main and public downloads remain unchanged.
+
+The Windows and universal Mac jobs in
+[Release run 35700965101](https://github.com/DanielKinsner/yes-master/actions/runs/35700965101)
+both pass. The complete 14-asset `yes-master-v0.9.2-manual-9` draft is review-only.
+Its final audit fails because the source manifests deliberately retain
+`releaseReady: false` while recipient permission and final release evidence
+remain unresolved. This is not a successful Release workflow or launch GO.
+Full [CI 35700809284](https://github.com/DanielKinsner/yes-master/actions/runs/35700809284)
+completes successfully at this exact candidate, including Windows/Mac desktop,
+all three encoder/relink jobs, Android, iPhone Swift/bridges, browser, snapshots
+and security lanes. Final documentation changes pass 59 affected contract tests;
+they do not create a different installer or claim CI for unbuilt application bytes.
+
+The actual workflow-built Windows setup is installed and has completed a native
+M4A export with independent decode/measurement proof. The universal Mac package
+passes both-architecture encoder execution and final bundled-hash checks. A real
+Mac install and by-ear judgment remain separate from those automated checks.
+
 ## Repairs and presentation
 
 - Integrate the separately verified Advanced reset-slot alignment from
@@ -189,6 +213,12 @@ Repository Dependabot alerts/security updates, secret scanning with push
 protection, and private vulnerability reporting are enabled and read back
 successfully on September 21. No automatic merging is enabled. Existing owner
 launch instructions now point away from beta.1 and the obsolete October 31 date.
+The resulting four Dependabot PRs remain unmerged. Their four CI runs were
+canceled to free qualification runners; they are not counted as passing tests.
+The existing Vercel integration also automatically created four READY previews
+for those bot branches. Final domain readback confirms production stayed on
+`ab42065495b8c998b696b7ae15e3792fc4d4eb7d`, deployment
+`dpl_4gsheBu1MwmX6FJXuzzL6uHRHQix`; neither preparation branch deployed.
 
 The newly populated GitHub dependency graph reports 11 moderate alerts on
 unchanged `main`: two Vitest entries fixed by the website/tooling follow-up,
@@ -260,8 +290,95 @@ proves the old staging/signing sequence changes the hash, then checks that the
 corrected sequence survives the sidecar rename and Tauri's signing command.
 It runs as an independent CI lane before the expensive package qualifications.
 The existing three cross-platform encoder regressions pass locally; the Mac
-signing regression is explicitly skipped on Windows and awaits the Mac runner.
-Actual bundled hashes must still pass after the full package build.
+signing regression is explicitly skipped on Windows and passes on the real Mac
+runner at `e6db1f46`. Both thin CI packaging and universal Release packaging now
+also pass their actual post-bundle hash checks.
+
+The superseded `5a9225ff` universal package independently demonstrates the defect:
+Rust's expected encoder SHA-256 is
+`31c903ebc2c08c6f34441f03496f3a3d56bbe8f9287616b085323e0313957e44`,
+while the signed bundled encoder is
+`e97d3e32b6c9b54a262f6ffff66e7e1e90cd73a7f9ee06bd44eb60536584e357`.
+The new gate rejects it. Its downloaded package is retained as a negative
+control and its draft is clearly marked superseded. No runtime assertion or
+trust check was weakened to get the repaired package through.
+
+## Final downloaded artifacts and installed proof
+
+Both the direct-head Release and PR CI encoder qualifications pass on Windows,
+Apple Silicon and Intel Mac. Downloaded direct-head source/relink packages each
+verify all 21 manifest hashes and prove a complete application rebuild plus real
+MP3 encoding with the modified library. CI checks synthetic merge `82c227c8`,
+whose tree is identical to `e6db1f46`:
+`a4ce69597606c1934462589a10406dcff306cdbb`. Keep those source commit labels distinct.
+The earlier full CI at `2bc36054` also completed successfully.
+
+All 14 final downloaded assets match GitHub's recorded size/SHA-256; the
+checksum ledger closes over every other asset. Both corresponding-source
+manifests pass all 15 hashes and all three encoder manifests pass all 13 hashes.
+Both source ZIPs contain exactly the candidate's 1,429 tracked files. Windows
+matches local `git archive` byte-for-byte; Mac has 624 identical files and 805
+UTF-8 files differing only by CRLF versus LF. Archive hashes remain distinct.
+Both source manifests still say `releaseReady: false`; their generic pending
+text is not proof that the separately recorded rebuild tests failed.
+
+| Final artifact | SHA-256 |
+| --- | --- |
+| Windows NSIS setup | `964715dd354dd8412d629c724c2ec39dea0da2d85f5e7f39360fe948a0d4a695` |
+| Windows MSI | `9ab6d6f99499f134cfb63dbfa1099d699e908726b20f08074696e3f0b9aeb56e` |
+| Installed Windows EXE | `1b0093a5b0d554eb1d12cb34d78a5b14d4ea1b7bd66045d3aab9a96f9104ecb4` |
+| Universal Mac DMG | `d49fe293210f0207bab141f7718d8e58ea60279ef58e9ff8e9ac6c164b34b71e` |
+| Universal Mac updater bundle | `a2e036cb4774b24538c0441b6bae0caad42ac6e0fb74e5525e3aa8f8a5a4c5a3` |
+
+All three detached updater signatures verify against the permanent application
+public key, and one-byte tamper controls are rejected. They are not paid OS
+publisher signatures. `latest.json` names the correct draft tag, repository,
+assets and signatures for both platforms.
+
+NSIS installation and administrative MSI extraction both return zero. The
+installed app and MSI payload are identical except for Tauri's expected
+three-byte `NSS`/`MSI` marker. Both contain encoder SHA-256
+`816e8f8c4bc1b48195503dacf038278dacba55594f5fa452c38b09872a968a44`,
+matching the qualified Windows package and the hash embedded in the app.
+All four encoder license files match their qualified source hashes. This is
+an NSIS install and an MSI payload check, not two separate installed passes.
+
+Computer use opens the installed app, restores/analyzes the short test project,
+selects Track AAC/M4A at 256 kbps, renders to a new destination and inspects the
+receipt. It identifies clean build `e6db1f4 · 2026-09-22 08:36`. Independent
+FFmpeg 9.0.1 decoding yields exactly 1,632,000 stereo frames at 48 kHz (34 s),
+-11.1 LUFS and -1.8 dBTP; the receipt reports -11.1 LUFS and -1.74 dBTP.
+The output remains local and ignored. WAV is restored after the check.
+The original eight-track session is reopened through the native project dialog;
+its complete saved data matches both the pre-task and pre-install backups,
+excluding only the save timestamp. The app remains installed on `e6db1f46`.
+
+The Mac bundle independently contains ARM and Intel slices in both executables;
+both main slices name clean `e6db1f4` builds. Final encoder SHA-256
+`b3622fcd32e2c1236853c27d334a2788afd9fb996f55ab9193f1d67f1ea29c72`
+matches both target build manifests in the post-package runner checks and the
+Intel main's embedded constant. The optimized ARM executable does not retain
+the value as one contiguous ASCII literal; package validation does not assume
+that compiler representation. No Mac installation is inferred from parsing it.
+
+The local review archive `YES-Master-e6db1f46-release-review.zip` is
+242,534,778 bytes, SHA-256
+`ed6e61c107e3589f7b956d07eec5a0f4c530ed3632ca7526157810dc719c7242`.
+All 14 payload hashes are checked again after ZIP readback. It contains release
+assets, inventory, verification report and review-only instructions, with no
+private audio, rendered masters, live session or signing secrets.
+
+Evidence is retained under `test-output/launch-20260921/release-e6db1f46/`.
+The prior installed `2bc36054` support flow also saves a diagnostics report
+through native Save As, confirms success and returns focus to Help's opener.
+Its correct build log/session sections are verified locally; the private report
+is not included in the release archive.
+
+An earlier superseded Windows job built successfully but received GitHub's
+`Resource not accessible by integration` response while creating its draft.
+The existing maintainer session prepared unpublished drafts, and final Actions
+uploads succeeded without changing workflow-token permissions or creating a
+public tag. Superseded manual drafts 7 and 8 remain labeled as failure evidence.
 
 The historical Intel Mac exact Album PCM failure in run `34864394286` remains
 unexplained. Its retained log ends at the equality assertion; it contains no
@@ -269,7 +386,7 @@ sample vectors or mismatch files from which to prove a cause. Current passing
 qualification demonstrates non-reproduction, not diagnosis. Exact PCM checks
 remain intact and newer failures retain compact mismatch evidence.
 
-Exact-commit cross-platform CI remains in progress. A real Mac install/import/export check, final candidate
+A real Mac install/import/export check, final candidate
 listening, LGPL relinking permission disposition, updater-key recovery evidence
 and the authorized public updater transaction remain separate requirements.
 Full screen-reader and physically disconnected operation remain unverified;
@@ -279,5 +396,5 @@ September 22, its closing date is November 17, 2026. Do not activate that date
 or downloads until the actual publication is verified.
 
 The preparation branch disables automatic Vercel deployment as main already
-does. Engineering CI and draft review do not publish installers or a website.
+does. This candidate has no public installer or production-site publication.
 `RELEASE_METADATA` remains null; the blocked beta.1 draft/tag remain untouched.

@@ -1,11 +1,13 @@
 # YES Master — Open Threads & Owner Decisions
 
-> **2026-09-21 — September 22 launch preparation active.** Dan requested all
+> **2026-09-22 — Launch candidate prepared; public release remains NO-GO.** Dan requested all
 > applicable tests, end-to-end computer use and visual polish. The isolated
 > [launch preparation record](reviews/2026-09-21-launch-preparation.md) records
 > Advanced layout integration, dependency/CI repairs, current export copy,
-> responsive corrections and completed local suites. Candidate packaging and
-> exact-commit remote CI follow. Research policies remain unadopted. Real Mac,
+> responsive corrections and completed local suites. Frozen candidate `e6db1f46`
+> has verified Windows/universal Mac draft assets and an installed Windows M4A
+> check; full CI `35700809284` completes successfully. The draft audit retains the
+> unresolved recipient-permission/release gate. Research policies remain unadopted. Real Mac,
 > final listening, relinking, key recovery and public updater evidence remain
 > separate; downloads are not activated by preparation.
 

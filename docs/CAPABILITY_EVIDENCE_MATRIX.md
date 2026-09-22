@@ -6,8 +6,10 @@ Advanced and Album. WAV, MP3, FLAC, AIFF, AAC/M4A, ADTS AAC and Ogg Vorbis pass
 the fresh Track/Album engine matrices in the [launch record](reviews/2026-09-21-launch-preparation.md).
 This supersedes the fixed-WAV restrictions in historical C-05/C-28/S-01/S-08
 wording below. Unapproved $29/$49 proposals have been removed from the page;
-no replacement price or entitlement is adopted. Final Mac/installer evidence
-and publication remain distinct from local engine and browser checks.
+no replacement price or entitlement is adopted. September 22 candidate
+`e6db1f46` adds verified Windows/universal Mac packages and an installed Windows
+M4A export/independent decode pass. A real Mac install, final listening and
+publication remain distinct from package, engine and browser checks.
 
 **One place where every public claim is bound to a named evidence source.**
 Created by U1 of `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`
