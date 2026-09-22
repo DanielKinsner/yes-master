@@ -616,6 +616,62 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  // 2026-09-22 review: the backend emits a tick every 50 ms whenever audio is
+  // loaded, including while paused. Each unchanged tick re-rendered the whole
+  // app 20 times a second. The hook returns a fresh object on every render,
+  // so an unchanged object proves the repeat tick caused no render.
+  it("ignores repeated identical ticks but still applies changed ones", async () => {
+    let playbackHandler: ((tick: Record<string, unknown>) => void) | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const track = makeTrack("idle-tick", "C:/audio/idle.wav");
+    mocks.api.importTracks.mockResolvedValueOnce([track]);
+    const harness = await renderHookHarness();
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => expect(playbackHandler).toBeDefined());
+    // Paused: the payload repeats exactly, but arrives as new objects/arrays.
+    const pausedTick = () => ({
+      track_id: track.id,
+      position_sec: 12,
+      is_playing: false,
+      is_loaded: true,
+      peak_dbfs: -120,
+      peak_left_dbfs: -120,
+      peak_right_dbfs: -120,
+      gr_low_db: -120,
+      gr_mid_db: -120,
+      gr_high_db: -120,
+      lufs_momentary: -120,
+      lufs_integrated: -14.2,
+      spectrum_db: [-120, -120, -120],
+    });
+    await act(async () => { playbackHandler?.(pausedTick()); });
+    expect(harness.current().transport.currentTimeSec).toBe(12);
+    expect(harness.current().transport.lufsIntegrated).toBe(-14.2);
+
+    // React may run the hook once more on the first repeat before bailing
+    // out (its documented eager-state caveat); every repeat after that must
+    // be skipped outright.
+    await act(async () => { playbackHandler?.(pausedTick()); });
+    const settled = harness.current();
+    for (let i = 0; i < 5; i++) {
+      await act(async () => { playbackHandler?.(pausedTick()); });
+      expect(harness.current()).toBe(settled);
+    }
+
+    // Control: any changed value (here one spectrum bin) still renders.
+    await act(async () => {
+      playbackHandler?.({ ...pausedTick(), spectrum_db: [-120, -60, -120] });
+    });
+    expect(harness.current()).not.toBe(settled);
+    expect(harness.current().transport.spectrumDb).toEqual([-120, -60, -120]);
+    await act(async () => { harness.root.unmount(); });
+  });
+
   it("auto-selects a fresh import and resets stale playing/meter state from the prior track", async () => {
     let playbackHandler:
       | ((tick: {

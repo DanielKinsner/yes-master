@@ -327,6 +327,10 @@ function isPausedAtEffectiveEnd(
   return positionSec >= durationSec - EOF_RESTART_EPSILON_SEC;
 }
 
+function sameNumbers(a: readonly number[], b: readonly number[]): boolean {
+  return a === b || (a.length === b.length && a.every((value, i) => value === b[i]));
+}
+
 let analysisBatchSeq = 0;
 
 function nextAnalysisBatchId(): string {
@@ -776,23 +780,48 @@ export function useTrackMaster() {
         isPlaying: tick.is_playing && !deviceLost && !playbackFailure,
         receivedAtMs: Date.now(),
       };
-      setTransport((t) => ({
-        ...t,
-        currentTimeSec: tick.position_sec,
-        isPlaying: tick.is_playing && !deviceLost && !playbackFailure,
-        deviceLost,
-        peakDbfs: tick.peak_dbfs,
-        peakLeftDbfs: tick.peak_left_dbfs ?? tick.peak_dbfs,
-        peakRightDbfs: tick.peak_right_dbfs ?? tick.peak_dbfs,
-        compressionGr: {
-          low: tick.gr_low_db,
-          mid: tick.gr_mid_db,
-          high: tick.gr_high_db,
-        },
-        lufsMomentary: tick.lufs_momentary,
-        lufsIntegrated: tick.lufs_integrated,
-        spectrumDb: tick.spectrum_db ?? t.spectrumDb,
-      }));
+      setTransport((t) => {
+        const isPlaying = tick.is_playing && !deviceLost && !playbackFailure;
+        const peakLeftDbfs = tick.peak_left_dbfs ?? tick.peak_dbfs;
+        const peakRightDbfs = tick.peak_right_dbfs ?? tick.peak_dbfs;
+        const spectrumDb = tick.spectrum_db ?? t.spectrumDb;
+        // While paused the backend repeats the same tick 20 times a second.
+        // Returning the current state lets React skip re-rendering the whole
+        // app for a tick that changes nothing (2026-09-22 review).
+        if (
+          t.currentTimeSec === tick.position_sec &&
+          t.isPlaying === isPlaying &&
+          t.deviceLost === deviceLost &&
+          t.peakDbfs === tick.peak_dbfs &&
+          t.peakLeftDbfs === peakLeftDbfs &&
+          t.peakRightDbfs === peakRightDbfs &&
+          t.compressionGr.low === tick.gr_low_db &&
+          t.compressionGr.mid === tick.gr_mid_db &&
+          t.compressionGr.high === tick.gr_high_db &&
+          t.lufsMomentary === tick.lufs_momentary &&
+          t.lufsIntegrated === tick.lufs_integrated &&
+          sameNumbers(t.spectrumDb, spectrumDb)
+        ) {
+          return t;
+        }
+        return {
+          ...t,
+          currentTimeSec: tick.position_sec,
+          isPlaying,
+          deviceLost,
+          peakDbfs: tick.peak_dbfs,
+          peakLeftDbfs,
+          peakRightDbfs,
+          compressionGr: {
+            low: tick.gr_low_db,
+            mid: tick.gr_mid_db,
+            high: tick.gr_high_db,
+          },
+          lufsMomentary: tick.lufs_momentary,
+          lufsIntegrated: tick.lufs_integrated,
+          spectrumDb,
+        };
+      });
     }).then((fn) => {
       unlistenTick = fn;
     });
