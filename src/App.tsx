@@ -13,7 +13,7 @@ import { StandardView } from "./components/StandardView";
 import { TrackIdentity } from "./components/TrackIdentity";
 import { FirstRunOverlay } from "./components/FirstRunOverlay";
 import { hasNonManagedEdits, isStandardPreset, needsStandardReturnReset } from "./lib/standard-managed";
-import { SHORTCUTS, isTextEntryTarget } from "./lib/shortcuts";
+import { SHORTCUTS, isModalDialogOpen, isTextEntryTarget } from "./lib/shortcuts";
 import { PresetIcon, PRESET_ACCENT, PRESET_TONE } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
@@ -238,13 +238,15 @@ function App() {
   const audioOutput = useAudioOutputSettings(tm.clearPlaybackDeviceLost);
   const [chromePanel, setChromePanel] = useState<"settings" | "help" | "shortcuts" | null>(null);
   // Pass 4 (2026-08-19): `?` opens the shortcut list (Shift+/ on most
-  // layouts — we read the produced character). Yields to text entry.
+  // layouts — we read the produced character). Yields to text entry, and
+  // never opens on top of another modal dialog (it can still close itself).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "?" || e.ctrlKey || e.metaKey || e.altKey) return;
       if (isTextEntryTarget(e.target)) return;
       e.preventDefault();
-      setChromePanel((p) => (p === "shortcuts" ? null : "shortcuts"));
+      const modalOpen = isModalDialogOpen();
+      setChromePanel((p) => (p === "shortcuts" ? null : modalOpen ? p : "shortcuts"));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

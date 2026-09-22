@@ -274,3 +274,36 @@ describe("App user-facing errors", () => {
     });
   });
 });
+
+describe("App shortcuts with an open dialog", () => {
+  // 2026-09-22 review: global keys reached the workspace behind modals. `?`
+  // may still close its own list, but never stacks it on another dialog.
+  it("? toggles the shortcut list but never opens it over another dialog", async () => {
+    const { root, container } = await mountApp();
+    await waitFor(() => {
+      expect(emptyStateImportButton(container)).toBeTruthy();
+    });
+    const press = (key: string) =>
+      window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+    const dialogTitles = () =>
+      Array.from(container.querySelectorAll('[role="dialog"] h2')).map((h) => h.textContent);
+
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('[aria-label="Help"]')?.click();
+    });
+    expect(dialogTitles()).toEqual(["Help"]);
+    await act(async () => { press("?"); });
+    expect(dialogTitles()).toEqual(["Help"]);
+
+    await act(async () => { press("Escape"); });
+    expect(dialogTitles()).toEqual([]);
+    await act(async () => { press("?"); });
+    expect(dialogTitles()).toEqual(["Shortcuts"]);
+    await act(async () => { press("?"); });
+    expect(dialogTitles()).toEqual([]);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});

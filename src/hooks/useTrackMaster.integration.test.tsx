@@ -2256,6 +2256,50 @@ describe("useTrackMaster integration dispatches", () => {
       radio.remove();
       await act(async () => { harness.root.unmount(); });
     });
+
+    // 2026-09-22 review: with Help open, Space started playback, A flipped
+    // Original/Mastered and → seeked the track behind the dialog. An
+    // aria-modal dialog makes the workspace inert; its keys must be too.
+    it("transport and history keys do nothing behind an open modal dialog", async () => {
+      const { harness } = await importOne();
+      await act(async () => { harness.current().setIntensity(0.82); });
+      await waitFor(() => expect(harness.current().selectedSettings.intensity).toBe(0.82));
+
+      const dialog = document.createElement("div");
+      dialog.setAttribute("role", "dialog");
+      dialog.setAttribute("aria-modal", "true");
+      const inside = document.createElement("button");
+      dialog.appendChild(inside);
+      document.body.appendChild(dialog);
+
+      mocks.api.playTrack.mockClear();
+      let space!: KeyboardEvent;
+      await act(async () => {
+        space = key({ key: " ", code: "Space", target: inside });
+        key({ key: "ArrowRight", target: inside });
+        key({ key: "Home", target: inside });
+        key({ key: "a", target: inside });
+        key({ key: "z", ctrlKey: true, target: inside });
+        // Focus can also sit outside the dialog (e.g. after a backdrop click).
+        key({ key: "ArrowRight" });
+        key({ key: "a" });
+      });
+      // Space stays with the dialog's focused button (native activation).
+      expect(space.defaultPrevented).toBe(false);
+      expect(mocks.api.playTrack).not.toHaveBeenCalled();
+      expect(harness.current().transport.currentTimeSec).toBe(0);
+      expect(harness.current().transport.playbackKind).toBe("source");
+      expect(harness.current().selectedSettings.intensity).toBe(0.82);
+
+      // Control: once the dialog closes the same keys work again, so the
+      // assertions above cannot pass vacuously.
+      dialog.remove();
+      await act(async () => { key({ key: "ArrowRight" }); });
+      expect(harness.current().transport.currentTimeSec).toBeCloseTo(5, 3);
+      await act(async () => { key({ key: "z", ctrlKey: true }); });
+      await waitFor(() => expect(harness.current().selectedSettings.intensity).toBe(0.5));
+      await act(async () => { harness.root.unmount(); });
+    });
   });
 
   it("re-pushes the live chain when switching Album<->Track during Mastered playback (§5)", async () => {

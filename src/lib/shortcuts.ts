@@ -48,6 +48,14 @@ export function isTextEntryTarget(target: EventTarget | null): boolean {
   );
 }
 
+/// True while an aria-modal dialog is open. Everything behind a modal is
+/// inert, so no global shortcut may reach the workspace (2026-09-22: Space
+/// in Help started playback, A flipped Original/Mastered behind it). Every
+/// app dialog is mounted only while open, so presence means open.
+export function isModalDialogOpen(): boolean {
+  return document.querySelector('[role="dialog"][aria-modal="true"]') !== null;
+}
+
 /// True when the focused control already consumes arrows / letters (knob
 /// range inputs, number fields, selects) — seek / A / L stay out of its way.
 export function isValueControlTarget(target: EventTarget | null): boolean {

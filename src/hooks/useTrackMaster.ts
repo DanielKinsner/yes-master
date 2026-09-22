@@ -41,6 +41,7 @@ import { standardExportSettings } from "../lib/standard-export";
 import {
   SEEK_STEP_LARGE_SEC,
   SEEK_STEP_SEC,
+  isModalDialogOpen,
   isTextEntryTarget,
   isValueControlTarget,
 } from "../lib/shortcuts";
@@ -2393,11 +2394,13 @@ export function useTrackMaster() {
   // Checkboxes and radios are the one carve-out (owner decision 2026-08-25):
   // Space is the ONLY keyboard way to toggle them, so a keyboard user could
   // never flip Link Stereo while Space was transport-everywhere. There the
-  // native toggle wins and transport stays untouched.
+  // native toggle wins and transport stays untouched. An open modal dialog
+  // keeps Space for its own focused button (2026-09-22 review).
   // preventDefault stops page scroll and the focused control's own space action.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.code !== "Space" && e.key !== " ") return;
+      if (isModalDialogOpen()) return;
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
       const inputType = (target as HTMLInputElement | null)?.type;
@@ -2418,11 +2421,13 @@ export function useTrackMaster() {
 
   // Phase 7.4 — Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z (or Ctrl/Cmd+Y) = redo.
   // Skips when focus is in a text-editable field so the system-native
-  // undo in those inputs still works.
+  // undo in those inputs still works, and while a modal dialog is open so
+  // settings never change unseen behind it.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const isCtrl = e.ctrlKey || e.metaKey;
       if (!isCtrl) return;
+      if (isModalDialogOpen()) return;
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
       const isTextField =
@@ -2566,11 +2571,12 @@ export function useTrackMaster() {
   //   A            flip Original / Mastered       L     toggle loop (Advanced)
   // All yield to text entry; seek/A/L also yield to focused value controls
   // (knob range inputs, number fields, selects) where arrows and letters
-  // already mean something. No modifiers — Ctrl/Cmd combos belong to the
-  // undo handler below.
+  // already mean something. All of them stay out of an open modal dialog.
+  // No modifiers — Ctrl/Cmd combos belong to the undo handler below.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (isModalDialogOpen()) return;
       if (isTextEntryTarget(e.target) || isValueControlTarget(e.target)) return;
       if (!selectedTrack) return;
       const key = e.key;
