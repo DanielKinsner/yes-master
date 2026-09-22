@@ -60,12 +60,25 @@ Ignored logs and reports: `test-output/launch-20260921/` in this worktree.
 | Try It Rust | Correct `wasm32-unknown-unknown` target check passes; frontend engine-stamp/runtime tests pass |
 | Native callback stress | Three explicit ignored tests pass on Realtek at 48 kHz using device-default buffers; 1,868 callbacks total, zero measured deadline misses, device errors or exhausted samples |
 | Research helper contracts | Seven restore tests and eleven selector tests pass; the latter use the existing hash-bound private inputs from the research checkout without changing shipping policy |
+| Native output/error paths | Default/explicit Realtek open, pause, seek and resume pass; injected nonfinite conversion failure pauses and surfaces the correct playback error |
 
 The native lifecycle initially used an 18-second excerpt for a harness that
 seeks to 30 seconds. That input error and log are retained separately; the full
 source passes. A zero-test exact-name invocation is not counted. Local Gradle
 retries with IPv4 and selector settings did not resolve the Java socket error;
 no OS/network/security configuration was changed.
+
+The 716-test desktop run leaves 35 explicitly ignored diagnostics/opt-in tests;
+the applicable encoder matrices, native lifecycle/stress/error probes, negative
+control and remote snapshot lanes are executed separately as recorded here.
+Unrelated research benchmarks and owner-report writers are not silently counted
+as executed. The iPhone timing proxy remains ignored in its normal 46-test run.
+
+The native device inventory probe completes with three of four exposed endpoints
+opening. The default Realtek speakers, Realtek digital output and ASUS
+noise-canceling endpoint open; the separate ASUS Virtual Speaker returns
+`0x8889000A`. Its cause is not established. This is not an all-device pass, and
+no driver, endpoint preference or system setting is modified to erase it.
 
 Computer use observed the installed Windows interface and ran the local website
 Try It flow with the existing 18-second No Ceiling excerpt: load, analysis,
@@ -177,6 +190,19 @@ protection, and private vulnerability reporting are enabled and read back
 successfully on September 21. No automatic merging is enabled. Existing owner
 launch instructions now point away from beta.1 and the obsolete October 31 date.
 
+The newly populated GitHub dependency graph reports 11 moderate alerts on
+unchanged `main`: two Vitest entries fixed by the website/tooling follow-up,
+five `glib` entries (the existing Linux-only Tauri/GTK exception), and four
+`serde_with` entries. Two copies of each Rust finding are in historical audit
+harness lockfiles; those evidence snapshots are not rewritten. The
+[`serde_with` advisory](https://github.com/jonasbb/serde_with/security/advisories/GHSA-7gcf-g7xr-8hxj)
+requires use of `KeyValueMap` on attacker-controlled data. The candidate has
+no `KeyValueMap` use; its only direct dependent is `tauri-utils` 2.9.1, whose
+source uses only the `skip_serializing_none` macro. Dependency-tree/source
+readback is retained. This is an applicability assessment, not an upgrade or
+claim that the GitHub alerts are closed. RustSec gates retain their existing
+single explicit Linux exception; no new ignore or lowered threshold is added.
+
 ## Remote qualification and remaining launch gates
 
 CI run `35693446694` is associated with head `2bc36054`; GitHub checks out its
@@ -187,6 +213,14 @@ platform, and proves a full application rebuild plus real MP3 encode with the
 modified library. Do not relabel that
 source commit as the head commit. Manual Release run `35693471170` builds
 `2bc36054` directly and prepares a draft, never a public release.
+
+All three direct-head Release qualifications now pass, including modified-library
+application rebuild and MP3 encode. Downloaded ARM, Intel and Windows source
+packages each pass 21 manifest hash checks and name `2bc36054` consistently.
+The local and direct-head Mac source ZIPs contain the same 1,425 files: 624
+are byte-identical and 801 UTF-8 text files differ only by CRLF versus LF.
+ZIP timestamps also differ by host timezone. No missing or other differing
+files were found; distinct archive SHA-256 values are retained as such.
 
 The historical Intel Mac exact Album PCM failure in run `34864394286` remains
 unexplained. Its retained log ends at the equality assertion; it contains no
