@@ -1,5 +1,17 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-22 — Preset preview delay and loudness-control investigation.**
+> The owner's supplied Coat source matches the installed Windows session's
+> frame counts. Three cold 96 kHz preview preparations total 30.6–32.8 seconds
+> across logged stages, explaining most of the reported approximately 40-second
+> wait. The [investigation](reviews/2026-09-22-preset-preview-investigation.md)
+> identifies duplicate measurement, reuse and gain-handoff optimization candidates,
+> confirms shared target state, and explains the hidden live-meter labels.
+> The end-of-preparation hiccup remains unproven: existing callback probes cancel
+> before this completion boundary. All 63 focused frontend tests pass. This is
+> investigation evidence and a concrete next diagnostic, with no app changes,
+> new listening verdict, installed fix or performance improvement claimed.
+
 > **2026-09-22 — Real Mac launch verification conducted.** The downloaded
 > `e6db1f4` universal candidate installs on the M4 and passes native import,
 > audition, WAV/M4A plus Album export, external playback and project/error
