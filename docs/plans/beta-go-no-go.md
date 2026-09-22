@@ -1,5 +1,15 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **2026-09-22 — Installed M4 evidence added; release remains NO-GO.** The exact
+> downloaded `e6db1f4` universal DMG passes actual installation, import, playback,
+> WAV/M4A export, Album cancellation/retry, project restoration and external
+> Mac playback. Signed encoder identity and independent outputs are verified.
+> [Mac evidence](../reviews/2026-09-22-mac-launch-verification.md) distinguishes
+> this candidate from the corrected local ARM `fb89d63` package. Its final UI
+> recheck awaits Mac unlock; offline interactive proof is not claimed. Final
+> listening, recipient permission, key recovery and public updater/publication
+> remain separate, and a changed final release artifact requires its own evidence.
+
 > **2026-09-22 — Launch candidate prepared; still NO-GO.** The owner requested readiness
 > for September 22. See the [current execution record](../reviews/2026-09-21-launch-preparation.md)
 > for repaired CI causes, passing local suites and current native/browser scope.

@@ -1,5 +1,17 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-22 — Real Mac launch verification conducted.** The downloaded
+> `e6db1f4` universal candidate installs on the M4 and passes native import,
+> audition, WAV/M4A plus Album export, external playback and project/error
+> recovery checks. Five complete outputs pass independent checks. The local
+> combined branch preserves the earlier Mac fixes and corrects a Mac label
+> squeeze; 902 frontend tests, 711 desktop tests, explicit encoder matrices,
+> 40 app browser cases and actual device timing/lifecycle checks pass. Corrected
+> ARM build `fb89d63` is packaged and installed, with the original session restored.
+> Its final native recheck and offline journey await manual Mac unlock; Computer
+> Use cannot proceed while locked. See [the scoped evidence](reviews/2026-09-22-mac-launch-verification.md).
+> No remote push, release or deployment occurred. Existing release gates remain.
+
 > **2026-09-22 — Launch candidate prepared; public release remains NO-GO.** Dan requested all
 > applicable tests, end-to-end computer use and visual polish. The isolated
 > [launch preparation record](reviews/2026-09-21-launch-preparation.md) records

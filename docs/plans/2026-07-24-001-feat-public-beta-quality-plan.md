@@ -18,6 +18,13 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 22 Mac execution:** [the M4 verification record](../reviews/2026-09-22-mac-launch-verification.md)
+> now contains actual universal-installer/native journeys, independent outputs,
+> automated checks and real-device timing. The corrected local ARM candidate is
+> installed with the owner's original session restored. Resume only the named
+> final UI/offline rechecks after Mac unlock, then the separate release gates;
+> do not repeat the already completed Windows or Mac questionnaires.
+
 > **September 22 launch preparation:** the [current execution record](../reviews/2026-09-21-launch-preparation.md)
 > tracks the September 22 target, actual completed local tests and presentation
 > repairs. Candidate `e6db1f46` has verified Windows/universal Mac draft packages

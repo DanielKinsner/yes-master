@@ -1,7 +1,9 @@
 # Mac launch verification — September 22, 2026
 
-Status: verification in progress. Public release remains NO-GO until the separate
-release gates are satisfied. The owner authorized pulling main, preparing the Mac
+Status: downloaded universal candidate passed the installed Mac journeys below.
+The corrected local build passes automated/package checks; its final native UI
+recheck is pending because Computer Use reported the Mac locked. Public release
+remains NO-GO until the separate release gates are satisfied. The owner authorized pulling main, preparing the Mac
 app and executing end-to-end checks, including Computer Use.
 
 ## Source and artifact identity
@@ -110,8 +112,51 @@ probes and measurement logs are retained with the Album manifest.
   changes and 1,387 callbacks during 1,200 combined-gain changes. Both record zero
   deadline misses, device errors, streaming errors and exhausted samples. These
   short muted measurements are distinct from by-ear or long-session evidence.
-- Final headless layout, native lifecycle, local package and fixed-app rechecks
-  are still running; update this line with actual results before closing the task.
+- Final headless verification passes: the complete landing suite plus 40 app
+  scenario/viewport checks. Evidence: `test-output/headless/2026-09-22T14-43-50-388Z/`.
+  The earlier failing captures/logs remain retained; no assertion was relaxed.
+- A further callback probe uses a locally derived 120-second, 192 kHz stereo
+  source, 44.1 kHz delivery and the actual 48 kHz output. It grants 256-frame
+  buffers and records zero deadline misses/errors/exhaustion (see JSON evidence).
+  This deliberately exercises both conversions; it is not a new musical source.
+- Native Mastered lifecycle passes playing/paused 44.1/48/96 kHz delivery edits,
+  paused seek/resume, four A/B transitions, first landing preparation, new/cached
+  target application and paused cached-target resume. First unlanded playback
+  meter arrives in 229 ms. Under this test workload the first whole-file 96 kHz
+  preparation applies after 66.62 s; a new target takes 1.92 s and a cached target
+  159 ms. Those are distinct from audio callback timing and normal 48 kHz UI
+  observations. They do not justify an unconditional instant-preview claim.
+
+## Corrected local package and pending native recheck
+
+The clean combined code revision is `fb89d63`. `npm run build:mac` produces an
+Apple Silicon app and DMG, both locally verified and installed. This is separate
+from the downloaded Intel + ARM universal candidate above.
+
+| Local artifact | SHA-256 |
+| --- | --- |
+| ARM DMG | `e2ca44b9546e727f8a1e18b3f88455b578b72221d621d23ae3d24d58dab83ad5` |
+| Installed main executable | `719469ec80cca2d7070847ac66d4e5cc904e2bc96b0854fc8e8d6359c864b117` |
+| Final signed encoder | `9b396dccb4a1a52230e290f73d7e061b597fdc9a9d9ebdfdedf8d584e2fd1d7b` |
+
+Strict deep codesign and the exact post-bundle encoder hash gate both pass. The
+DMG was mounted read-only and its app copied into `/Applications`. Both previous
+applications are preserved in ignored evidence. The original pre-test session is
+restored byte-for-byte and the app is left closed.
+
+Computer Use reported: "The Mac is locked and automatic unlock could not unlock
+it." The owner was asked to unlock it; no unlock/bypass was attempted. Remaining
+native work is specific: confirm `fb89d63` in Help, inspect the corrected labels,
+repeat Album cancel/retry and Show files, and verify offline playback/export.
+A per-process network-denial profile and a failing curl control are prepared;
+no interactive offline result is claimed. The isolated test process was stopped.
+The machine's network settings were not changed.
+
+Build tools: the existing Homebrew Node could not load its simdutf dependency,
+so commands used the bundled Node 24.19 runtime. The broken Homebrew FFmpeg was
+updated and the full FFmpeg variant installed for libvorbis fixture generation;
+these developer tools are never bundled into the app. The product encoder was
+built separately from the pinned recipe and signed/staged through its verifier.
 
 ## Remaining release boundaries
 
