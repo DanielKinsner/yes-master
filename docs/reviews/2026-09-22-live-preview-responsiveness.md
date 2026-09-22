@@ -90,16 +90,31 @@ No estimator limit, PCM identity assertion or preset snapshot was weakened.
 - Preview regressions cover 672 format/profile/rate/precision combinations,
   same-rate one-pass measurement, exact serial/parallel peak facts, edge/silence/
   multichannel input, cancellation/retry and invalid samples.
-- Strict all-target release Clippy passes. Rust formatting passes.
+- Strict all-target release Clippy passes. Rust formatting passes. After adding
+  explicit thread-start failure handling, the five peak-meter regressions and
+  strict Clippy pass again; numerical algorithms remain unchanged.
 - Frontend: **913 tests passed**; production build passes. Deterministic landing
   captures refreshed after the intentional UI changes. Initial full headless
-  pass: landing plus 40 app cases. Final label-fit pass is recorded below.
+  pass: landing plus 40 app cases. The final full headless pass also passes all
+  40 cases, including visible/unclipped meter labels and every named target's
+  text width. Evidence: `test-output/headless/2026-09-22T16-51-24-282Z/`.
+  Reviewed captures include 1360x740 flow layout and 1440x1000 Advanced; the
+  target column was widened to keep full names/values visible.
 - iPhone facade host all-target check and **46 tests pass**, one ignored. This
   is a compile/host contract lane, not iOS device or Mac listening evidence.
 - Android facade: **26 host tests pass** and arm64 API-29 `cargo ndk check` passes.
   The first cross-check invocation used the wrong working directory and was
   corrected before the passing run; no check was skipped. This is not device listening.
-- Windows build: final artifact results recorded below.
+  Both facade host lanes and the Android cross-check were repeated successfully
+  after the final worker thread-start error handling change.
+- Windows MSI and NSIS builds pass from clean source commit
+  `81a98eab09e9810aed033aca753ddf70fbb4176d`, embedded stamp
+  `81a98eab · 2026-09-22 09:56`. Local copies and the hash manifest are in
+  `test-output/preview-preset-investigation-20260922/windows-81a98eab/`.
+  NSIS SHA-256: `92b8f8dc8658fcb411cb2392e452878a38596336134f7cc79a9ac5a1de2fe3e6`.
+  MSI SHA-256: `f31f7cca9d872d9604154103229daaeb53654f1bfc3f20f99a76e0be556bde15`.
+  Neither installer was run. The installed application retains its baseline
+  `54c60536be9b89193ca5c4edb9206d53b732f0c01cff7768729c61a454b17041` hash.
 
 ## Evidence and limits
 
@@ -109,7 +124,7 @@ captures, completion-pcm-check, native lifecycle/codec reports, whole-file input
 and outputs, independent comparison, Rust/Clippy/frontend/bridge logs. Source
 audio, rendered masters and these private captures are not committed.
 
-No public push/deployment/release occurs. Packaging and installation, if performed,
-are separate from the source-level/native probe evidence and must be identified
-explicitly. New owner listening remains unclaimed; the existing unrelated Windows
+No public push/deployment/release occurs. Packaging is complete; installation
+and listening of this build remain separate and unperformed. New owner listening
+remains unclaimed; the existing unrelated Windows
 listening verdict is not reopened or expanded by these tests.

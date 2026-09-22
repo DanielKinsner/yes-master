@@ -12,7 +12,9 @@
 > iPhone host check/46 tests and Android host/26 tests plus API-29 cross-check pass.
 > See [implementation and precise evidence](reviews/2026-09-22-live-preview-responsiveness.md).
 > The reported hiccup was not reproduced; no new owner listening verdict is
-> claimed. Final UI/build evidence is recorded there. No public push or release.
+> claimed. Final landing/40-case browser gate and Windows MSI/NSIS builds pass;
+> installers are retained locally at `81a98eab`, and the installed app is unchanged.
+> Final UI/build hashes are recorded there. No public push or release.
 
 > **2026-09-22 — Preset preview delay and loudness-control investigation.**
 > The owner's supplied Coat source matches the installed Windows session's
