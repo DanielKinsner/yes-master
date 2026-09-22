@@ -201,10 +201,17 @@ fn album_matrix_preserves_order_overrides_gaps_and_one_continuous_encode() {
                 .map(|t| t.ceiling_dbtp)
                 .fold(f32::NEG_INFINITY, f32::max)
         );
-        assert_eq!(
-            manifest["continuous_peak"],
-            serde_json::to_value(continuous).unwrap()
-        );
+        // Compare at the report's actual f32 precision. Parsing the JSON into
+        // Value first widens to f64, whose decimal parse may differ by one ULP
+        // from to_value(f32). This is not a change in the delivered peak.
+        for (field, expected) in [
+            ("true_peak_dbtp", continuous.true_peak_dbtp),
+            ("ceiling_dbtp", continuous.ceiling_dbtp),
+        ] {
+            let actual: f32 =
+                serde_json::from_value(manifest["continuous_peak"][field].clone()).unwrap();
+            assert_eq!(actual.to_bits(), expected.to_bits(), "manifest {field}");
+        }
         assert_eq!(
             manifest["delivered_format"],
             serde_json::to_value(&report.delivered_format).unwrap()

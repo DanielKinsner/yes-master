@@ -4,7 +4,9 @@
   "framework": "vite",
   "git": {
     "deploymentEnabled": {
-      "main": false
+      "main": false,
+      "codex/launch-sept22": false,
+      "codex/launch-website-sept22": false
     }
   },
   "rewrites": [

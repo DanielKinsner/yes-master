@@ -578,6 +578,7 @@ body {
 }
 .studio-specs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 25px;
@@ -592,10 +593,15 @@ body {
 }
 .studio-specs dl {
   display: flex;
-  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.studio-specs > div {
+  flex: 1 1 220px;
 }
 .studio-specs dl > div {
   display: flex;
+  min-width: 0;
   flex-direction: column-reverse;
   padding-inline: 25px;
   text-align: center;

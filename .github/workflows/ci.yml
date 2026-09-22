@@ -13,6 +13,17 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  mac-encoder-signing:
+    name: Mac encoder signing stability
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Prove thin and universal sidecar hashes survive packaging
+        run: node --test scripts/sign-mac-encoder.test.mjs
+
   audio-encoders:
     uses: ./.github/workflows/audio-encoders.yml
 
@@ -243,6 +254,20 @@ jobs:
         working-directory: src-tauri
         run: cargo test
 
+      - name: Download both qualified Mac architectures
+        uses: actions/download-artifact@v4
+        with:
+          pattern: audio-encoder-*-apple-darwin
+          path: test-output/universal-encoder-packages
+
+      - name: Verify universal encoder assembly and both execution routes
+        run: |
+          if ! arch -x86_64 /usr/bin/true; then
+            softwareupdate --install-rosetta --agree-to-license
+          fi
+          chmod +x test-output/universal-encoder-packages/audio-encoder-*/yes-master-encoder-*
+          node scripts/stage-universal-encoder.mjs test-output/universal-encoder-packages/audio-encoder-aarch64-apple-darwin test-output/universal-encoder-packages/audio-encoder-x86_64-apple-darwin test-output/universal-encoder-ci
+
       - name: macOS package build
         uses: actions/download-artifact@v4
         with:
@@ -254,6 +279,9 @@ jobs:
 
       - name: Build Mac package with encoder
         run: npm run build:mac
+
+      - name: Verify bundled Mac encoder still matches the runtime trust hash
+        run: node scripts/check-staged-encoder.mjs aarch64-apple-darwin 'src-tauri/target/release/bundle/macos/YES Master.app/Contents/MacOS/yes-master-encoder'
 
       - name: New-format Track and Album matrices
         working-directory: src-tauri
@@ -316,6 +344,10 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # v3 also defaults to the retired "tools" package. Request only
+          # the supported package; the pinned SDK/NDK set is installed below.
+          packages: platform-tools
 
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"

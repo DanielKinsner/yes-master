@@ -1,5 +1,13 @@
 # YES Master — Owner Launch Checklist (2026-08-31)
 
+> **Historical checklist — do not execute its old candidate/date instructions.**
+> The September launch uses the [current candidate record](../reviews/2026-09-21-launch-preparation.md).
+> Beta.1 remains blocked. The old October 31 date is superseded by 56 days from
+> actual publication, and production is `https://www.yesdsp.com/`. Automatic
+> Vercel deployment is disabled. The repository security toggles in step 6
+> were enabled and verified September 21. Publishing, updating from an older
+> seed and activating downloads still require their applicable evidence.
+>
 > **⚠ 2026-08-31 (later the same day): candidate `v0.9.2-beta.1` is
 > AUDIT-BLOCKED / NO-GO pending owner disposition.** The adversarial audit
 > confirmed launch blockers in release-bound code (hostile-import panic,

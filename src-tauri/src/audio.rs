@@ -2212,12 +2212,12 @@ fn queue_preview_work(
     seed_prepared_preview(s, &request.settings);
     s.preview_work
         .cancel_obsolete_response(s.live_sample_rate, &request.settings);
-    if !preview_measurement_needed(
+    if !(preview_measurement_needed(
         &s.device_gain_cache,
         &s.vm_gain_cache,
         &request.settings,
         request.landing_enabled,
-    ) && !(request.landing_enabled && s.landing_gain_cache.get(&request.settings).is_none())
+    ) || (request.landing_enabled && s.landing_gain_cache.get(&request.settings).is_none()))
     {
         s.preview_work.pending = None;
         publish_preview_coeffs(s, &request.settings, request.generation);

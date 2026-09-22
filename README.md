@@ -2,8 +2,9 @@
 
 **Master your track in real time — and see exactly what it did.** Drop in a
 finished track or album, hear the full mastering chain as you listen, shape it to
-taste, and export a technically-checked master. It runs entirely on your machine,
-so every change is instant — no upload, no waiting, no account.
+taste, and export a technically-checked master. Audio processing runs on your
+machine, with no upload or account. Audition is live; analysis, preview
+preparation and exports take processing time.
 
 No black box. YES Master *measures what it did and shows you* — live meters,
 quality checks, and a post-render receipt — so you can push as hard as you want
@@ -56,9 +57,10 @@ License: source-available, proprietary — see `LICENSE`.
 album delivery format with mixed-rate resampling, continuous + per-track
 renders with a manifest.
 
-The expanded formats are implemented locally and verified in the installed
-Windows `7cd36ab6` candidate. Mac qualification and public release remain
-pending; see [the evidence ledger](docs/plans/2026-09-09-export-formats-evidence.md).
+The expanded formats have engine-matrix and installed Windows evidence.
+See the [current launch record](docs/reviews/2026-09-21-launch-preparation.md)
+for exact candidate identities, Mac qualification and remaining release gates.
+Preparation is not a public release.
 ALAC and Opus are follow-ups. Export format changes do not retune mastering.
 
 **Projects:** `.ams.json` save/open, autosaved recent session with restore,
@@ -88,8 +90,8 @@ only human gates:
    `docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md`.
 4. **Public desktop release** (desktop-first, in progress): a free public
    beta (Mac + Windows together, current candidate v0.9.2) from GitHub
-   Releases with a cryptographically signed Tauri updater, then a paid 1.0
-   ($29 founder → $49). The $0 beta may use ad-hoc/unsigned OS installers
+   Releases with a cryptographically signed Tauri updater, then a paid 1.0.
+   Final pricing and purchase terms remain open. The $0 beta may use ad-hoc/unsigned OS installers
    with clear install guidance; paid Apple notarization and Windows
    Authenticode follow as trust upgrades. The active work queue is
    `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md` and the live

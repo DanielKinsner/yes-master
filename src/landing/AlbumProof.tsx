@@ -43,9 +43,9 @@ export default function AlbumProof() {
             </div>
             <dl>
               {[
-                ["Individual WAVs", "A master for each track"],
-                ["Continuous WAV", "The record, together"],
-                ["Manifest", "Delivery details"],
+                ["Individual masters", "A master for each track"],
+                ["Continuous master", "The record, together"],
+                ["Delivery details", "In the metadata folder"],
                 ["Per-track receipts", "See each result"],
               ].map(([k, v]) => (
                 <div key={k}>

@@ -57,7 +57,7 @@ export const SETTINGS_GROUPS: Array<{
 export const HELP_SECTIONS: Array<[string, string]> = [
   [
     "Standard view",
-    "Styles choose the character, Low / Medium / High sets loudness, and Create Master asks where to save your WAV or MP3 master — it never overwrites your source.",
+    "Styles choose the character, Low / Medium / High sets loudness, and Create Master asks where to save your master in the selected file format — it never overwrites your source.",
   ],
   [
     "Import / Analyze",
@@ -73,7 +73,7 @@ export const HELP_SECTIONS: Array<[string, string]> = [
   ],
   [
     "Delivery Profile / Format",
-    "Delivery Profile sets the loudness target, ceiling and WAV format. WAV is the default. MP3 offers smaller files at 320, 256, 192 or 128 kbps and uses a compatible sample rate. Both formats use your chosen mastering settings.",
+    "Delivery Profile sets the loudness target, ceiling and WAV defaults. Track and Album Master support WAV, MP3, FLAC, AIFF, AAC / M4A, AAC (ADTS) and Ogg Vorbis. Choose the file format and its quality controls in Delivery Format. MP3 offers 320, 256, 192 or 128 kbps. Every format uses your chosen mastering settings; the export receipt shows the delivered format and sample rate.",
   ],
   [
     "Export Review",

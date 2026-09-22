@@ -25,17 +25,18 @@ glow were both tried and both announced it.)
 - Not just louder. More legible.
 - Three decisions. One finished master.
 - The four Standard sounds. When you need more, the studio opens.
-- Real-time on your machine — instant, no upload, no account.
+- Real-time audition on your machine — no upload, no account.
 
 ## The promise (what the page sells)
 
 Drop in audio. Hear what the mastering chain is doing in real time. Pick a sound,
 set a loudness, shape the intensity. Create a finished, technically-checked
-master — all running locally, so it responds the instant you touch it.
+master, with audio processing running locally.
 
 Push it as hard as you want: YES Master measures what actually happened and shows
 you — live meters, quality checks, a post-render receipt — so you always know the
-truth about the file you're shipping. **No waiting. No black box.**
+truth about the file you're shipping. Analysis, preview preparation and export
+take processing time; do not promise zero waiting or universal responsiveness.
 
 ## Two views, one engine (the core visual story)
 
@@ -65,9 +66,9 @@ A focused, studio-grade desktop interface:
 
 ## Feature pillars (present tense)
 
-- **Real-time.** The whole mastering chain runs live while audio plays; every
-  control responds instantly.
-- **Local & instant.** Everything runs on your machine — no upload, no round-trip,
+- **Real-time.** The mastering chain runs live while audio plays, with audible
+  control changes and measured output.
+- **Local.** Audio processing runs on your machine — no upload, no round-trip,
   no account, works offline. (Your audio staying private is a welcome side effect,
   not the pitch.)
 - **Honest.** It measures the rendered file and surfaces real problems; it never

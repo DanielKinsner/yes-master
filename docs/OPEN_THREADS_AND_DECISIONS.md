@@ -1,5 +1,36 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-22 — Launch candidate prepared; public release remains NO-GO.** Dan requested all
+> applicable tests, end-to-end computer use and visual polish. The isolated
+> [launch preparation record](reviews/2026-09-21-launch-preparation.md) records
+> Advanced layout integration, dependency/CI repairs, current export copy,
+> responsive corrections and completed local suites. Frozen candidate `e6db1f46`
+> has verified Windows/universal Mac draft assets and an installed Windows M4A
+> check; full CI `35700809284` completes successfully. The draft audit retains the
+> unresolved recipient-permission/release gate. Research policies remain unadopted. Real Mac,
+> final listening, relinking, key recovery and public updater evidence remain
+> separate; downloads are not activated by preparation.
+
+> **2026-09-21 — Advanced control alignment corrected after owner review.**
+> The original `ab420654` label/value collision also blocked reset clicks.
+> The first fix (`68983921`) passed collision checks but the owner rejected
+> its uneven wrapping. The revised two-row grid keeps every label/readout on
+> one line and puts compact reset icons in a fixed slot beside each slider.
+> Auto retains an inactive icon so editing cannot move the controls. Full
+> labels, numeric formats and reset-to-Auto semantics are preserved.
+> Browser checks now cover minimum header spacing, row/track alignment and
+> stable Auto/mixed/edited layouts in Track/Album at 1360, 1440 and 1920 widths.
+> These focused checks and 32 affected component/behavior tests pass. Visual
+> captures include all three states at each width; evidence is under ignored
+> `test-output/text-overlap/` in the installation worktree. The full
+> `npm run verify:headless` gate passes (landing and 38 app scenarios).
+> Windows packages built at `b7eebf49`; the installed app/encoder were verified
+> and the app reopened with a responsive window. The previous autosaved session
+> was backed up locally. Enlarged browser captures establish the visual review;
+> native window responsiveness does not substitute for native visual inspection.
+> Work remains on `codex/fix-advanced-text-overlap`; no DSP change, main merge
+> or public push is included.
+
 > **2026-09-21 — Completed research main push authorized.** Dan requested
 > committing and pushing the completed checkpoint. The [integration record](reviews/2026-09-21-research-main-integration.md)
 > reviews the 16-commit research delta, verification and existing remote CI

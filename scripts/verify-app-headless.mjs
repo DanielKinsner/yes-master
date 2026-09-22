@@ -18,6 +18,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { launchHeadless, runtimeStamp } from "./lib/headless-browser.mjs";
+import { advancedLabelProbe } from "./lib/advanced-label-probe.mjs";
 
 // Audit A-02: the committed axe-core build (pinned by the lockfile) is the
 // scanner — never a CDN copy, so the gate is reproducible offline.
@@ -87,6 +88,28 @@ const SETTLE_TIMEOUT_MS = 20_000;
  * whitespace-collapsed innerText of <body>.
  */
 const SCENARIOS = [
+  {
+    name: "clean", label: "chrome-dialog-keyboard", scenarioId: "S-F1",
+    purpose: "Help and Settings contain keyboard focus and restore their opener.",
+    viewports: [MIN_DESKTOP, LAPTOP], settle: "ready",
+    assert: async (page, report) => {
+      for (const title of ["Help", "Settings"]) {
+        const opener = page.getByRole("button", { name: title, exact: true });
+        await opener.click();
+        const dialog = page.getByRole("dialog", { name: title, exact: true });
+        await dialog.waitFor({ state: "visible" });
+        for (const key of ["Tab", "Tab", "Tab", "Tab", "Tab", "Tab", "Tab", "Shift+Tab", "Shift+Tab"]) {
+          await page.keyboard.press(key);
+          if (!await dialog.evaluate(el => el.contains(document.activeElement))) {
+            report(`${title}: ${key} escaped the dialog`);
+          }
+        }
+        await page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "detached" });
+        await page.waitForFunction(label => document.activeElement?.getAttribute("aria-label") === label, title);
+      }
+    },
+  },
   { name:"album-warning", label:"album-new-formats", scenarioId:"S-F2", purpose:"New-format Album controls, delivered identity and per-track paths.", viewports:[MIN_DESKTOP], settle:"album-ready", drive:async page => {
     for (const [format,label] of [['flac','FLAC'],['m4a','AAC / M4A'],['aac','AAC (ADTS)'],['ogg','Ogg Vorbis'],['aiff','AIFF']]) {
       const close = page.getByRole('button',{name:'Close Album receipt',exact:true});
@@ -921,6 +944,7 @@ async function mp3ExportProbe(page,report) {
 }
 
 async function railModeConsistencyProbe(page, report) {
+  const labels = await advancedLabelProbe(page, report);
   await page.waitForFunction(() => Number(document.querySelector('input[aria-label="Width"]')?.value) > 0);
   // Observe every DOM update as well as painted frames: a settled screenshot
   // alone cannot catch the brief zero fallback during asynchronous mode changes.
@@ -978,7 +1002,7 @@ async function railModeConsistencyProbe(page, report) {
   }
   const samples = await page.evaluate(() => { window.__stopRailWidthSamples(); return window.__railWidthSamples; });
   if (!samples.length || samples.some(v => !Number.isFinite(v) || v <= 0)) report(`Width dropped to an unresolved/zero position during mode switches: ${JSON.stringify([...new Set(samples)])}`);
-  return {states, widthSampleCount:samples.length, widthValues:[...new Set(samples)]};
+  return {states, labels, widthSampleCount:samples.length, widthValues:[...new Set(samples)]};
 }
 
 async function exportOverlapProbe(page, report) {
