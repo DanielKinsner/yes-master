@@ -243,6 +243,23 @@ The already-tested canonical-domain, Vitest and documentation follow-up is
 folded into that candidate. Earlier artifact identities above stay historical;
 they are not silently presented as the repaired universal-Mac release.
 
+The replacement `5a9225ff` passes the complete local headless gate (40 app
+scenarios plus the landing suite). Inspection then identifies a separate Mac
+signing mismatch before declaring its artifacts ready: the qualified thin
+encoder has CodeDirectory flags `0x2`, while the pinned Tauri CLI 2.11.1 signs
+executable sidecars with hardened runtime (`--options runtime`). Re-signing
+therefore changes bytes after Rust has embedded their SHA-256. Both thin and
+universal staging now apply that signing mode and a stable encoder identifier
+before recording the hash. Runtime hash enforcement remains exact.
+
+A small Mac-only regression compiles real ARM, Intel and universal executables,
+proves the old staging/signing sequence changes the hash, then checks that the
+corrected sequence survives the sidecar rename and Tauri's signing command.
+It runs as an independent CI lane before the expensive package qualifications.
+The existing three cross-platform encoder regressions pass locally; the Mac
+signing regression is explicitly skipped on Windows and awaits the Mac runner.
+Actual bundled hashes must still pass after the full package build.
+
 The historical Intel Mac exact Album PCM failure in run `34864394286` remains
 unexplained. Its retained log ends at the equality assertion; it contains no
 sample vectors or mismatch files from which to prove a cause. Current passing
