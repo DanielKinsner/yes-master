@@ -30,6 +30,17 @@ only, subject to the following conditions:
 6. RESERVATION. All rights not expressly granted above are reserved. This
    is not an open-source license as defined by the Open Source Initiative.
 
+7. LGPL-COVERED LIBRARY COMPONENTS. Notwithstanding the restrictions in
+   this license, recipients may modify the LGPL-covered library components
+   listed in THIRD_PARTY_NOTICES.md, and modify and rebuild or relink the
+   portions of YES Master necessary to use those modified components, for
+   their own use. Recipients may reverse engineer YES Master to the extent
+   necessary to debug those library modifications. The supplied source and
+   build materials may be used for that purpose. This section does not
+   restrict any rights independently granted under the licenses of those
+   third-party components. No permission to redistribute YES Master is
+   otherwise granted by this section.
+
 For commercial licensing inquiries, contact the copyright holder.
 
 Note to the copyright holder: this is a plain-language source-available
