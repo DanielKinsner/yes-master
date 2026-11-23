@@ -1,17 +1,18 @@
-# Proposed LGPL relinking permission — NOT APPROVED
+# LGPL relinking permission — APPROVED 2026-11-23 (now `LICENSE` section 7)
 
 This draft is for the release owner's review. It has not changed `LICENSE`,
 has not been granted to recipients, and must not be represented as an approved
 distribution term. The current source-available license remains unchanged.
 
-> **2026-11-23 — prepared for approval, still not approved.** Branch
-> `vera/launch-tie-up` places this wording into `LICENSE` as section 7
-> (commit `25a118d`), unchanged except that "this exception" reads "this
-> section" and the components are identified by `THIRD_PARTY_NOTICES.md`.
-> `main` is untouched. The owner approves by merging that branch; nothing is
-> granted to recipients before then. After a merge, the redistribution
-> materials and release evidence must be regenerated for the changed terms
+> **2026-11-23 — approved by the owner.** Dan Kinsner authorized merging branch
+> `vera/launch-tie-up` into `main` ("push the new vera/tie up … to main"). The
+> wording below is in force as `LICENSE` section 7 from commit `25a118d`
+> (on `main` as of `ec8b56f`), unchanged except that "this exception" reads
+> "this section" and the components are identified by `THIRD_PARTY_NOTICES.md`.
+> Still required before any public release: regenerate the redistribution
+> materials and release evidence for the changed terms
 > (`scripts/prepare-redistribution.mjs` still lists this permission as pending).
+> The text beneath this note is the historical draft and is kept for the record.
 
 Proposed narrowly scoped exception for the release notice:
 

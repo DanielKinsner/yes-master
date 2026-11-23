@@ -1,5 +1,19 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-23 — Relinking permission approved; launch tie-up merged.** The
+> owner authorized merging `vera/launch-tie-up` (`9945fef..ec8b56f`). `LICENSE`
+> now carries the LGPL relinking permission as section 7; the redistribution
+> materials and release evidence still have to be regenerated for the changed
+> terms. Also merged: draft public-beta terms (`docs/legal/BETA-TERMS.md`, not
+> published), the owner's chosen contact address `yes@yesdsp.com` in the legal
+> drafts (it does not receive mail yet), and a one-page
+> [launch tracker](LAUNCH_TRACKER.md) with today's findings: the draft release
+> is 19 commits behind `main`, 21 Dependabot alerts are open (the critical `zip`
+> one is addressed by draft PR #58, which also moves Tauri to 2.12.7 and is
+> unverified), and the live site shows prices the record calls not approved.
+> No listening verdict, installed-build evidence or release authorization is
+> claimed. Windows publisher signing is parked by the owner.
+
 > **2026-09-22 — Mac testing resumed and the postponed checks completed.**
 > Pulled `aec5f6e`, then exercised the actual installed M4 app, including
 > offline playback/project/export, preset changes during preparation, Album

@@ -1,23 +1,23 @@
 # YES Master — Launch Tracker (public beta)
 
 One page. What stands between `main` and an open public beta, who owns each
-item, and its state. Started 2026-11-23 on branch `vera/launch-tie-up`.
+item, and its state. Started 2026-11-23 on branch `vera/launch-tie-up`; merged to `main` the same day on the owner's word.
 The authoritative gate record is still
 [plans/beta-go-no-go.md](plans/beta-go-no-go.md) and
 [OPEN_THREADS_AND_DECISIONS.md](OPEN_THREADS_AND_DECISIONS.md); this page is the
-short view. Nothing here publishes, merges or approves anything.
+short view. Nothing here publishes anything.
 
 ## The owner's five
 
 | # | Item | State |
 |---|---|---|
 | 1 | **Listen.** One compressed export against the in-app master on the installed build. | open |
-| 2 | **Approve the relinking permission.** Prepared as `LICENSE` section 7 on this branch (`25a118d`). Merging is the approval. | prepared, not approved |
+| 2 | **Approve the relinking permission.** `LICENSE` section 7 (`25a118d`), merged to `main` on the owner's word, 2026-11-23. Follow-up: regenerate the redistribution materials for the changed terms. | **approved** |
 | 3 | **A contact address that receives mail.** See finding C4. | open |
 | 4 | **Updater key.** Independent backup, and a proven restore on the other machine. | open |
 | 5 | **Publish.** Approve the final tag and site activation. | open |
 
-## Done on this branch (2026-11-23)
+## Done (2026-11-23)
 
 | Commit | What |
 |---|---|
