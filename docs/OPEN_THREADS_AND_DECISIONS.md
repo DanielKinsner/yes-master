@@ -1,5 +1,27 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-23 — Launch-day review; owner chose option A; three fixes.** Dan
+> asked for a last engineering and interface look before launching. On
+> `f1f89ef` every lane run on the office PC passes: typecheck, 908 frontend
+> tests, `cargo fmt`, strict Clippy, 722 Rust tests and `npm run verify:headless`
+> (landing plus 40 app checks). The app and landing interfaces were inspected in
+> a browser preview at desktop, minimum-window and phone sizes. The review found
+> the software ready and the launch steps incomplete; the short list is in the
+> [launch tracker](LAUNCH_TRACKER.md) (C11–C16 are new). Dan chose **option A**
+> ("go with A"): launch on the tested dependency set and ship the Tauri and
+> updater dependency update as 0.9.3. Three fixes follow from that choice:
+> the release audit no longer fails by constant and instead requires the
+> relinking permission in the archived `LICENSE` plus this run's rebuild proof
+> (`4a4bdac`); the public bug form and testing guide warn that a diagnostics
+> report contains file paths, and the version hint points at Help (`8227936`);
+> the eight development-only npm advisories are cleared with a byte-identical
+> production build (`43d09c7`). CI's advisory job still fails at its RustSec
+> step by that decision; the gate is unchanged. Open and owner-held: the
+> licence wording against the beta terms (C13), the final build and its
+> installed checks (C1), the updater key backup, publication and site
+> activation. No installed-build evidence, listening verdict, release or
+> deployment is claimed. The new audit step has not yet run on GitHub.
+
 > **2026-11-23 — Relinking permission approved; launch tie-up merged.** The
 > owner authorized merging `vera/launch-tie-up` (`9945fef..ec8b56f`). `LICENSE`
 > now carries the LGPL relinking permission as section 7; the redistribution
