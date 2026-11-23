@@ -1,5 +1,23 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-23 — Release run passed; draft manual-10 is the launch candidate.**
+> On the owner's request the Release workflow was started on `main` at
+> `6b3c7bb` (run `45283986699`). All seven jobs passed in about 57 minutes:
+> Preflight, the three encoder qualifications, the macOS universal and Windows
+> draft builds, and the audit. The derived-readiness audit (`4a4bdac`) ran on
+> GitHub for the first time: it fetched the same run's rebuild proofs for all
+> three targets with matching digests and passed. Draft
+> `yes-master-v0.9.2-manual-10` (release id `456134497`, 14 assets) is
+> **unpublished**; `releases/latest` still returns 404. `latest.json` links
+> embed the tag name, so the draft has to be published under that exact tag, as
+> the latest release and not a pre-release. Five older drafts remain on GitHub
+> (tracker C1). Separately, GitHub dropped two Apple Silicon jobs of the CI run
+> for the same commit for lack of machines, which skipped the desktop lanes;
+> on the owner's word those jobs were re-run after the release run (tracker
+> C17). Still open and owner-held: installed and listening checks on these
+> bytes, the updater key backup, the licence wording (C13), publication and
+> site activation. Nothing is installed, published or deployed.
+
 > **2026-11-23 — Launch-day review; owner chose option A; three fixes.** Dan
 > asked for a last engineering and interface look before launching. On
 > `f1f89ef` every lane run on the office PC passes: typecheck, 908 frontend
