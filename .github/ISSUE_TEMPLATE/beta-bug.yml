@@ -24,11 +24,16 @@ body:
         most useful thing you can attach to a crash. It is assembled locally,
         contains no telemetry, and you choose where it is saved.
 
+        **The report contains file paths from your computer.** Those can show
+        your computer account name and the names of your folders and tracks.
+        Open the file in a text editor first and remove anything you would not
+        post publicly.
+
   - type: input
     id: version
     attributes:
       label: App version and build
-      description: Help → the build stamp at the bottom of the export receipt, or Settings → app info.
+      description: Open Help (the ? button). The version and build are on its last line. The same stamp is at the bottom of every export receipt.
       placeholder: "0.9.2 · a1b2c3d"
     validations:
       required: true
@@ -137,7 +142,8 @@ body:
     attributes:
       label: Diagnostics report contents, screenshots, or anything else
       description: >
-        Paste the diagnostics text or drop screenshots here. **No private audio,
+        Paste the diagnostics text or drop screenshots here. Check the report
+        for file paths you would rather not publish first. **No private audio,
         please** — see the note at the top.
     validations:
       required: false

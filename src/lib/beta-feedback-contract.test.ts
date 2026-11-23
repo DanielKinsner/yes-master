@@ -114,6 +114,42 @@ describe("U4 — the bug form demands what reproduction actually needs", () => {
     }
   });
 
+  it("says where the version really is, and never points at Settings", () => {
+    // Settings deliberately has no build row (chrome-content.ts); Help and
+    // the export receipt do. The form used to send testers to "Settings →
+    // app info", which shows no version at all.
+    const version = bug.body.find((f) => f.id === "version");
+    const hint = version?.attributes?.description ?? "";
+    expect(hint).toContain("Help");
+    expect(hint).toContain("export receipt");
+    expect(hint).not.toMatch(/settings/i);
+    expect(read("src/lib/chrome-content.ts")).toContain('No "Build" row here');
+  });
+
+  it("warns that the diagnostics report carries file paths before it is posted publicly", () => {
+    // The report holds log lines and session.json, so it contains absolute
+    // paths: the OS account name and track/folder names. The issue is public.
+    // "Contains no telemetry" alone reads as "safe to paste".
+    expect(read("src-tauri/src/diagnostics.rs")).toContain(
+      "this file contains log lines and file paths from this machine",
+    );
+    const intro = (bug.body[0].attributes?.value ?? "")
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+    expect(intro).toContain("the report contains file paths");
+    expect(intro).toContain("account name");
+    expect(intro).toContain("would not post publicly");
+    // Repeated at the field where the text is actually pasted.
+    const extra = bug.body.find((f) => f.id === "extra");
+    expect(
+      (extra?.attributes?.description ?? "").toLowerCase().replace(/\s+/g, " "),
+    ).toContain("file paths");
+    // And in the guide the form sends people to.
+    const guide = read(GUIDE_PATH).toLowerCase().replace(/\s+/g, " ");
+    expect(guide).toContain("the report contains file paths");
+    expect(guide).toContain("would not post publicly");
+  });
+
   it("requires the audio metadata that changes engine behaviour", () => {
     // Already-mastered sources drive a different adaptive path, so a report
     // without it is ambiguous in a way that wastes a round trip.

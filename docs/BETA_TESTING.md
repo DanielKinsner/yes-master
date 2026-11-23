@@ -90,6 +90,11 @@ them is worse than described.
 version, a recent log tail, and a summary of the current session. It is
 assembled locally and saved wherever you choose.
 
+**The report contains file paths from your computer.** Those can show your
+computer account name and the names of your folders and tracks. GitHub issues
+are public, so open the file in a text editor first and remove anything you
+would not post publicly.
+
 The app keeps a small rotating log (about 2 MiB, error paths and lifecycle
 events only) in its app-data folder. **There is no telemetry.** Nothing is
 transmitted unless you save that report and attach it yourself.
