@@ -4,6 +4,15 @@ This draft is for the release owner's review. It has not changed `LICENSE`,
 has not been granted to recipients, and must not be represented as an approved
 distribution term. The current source-available license remains unchanged.
 
+> **2026-11-23 — prepared for approval, still not approved.** Branch
+> `vera/launch-tie-up` places this wording into `LICENSE` as section 7
+> (commit `25a118d`), unchanged except that "this exception" reads "this
+> section" and the components are identified by `THIRD_PARTY_NOTICES.md`.
+> `main` is untouched. The owner approves by merging that branch; nothing is
+> granted to recipients before then. After a merge, the redistribution
+> materials and release evidence must be regenerated for the changed terms
+> (`scripts/prepare-redistribution.mjs` still lists this permission as pending).
+
 Proposed narrowly scoped exception for the release notice:
 
 > Notwithstanding the restrictions in the YES Master Source-Available License,
