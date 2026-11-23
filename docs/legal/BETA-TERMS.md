@@ -10,7 +10,7 @@
 > Delete this box when the page is approved.
 
 **Effective:** [the publication date of the beta] · **From:** Daniel Kinsner ·
-**Contact:** yes@yesdsp.com [confirm it receives mail before publishing]
+**Contact:** yes@yesdsp.com
 
 ## What you are getting
 
