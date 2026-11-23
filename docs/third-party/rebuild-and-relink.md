@@ -13,8 +13,12 @@ tree, patches only the private LAME version marker, rebuilds the full applicatio
 and runs the existing MP3 tests plus a real modified-library encode/decode test.
 It retains logs and source/application/output hashes in `MATERIALS/relink-proof/`.
 It never installs the modified application, changes the original archives or
-grants license permission. `releaseReady` remains false pending owner/release
-gates. CI exercises the runner on Windows and both Mac architectures.
+grants license permission. On a pass it records `releaseReady` from evidence:
+true only when the extracted archive's `LICENSE` also carries the relinking
+permission (section 7), otherwise false with the missing item listed in
+`pending`. The owner's installed and publication gates are recorded beside it
+as `ownerGates` and are never implied by readiness. CI exercises the runner on
+Windows and both Mac architectures; the release audit reads those results.
 
 This complements the historical manual proof below; CI results must be read
 before claiming a platform passed. A first build needs npm/Cargo dependency

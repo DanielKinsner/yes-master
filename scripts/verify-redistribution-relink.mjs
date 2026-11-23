@@ -6,6 +6,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, openSy
 import { resolve, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { hasRelinkPermission, sourceReadiness, OWNER_GATES } from './lib/redistribution-readiness.mjs';
 
 const [materialsArg, packageArg, target, workArg] = process.argv.slice(2);
 assert(materialsArg && packageArg && target && workArg,
@@ -23,6 +24,8 @@ mkdirSync(work);
 const source = join(work, 'source'), vendor = join(work, 'vendor'), proof = join(materials, 'relink-proof');
 mkdirSync(source); mkdirSync(vendor); mkdirSync(proof);
 writeFileSync(join(proof, 'verify-redistribution-relink.mjs'), readFileSync(fileURLToPath(import.meta.url)));
+writeFileSync(join(proof, 'redistribution-readiness.mjs'),
+  readFileSync(fileURLToPath(new URL('./lib/redistribution-readiness.mjs', import.meta.url))));
 function run(exe, args, cwd = source, logName = 'setup.log') {
   const fd = openSync(join(proof, logName), 'a');
   try {
@@ -36,6 +39,14 @@ function run(exe, args, cwd = source, logName = 'setup.log') {
   } finally { closeSync(fd); }
 }
 run('tar', ['-xf', join(materials, 'yes-master-source.zip'), '-C', source]);
+// Read the permission from the extracted archive: that LICENSE is what a
+// recipient actually receives. A disagreement with the prepared manifest means
+// the materials and the archive are not the same revision.
+const relinkPermission = hasRelinkPermission(readFileSync(join(source, 'LICENSE'), 'utf8'));
+if (typeof manifest.relinkPermission === 'boolean') {
+  assert.equal(manifest.relinkPermission, relinkPermission,
+    'Prepared manifest and archived LICENSE disagree about the relinking permission');
+}
 const crates = {};
 for (const name of ['mp3lame-sys', 'mp3lame-encoder']) {
   const archive = readdirSync(materials).find(file => file.startsWith(`${name}-`) && file.endsWith('.crate'));
@@ -98,9 +109,11 @@ const record = {
 writeFileSync(join(proof, 'result.json'), JSON.stringify(record, null, 2) + '\n');
 for (const name of readdirSync(proof)) manifest.files[`relink-proof/${name}`] = hash(join(proof, name));
 manifest.relinkProof = record;
-// The existing permission decision remains explicit. A successful rebuild
-// supplies mechanical proof only and must never approve distribution by itself.
-manifest.releaseReady = false;
-manifest.pending = ['Owner-approved LGPL relinking permission', 'Final candidate release evidence'];
+// A successful rebuild supplies mechanical proof only. Readiness also needs the
+// relinking permission in the archived LICENSE, and it never approves
+// publication by itself: the owner gates stay recorded beside it.
+manifest.relinkPermission = relinkPermission;
+Object.assign(manifest, sourceReadiness({ relinkPermission, rebuildVerified: true }));
+manifest.ownerGates = OWNER_GATES;
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
-console.log(`PASS: archived ${manifest.commit} rebuilt for ${target} with modified LAME; releaseReady=false`);
+console.log(`PASS: archived ${manifest.commit} rebuilt for ${target} with modified LAME; relinkPermission=${relinkPermission}; releaseReady=${manifest.releaseReady}`);

@@ -10,8 +10,10 @@ distribution term. The current source-available license remains unchanged.
 > (on `main` as of `ec8b56f`), unchanged except that "this exception" reads
 > "this section" and the components are identified by `THIRD_PARTY_NOTICES.md`.
 > Still required before any public release: regenerate the redistribution
-> materials and release evidence for the changed terms
-> (`scripts/prepare-redistribution.mjs` still lists this permission as pending).
+> materials and release evidence for the changed terms. The scripts no longer
+> list this permission as pending by constant: they read it from the archived
+> `LICENSE` (`scripts/lib/redistribution-readiness.mjs`), so a release run on a
+> revision that contains section 7 records it as present.
 > The text beneath this note is the historical draft and is kept for the record.
 
 Proposed narrowly scoped exception for the release notice:

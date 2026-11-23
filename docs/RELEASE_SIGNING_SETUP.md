@@ -66,11 +66,19 @@ the files become publicly accessible at that moment. Keep the audit-blocked
 beta.1 artifacts out of this candidate.
 
 The export candidate adds qualified encoder/source archives to the asset audit.
-The source preparation script intentionally records `releaseReady: false` while
-the LGPL recipient-permission proposal and rebuild proof remain unresolved;
-the draft audit fails on that state. See
-[the permission draft](third-party/lgpl-relink-exception-DRAFT.md). Approving a
-push or workflow run does not approve that license change or publication.
+Source readiness is derived from evidence, not written as a constant
+(`scripts/lib/redistribution-readiness.mjs`). A package is `releaseReady` only
+when the archived `LICENSE` carries the LGPL relinking permission (section 7,
+owner-approved 2026-11-23; see
+[the permission record](third-party/lgpl-relink-exception-DRAFT.md)) **and**
+that exact revision was rebuilt with a modified library. Preparing materials
+proves no rebuild, so `prepare-redistribution.mjs` always records not-ready;
+only `verify-redistribution-relink.mjs` can record ready. The draft audit
+requires the published archives to be this revision with the permission
+present, and requires this run's rebuild proof for all three targets to be
+ready. It fails if either is missing. A passing audit is mechanical only:
+installed, listening and publication evidence remain owner gates, and approving
+a push or workflow run does not approve publication.
 
 ## Optional macOS trust upgrade (post-beta)
 

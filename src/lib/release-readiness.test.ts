@@ -274,6 +274,147 @@ describe("zero-cost beta release contract", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Corresponding-source readiness (2026-11-23).
+//
+// `releaseReady` used to be the literal `false` in prepare-redistribution.mjs,
+// a deliberate catch that made the release audit fail until the owner approved
+// the LGPL relinking permission. The permission is now LICENSE section 7, so
+// the catch became a permanent red audit. The fix is NOT to write `true`: the
+// flag is derived from the two things it always stood for — the permission in
+// the archived LICENSE and a passing rebuild with a modified library — and the
+// audit reads that rebuild proof from the same workflow run. These pin both
+// halves so neither a constant nor a missing proof can make a draft "ready".
+// ---------------------------------------------------------------------------
+
+interface RedistributionReadiness {
+  hasRelinkPermission: (licenseText?: unknown) => boolean;
+  sourceReadiness: (input?: {
+    relinkPermission?: unknown;
+    rebuildVerified?: unknown;
+  }) => { releaseReady: boolean; pending: string[] };
+  PENDING_PERMISSION: string;
+  PENDING_REBUILD: string;
+  OWNER_GATES: string[];
+}
+
+async function loadRedistributionReadiness(): Promise<RedistributionReadiness> {
+  // Plain .mjs outside `src`, so it is imported by file URL (untyped) and given
+  // its shape here instead of widening tsconfig for one helper. The path is a
+  // variable on purpose: Vite rewrites a literal `new URL(…, import.meta.url)`
+  // into a dev-server asset URL, which Node cannot import.
+  const helperPath = "../../scripts/lib/redistribution-readiness.mjs";
+  const url = new URL(helperPath, import.meta.url).href;
+  return (await import(/* @vite-ignore */ url)) as RedistributionReadiness;
+}
+
+describe("corresponding-source readiness is derived from evidence", () => {
+  const license = readText("../../LICENSE");
+  const prepareScript = readText("../../scripts/prepare-redistribution.mjs");
+  const relinkScript = readText("../../scripts/verify-redistribution-relink.mjs");
+  const encoderWorkflow = readText("../../.github/workflows/audio-encoders.yml");
+  const auditJob = workflow.split("\n  release-audit:\n")[1];
+
+  it("finds the relinking permission in the shipped LICENSE, however it is wrapped", async () => {
+    const { hasRelinkPermission } = await loadRedistributionReadiness();
+    expect(hasRelinkPermission(license)).toBe(true);
+    // Re-wrapping must not hide the grant.
+    expect(hasRelinkPermission(license.replace(/\n\s*/g, "\n      "))).toBe(true);
+    // Removing section 7 must be noticed.
+    const withoutSection7 = license.split("7. LGPL-COVERED LIBRARY COMPONENTS")[0];
+    expect(withoutSection7.length).toBeLessThan(license.length);
+    expect(hasRelinkPermission(withoutSection7)).toBe(false);
+    // The heading alone, without the operative grant, is not the permission.
+    expect(hasRelinkPermission("7. LGPL-COVERED LIBRARY COMPONENTS.")).toBe(false);
+    expect(hasRelinkPermission("")).toBe(false);
+    expect(hasRelinkPermission(undefined)).toBe(false);
+  });
+
+  it("is ready only with BOTH the permission and a verified rebuild", async () => {
+    const { sourceReadiness, PENDING_PERMISSION, PENDING_REBUILD } =
+      await loadRedistributionReadiness();
+    expect(
+      sourceReadiness({ relinkPermission: true, rebuildVerified: true }),
+    ).toEqual({ releaseReady: true, pending: [] });
+    expect(
+      sourceReadiness({ relinkPermission: true, rebuildVerified: false }),
+    ).toEqual({ releaseReady: false, pending: [PENDING_REBUILD] });
+    expect(
+      sourceReadiness({ relinkPermission: false, rebuildVerified: true }),
+    ).toEqual({ releaseReady: false, pending: [PENDING_PERMISSION] });
+    // Fails closed: absent or merely truthy evidence is not evidence.
+    expect(sourceReadiness().releaseReady).toBe(false);
+    expect(sourceReadiness({}).pending).toEqual([
+      PENDING_PERMISSION,
+      PENDING_REBUILD,
+    ]);
+    expect(
+      sourceReadiness({ relinkPermission: "yes", rebuildVerified: 1 })
+        .releaseReady,
+    ).toBe(false);
+  });
+
+  it("never lets readiness stand in for the owner's publication gates", async () => {
+    const { OWNER_GATES } = await loadRedistributionReadiness();
+    expect(OWNER_GATES.join(" ")).toContain("docs/plans/beta-go-no-go.md");
+    expect(prepareScript).toContain("ownerGates: OWNER_GATES");
+    expect(relinkScript).toContain("manifest.ownerGates = OWNER_GATES");
+    expect(auditJob).toContain("installed/publication gates still apply");
+  });
+
+  it("has no hard-coded readiness in either script", () => {
+    for (const script of [prepareScript, relinkScript]) {
+      expect(script).not.toMatch(/releaseReady\s*[:=]\s*(true|false)\b/);
+      expect(script).toContain("sourceReadiness(");
+    }
+    // The permission is read from the archived revision, not the working tree.
+    expect(prepareScript).toContain("`${commit}:LICENSE`");
+    expect(relinkScript).toContain("join(source, 'LICENSE')");
+    // Preparing materials proves no rebuild; only the relink runner may, and
+    // only after its last rebuild assertion.
+    expect(prepareScript).toContain("rebuildVerified: false");
+    expect(prepareScript).not.toContain("rebuildVerified: true");
+    expect(relinkScript.indexOf("rebuildVerified: true")).toBeGreaterThan(
+      relinkScript.indexOf("Full application lacks the modified library marker"),
+    );
+  });
+
+  it("makes the release audit read this run's rebuild proof for every shipped target", () => {
+    // The proofs come from the audio-encoders job, which the build must wait for.
+    expect(releaseJobHeader).toContain("needs: [preflight, audio-encoders]");
+    expect(encoderWorkflow).toContain("scripts/verify-redistribution-relink.mjs");
+    expect(encoderWorkflow).toContain("name: source-relink-${{ matrix.target }}");
+
+    expect(auditJob).toContain("pattern: source-relink-*");
+    expect(auditJob).toContain("path: relink-proof");
+    for (const target of [
+      "x86_64-pc-windows-msvc",
+      "aarch64-apple-darwin",
+      "x86_64-apple-darwin",
+    ]) {
+      expect(auditJob).toContain(`'${target}'`);
+      expect(encoderWorkflow).toContain(`target: ${target}`);
+    }
+    expect(auditJob).toContain(
+      '"relink-proof/source-relink-$target/manifest.json"',
+    );
+    expect(auditJob).toContain("$proof.commit -ne '${{ github.sha }}'");
+    expect(auditJob).toContain(
+      "$proof.relinkProof.fullApplicationRebuild -ne 'pass'",
+    );
+    // Type-checked on purpose: PowerShell coerces the string "true" to ready.
+    expect(auditJob).toContain(
+      "$ready = $proof.releaseReady -is [bool] -and $proof.releaseReady",
+    );
+    expect(auditJob).toContain("-or -not $ready)");
+    // The published archives are held to the same revision and permission.
+    expect(auditJob).toContain("$source.commit -ne '${{ github.sha }}'");
+    expect(auditJob).toContain(
+      "$source.relinkPermission -isnot [bool] -or -not $source.relinkPermission",
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // U1 — product canon and evidence contract (2026-07-24 quality program).
 //
 // These are STATIC INVARIANTS, not behavior tests. They exist because the canon

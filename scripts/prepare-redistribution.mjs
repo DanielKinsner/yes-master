@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { verifyPackage } from './verify-audio-encoders.mjs';
+import { hasRelinkPermission, sourceReadiness, OWNER_GATES } from './lib/redistribution-readiness.mjs';
 
 const [revision, encoderDirectory, target, outputDirectory] = process.argv.slice(2);
 assert(revision && encoderDirectory && target && outputDirectory,
@@ -43,9 +44,15 @@ for (const name of ['mp3lame-encoder', 'mp3lame-sys']) {
 for (const name of Object.keys(encoder.manifest.files).filter(name => name.startsWith('sources/') || name.startsWith('licenses/') || name.startsWith('build/'))) {
   retain(join(resolve(encoderDirectory), name), `encoder-${name.replaceAll('/', '-')}`);
 }
+// Read the permission from the archived revision itself, not the working tree:
+// recipients receive that LICENSE. Preparing materials never proves a rebuild,
+// so this manifest stays not-ready until verify-redistribution-relink.mjs passes.
+const relinkPermission = hasRelinkPermission(git(['show', `${commit}:LICENSE`]));
+const readiness = sourceReadiness({ relinkPermission, rebuildVerified: false });
 writeFileSync(join(output, 'manifest.json'), JSON.stringify({
   commit, encoder: encoder.manifest, files,
-  releaseReady: false,
-  pending: ['Owner-approved LGPL relinking permission and actual rebuild verification', 'Final candidate installed/CI/signing evidence'],
+  relinkPermission,
+  ...readiness,
+  ownerGates: OWNER_GATES,
 }, null, 2) + '\n');
-console.log(`Prepared source materials for ${commit}: ${output}; releaseReady=false`);
+console.log(`Prepared source materials for ${commit}: ${output}; relinkPermission=${relinkPermission}; releaseReady=${readiness.releaseReady}`);

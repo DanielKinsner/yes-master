@@ -376,6 +376,14 @@ jobs:
           $lines | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8NoBOM
           gh release upload $env:RELEASE_TAG SHA256SUMS.txt --clobber
 
+      # The audio-encoders job in this same run rebuilt the archived revision
+      # with a modified library and retained each result as an artifact.
+      - name: Download same-run rebuild proofs
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: source-relink-*
+          path: relink-proof
+
       - name: Audit draft release assets
         shell: pwsh
         run: |
@@ -437,20 +445,41 @@ jobs:
             exit 1
           }
 
-          # Source archives are useful draft artifacts while recipient permission
-          # and relink verification remain unresolved. Never call those ready.
+          # The published source archives must be this exact revision and must
+          # carry the LGPL relinking permission (LICENSE section 7), which
+          # prepare-redistribution.mjs reads from the archived LICENSE itself.
           foreach ($platform in @('Windows', 'macOS')) {
             $directory = "release-assets/source-$platform"
             New-Item -ItemType Directory -Path $directory | Out-Null
             tar -xzf "release-assets/yes-master-source-$platform.tar.gz" -C $directory
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             $source = Get-Content "$directory/manifest.json" -Raw | ConvertFrom-Json
-            if ($source.commit -ne '${{ github.sha }}' -or -not $source.releaseReady) {
-              throw "Corresponding source is not release-ready for this revision: $($source.pending -join '; ')"
+            if ($source.commit -ne '${{ github.sha }}') {
+              throw "Corresponding source is for revision $($source.commit), not this one."
+            }
+            # Type-checked: PowerShell would otherwise accept the string "true".
+            if ($source.relinkPermission -isnot [bool] -or -not $source.relinkPermission) {
+              throw "Corresponding source lacks the LGPL relinking permission for this revision: $($source.pending -join '; ')"
             }
             foreach ($file in $source.files.PSObject.Properties) {
               $hash = (Get-FileHash -LiteralPath (Join-Path $directory $file.Name) -Algorithm SHA256).Hash.ToLowerInvariant()
               if ($hash -ne $file.Value) { throw "Corresponding-source hash mismatch: $($file.Name)" }
+            }
+          }
+
+          # Release readiness is evidence, not a constant. This run's
+          # audio-encoders job rebuilt this exact revision with a modified
+          # library on every shipped target; each proof must say it is ready
+          # (relinking permission present AND the rebuild passed).
+          foreach ($target in @('x86_64-pc-windows-msvc', 'aarch64-apple-darwin', 'x86_64-apple-darwin')) {
+            $proofManifest = "relink-proof/source-relink-$target/manifest.json"
+            if (-not (Test-Path -LiteralPath $proofManifest)) {
+              throw "Missing rebuild proof for $target."
+            }
+            $proof = Get-Content -LiteralPath $proofManifest -Raw | ConvertFrom-Json
+            $ready = $proof.releaseReady -is [bool] -and $proof.releaseReady
+            if ($proof.commit -ne '${{ github.sha }}' -or $proof.relinkProof.fullApplicationRebuild -ne 'pass' -or -not $ready) {
+              throw "Rebuild proof is not release-ready for $target at this revision: $($proof.pending -join '; ')"
             }
           }
           Write-Host "Draft assets pass the mechanical audit; installed/publication gates still apply: $env:RELEASE_TAG"
