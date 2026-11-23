@@ -4,7 +4,7 @@
 > actually handles data. Have a lawyer review before launch / store submission
 > and fill in the bracketed items (`[…]`).
 
-**Last updated:** [DATE] · **Contact:** hello@yesmaster.app
+**Last updated:** [DATE] · **Contact:** yes@yesdsp.com
 
 Short version: **your audio never leaves your computer.** The app processes
 everything locally. We collect almost nothing, and we don't track you.
@@ -47,7 +47,7 @@ license records are retained as required for support and accounting.
 ## Your rights
 
 You can ask us to access or delete the personal data we hold about you (your
-email and order records) by emailing hello@yesmaster.app. Depending on where you
+email and order records) by emailing yes@yesdsp.com. Depending on where you
 live (e.g. EU/UK/California) you may have additional rights; we will honor
 applicable requests.
 

@@ -11,7 +11,7 @@
 > until that gate ships or the owner/legal review explicitly approves publishing
 > ahead of code.
 
-**Last updated:** [DATE] · **Contact:** hello@yesmaster.app
+**Last updated:** [DATE] · **Contact:** yes@yesdsp.com
 
 ## Try before you buy
 
@@ -21,7 +21,7 @@ first, since it removes most reasons a paid purchase wouldn't work for you.
 
 ## Our guarantee
 
-If the paid app doesn't work for you, email **hello@yesmaster.app within
+If the paid app doesn't work for you, email **yes@yesdsp.com within
 [14] days** of purchase and we'll refund you. No essay required.
 
 ## How refunds are processed

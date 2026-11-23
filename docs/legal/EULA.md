@@ -11,7 +11,7 @@
 > ship or the owner/legal review explicitly approves publishing ahead of code.
 
 **Last updated:** [DATE] · **Licensor:** Daniel Kinsner ("we", "us") ·
-**Contact:** hello@yesmaster.app
+**Contact:** yes@yesdsp.com
 
 By installing or using YES Master ("the Software") you agree to this Agreement.
 If you do not agree, do not install or use the Software.

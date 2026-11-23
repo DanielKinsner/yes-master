@@ -10,7 +10,7 @@
 > Delete this box when the page is approved.
 
 **Effective:** [the publication date of the beta] · **From:** Daniel Kinsner ·
-**Contact:** [a working address; `hello@yesmaster.app` does not receive mail yet]
+**Contact:** yes@yesdsp.com [confirm it receives mail before publishing]
 
 ## What you are getting
 
