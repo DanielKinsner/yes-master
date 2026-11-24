@@ -14,6 +14,8 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
+import { RELEASE_METADATA } from "../landing/release-config";
+
 const root = process.cwd();
 
 function read(relative: string): string {
@@ -297,12 +299,30 @@ describe("U4 — the beta guide is discoverable and honest", () => {
     expect(guide).toMatch(/mobile is not part of this beta/i);
   });
 
-  it("uses the owner-approved eight weeks from launch without inventing a launch date", () => {
-    // OWNER_INPUT_QUEUE, September 14: duration answered, actual publication
-    // still pending. This checks that decision without changing public copy.
+  it("states the owner-approved eight weeks and the same end date the download uses", () => {
+    // OWNER_INPUT_QUEUE, September 14: eight weeks from actual publication.
+    // The owner published on 2026-11-24 (UTC) and approved stating the end
+    // date here. The expected date is derived from the release config, not
+    // typed a second time, so the guide and the download window cannot drift.
     expect(guide).toMatch(/free for eight weeks from launch/i);
-    expect(guide).toMatch(/exact end date is announced/i);
     expect(guide).not.toMatch(/\b20\d\d-\d\d-\d\d\b/);
+
+    const endIso = RELEASE_METADATA?.betaEndsAt ?? null;
+    if (endIso === null) {
+      // No committed release: the guide must not invent a date.
+      expect(guide).toMatch(/exact end date is announced/i);
+      return;
+    }
+    const months = [
+      "January", "February", "March", "April", "May", "June", "July",
+      "August", "September", "October", "November", "December",
+    ];
+    const [year, month, day] = endIso.split("-").map(Number);
+    const spoken = `${months[month - 1]} ${day}, ${year}`;
+    expect(guide.replace(/\s+/g, " ")).toContain(`runs through **${spoken}**`);
+    // The landing page does not display the date, so the guide must not send
+    // readers there for it.
+    expect(guide).not.toMatch(/announced on the landing page/i);
   });
 });
 

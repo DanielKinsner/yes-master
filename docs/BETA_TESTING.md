@@ -13,8 +13,8 @@ YES Master is a **local-first desktop mastering app**. It analyses your track,
 runs it through a real-time chain you can audition against the original, and
 exports a technically checked master. It never modifies your source file.
 
-- **Free for eight weeks from launch.** The exact end date is announced on the
-  landing page when the beta opens. Your installed build keeps working afterward.
+- **Free for eight weeks from launch.** The beta runs through
+  **January 19, 2027**. Your installed build keeps working afterward.
 - **Mac and Windows.** Both ship together. Mobile is not part of this beta and
   there is no mobile download.
 - **Your audio stays on your machine.** No telemetry, no accounts, no audio

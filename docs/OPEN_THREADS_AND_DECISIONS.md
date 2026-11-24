@@ -19,8 +19,9 @@
 > date, `2026-11-24`; the beta therefore ends `2027-01-19` (56 days). On the
 > owner's Pacific clock publication was November 23, which would give January
 > 18; the later date was used. The landing page does not show the end date,
-> though `docs/BETA_TESTING.md` says it is announced there — owner to confirm
-> the date and where it is stated. **Not claimed:** no installer was run from
+> though `docs/BETA_TESTING.md` said it was announced there. **Owner decision
+> ("Yes, add Jan 19"):** January 19, 2027 stands, and the testing guide now
+> states it, pinned to `betaEndsAt` by a contract test. **Not claimed:** no installer was run from
 > the site, no in-app update has been observed, and this record holds no
 > listening verdict or updater-key backup evidence. Still open: the licence
 > wording against the beta terms (tracker C13), now that the download is
