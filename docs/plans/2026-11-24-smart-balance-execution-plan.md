@@ -526,8 +526,9 @@ old and new binaries back to back.
 `tests/evidence_runner_paths.rs`, and usage in `docs/TESTING.md` ("Smart
 Balance Reference Measurement"). Smoke runs on real private folders decoded
 MP3 and WAV and logged skips. Two runs on the same 30 real files gave
-byte-identical statistics. Those folders are stems and test renders, not a
-reference library, so their statistics were discarded.
+byte-identical statistics. Those folders hold corpus stems and one source
+with its LANDR, BandLab and YES masters. They are not a reference library, so
+their statistics were discarded.
 
 ### Deviation log (Slices 0–1)
 
@@ -538,12 +539,24 @@ reference library, so their statistics were discarded.
 2. **Worktree paths.** Private audio exists only in the main checkout and is
    passed by absolute path. Private evidence goes to the main checkout's
    ignored `test-output/smart-balance/`.
-3. **No BandLab masters exist.** Slice 2 asks for "the saved LANDR and BandLab
-   masters in `tests for presets/`". That folder holds three LANDR masters and
-   no BandLab audio. No BandLab audio exists anywhere in the checkout (only
-   `test-output/yesmaster-fingerprint-runner/bandlab-role-targets.json`).
-   Slice 2 will place the LANDR masters and report BandLab as unavailable
-   unless the owner supplies them.
+3. **Correction: the BandLab masters do exist.** An earlier version of this
+   entry said `tests for presets/` held no BandLab masters. That was wrong. The
+   search looked for "bandlab" in file names, and these files have no service
+   prefix. BandLab's style names (Clarity, Oomph, Tape, Universal) match YES
+   Master's preset names, so the files look like YES exports. Per
+   `docs/reviews/2026-09-14-landr-waves-dsp-assessment.md` ("Scope and
+   evidence"), the owner identified the files as follows:
+   - the source: `It’s a coat-original-test.wav`;
+   - three LANDR masters: the `LANDR-` files;
+   - four BandLab masters: `It’s a coat-clarity-test.wav`, `-oomph-test`,
+     `-tape-test` and `-universal-test`.
+
+   The three remaining files are YES Master exports:
+   `It_s_a_coat-original-test_YESmaster_mastered_universal intensity75.wav`,
+   `YES-compressor-on.wav` and `YES-compressor-off.wav`. Slice 2's note places
+   the source, the three LANDR masters and the four BandLab masters against the
+   range. It may include the YES exports as optional context, labeled as YES
+   output.
 4. **Two skip rules added** beyond the plan's four: sample rate under 32 kHz
    (the meter's air band is cut off by Nyquist, which would bias the air
    statistic) and byte-identical duplicates (one song counted twice would bias
