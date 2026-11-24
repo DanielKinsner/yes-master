@@ -185,6 +185,33 @@ describe("RustSec gate fails closed on unsound advisories (audit S-02)", () => {
   });
 });
 
+describe("Rust toolchain pin (tracker C17)", () => {
+  it("every workflow installs the same exact Rust version, never a floating channel", () => {
+    // A floating `stable` let a new Rust release fail CI's clippy step and
+    // silently skip the Windows Rust tests behind it (C17). The tests must
+    // also run on the compiler that builds the installers, so the CI,
+    // encoder and release workflows all name one exact version.
+    const pins = new Set<string>();
+    for (const name of ["ci.yml", "audio-encoders.yml", "release.yml"]) {
+      const text = readText(`../../.github/workflows/${name}`);
+      const setups = text
+        .split("\n")
+        .filter((line) => line.includes("dtolnay/rust-toolchain@"));
+      const toolchains = [...text.matchAll(/^\s+toolchain:\s*"?([^"\s#]+)"?/gm)].map(
+        (match) => match[1],
+      );
+      expect(setups.length, name).toBeGreaterThan(0);
+      expect(toolchains, `${name}: one toolchain per setup step`).toHaveLength(setups.length);
+      for (const toolchain of toolchains) {
+        expect(toolchain, name).toMatch(/^\d+\.\d+\.\d+$/);
+        pins.add(toolchain);
+      }
+      expect(text, name).not.toMatch(/rustup (default|update|toolchain install)/);
+    }
+    expect([...pins], "all workflows agree on one Rust version").toHaveLength(1);
+  });
+});
+
 describe("updater manual-recovery origin (audit L-03)", () => {
   it("pins the fixed Releases URL identically in frontend, Rust, and landing sources", () => {
     // The desktop open_release_page command must only ever open this URL.

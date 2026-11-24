@@ -12,6 +12,12 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 
+# Rust is pinned to one exact version in every workflow (ci.yml,
+# audio-encoders.yml, release.yml), so a new stable release cannot turn CI
+# red overnight and the tests run on the compiler that builds the installers.
+# Bump all three together, after a clippy --all-targets sweep and the test
+# suites on the new version (docs/TESTING.md; tracker C17).
+
 jobs:
   mac-encoder-signing:
     name: Mac encoder signing stability
@@ -49,6 +55,8 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.100.0"
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -146,6 +154,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: "1.100.0"
           components: clippy,rustfmt
 
       - name: Cache cargo
@@ -228,6 +237,8 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.100.0"
 
       - name: Add iOS simulator Rust targets
         run: rustup target add aarch64-apple-ios-sim x86_64-apple-ios
@@ -340,6 +351,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: "1.100.0"
           targets: aarch64-linux-android
 
       - name: Set up Android SDK
@@ -395,6 +407,8 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.100.0"
 
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked --version 0.22.2

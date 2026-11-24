@@ -746,6 +746,14 @@ cargo test --test preset_fingerprint write_owner_fingerprint_report -- --ignored
 
 - Clippy is part of the hard local gate. If it is missing on a fresh toolchain,
   install it with `rustup component add clippy`.
+- CI and the release workflow pin Rust to one exact version (`1.100.0` since
+  2026-11-24, tracker C17) in `ci.yml`, `audio-encoders.yml` and `release.yml`;
+  a contract test in `src/lib/release-readiness.test.ts` fails if any setup
+  floats or the three disagree. Run local gates on the same version
+  (`rustup install 1.100.0`, then `cargo +1.100.0 …`, or make it the default).
+  To bump: on the new version run `cargo fmt --check`,
+  `cargo clippy --all-targets -- -D warnings` and the three `cargo test` lanes,
+  fix any findings, then change all three workflows together.
 - Windows packaging should produce MSI and NSIS artifacts under ignored
   `src-tauri/target/release/bundle/` and should not leave
   `src-tauri/target/release/produce_dialog_smoke.exe` registered as an app
