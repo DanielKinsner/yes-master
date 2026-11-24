@@ -1,5 +1,15 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-24 — The Windows CI lane runs its Rust tests again (tracker C17).**
+> On the owner's word, the Rust 1.100.0 clippy findings were fixed now rather
+> than with 0.9.3. `1573b47` changes three loops in a behavior-preserving way
+> (one iterator rewrite; two binomial loops kept in index form under a scoped
+> allow). Before/after output of the peak meter and spectrum matches byte for
+> byte. In CI run #379, attempt 2, "Windows desktop and host bridge lanes" passed
+> clippy, 722 Rust tests and both bridge host tests on 1.100.0. The macOS lane
+> is still waiting on GitHub's Apple Silicon capacity. **Owner choice, open:**
+> pinning CI's Rust version. Details and numbers are in tracker C17.
+
 > **2026-11-24 (UTC) — The owner published 0.9.2 and the site is open.** Dan
 > published draft `yes-master-v0.9.2-manual-10` as GitHub's latest release
 > (2026-11-24T00:10:34Z; tag at `6b3c7bb`) and instructed: fill in the release
