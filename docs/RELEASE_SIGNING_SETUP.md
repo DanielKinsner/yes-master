@@ -131,8 +131,10 @@ complete Azure group exists and fails on a partial group.
 ## Activating the landing download (added 2026-07-25, U5)
 
 Publishing a release does **not** turn the landing page's download on. The page
-renders from `src/landing/release-config.ts`, where `RELEASE_METADATA` ships as
-`null`. Until it is populated with a release that passes every check below, the
+renders from `src/landing/release-config.ts`. `RELEASE_METADATA` shipped as
+`null` until 2026-11-24, when the owner published 0.9.2 and ordered the site
+opened; it now describes that release, and returns to `null` to close the
+download. Until it is populated with a release that passes every check below, the
 page shows an inactive action and a plain reason, and points at the releases
 index rather than `/releases/latest`.
 
@@ -164,7 +166,11 @@ partial state and no override.
    start the clock. Record the concrete ISO date in the release metadata.
 4. Populate `RELEASE_METADATA`, run `npm test` and `npm run verify:headless`,
    and confirm the landing lane now reports `verified-public`.
-5. Deploy (U17).
+5. Deploy (U17). Pushes to `main` do not deploy (`vercel.json`). Create the
+   production deployment from the pushed commit through the project's Git
+   link (Vercel dashboard, or `POST /v13/deployments` with `gitSource` and
+   `target: production`), then run
+   `npm run verify:landing-smoke -- https://www.yesdsp.com`.
 
 Do not populate `RELEASE_METADATA` to "make the button work". Editing that
 constant is what publishes a download to the public.

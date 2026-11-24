@@ -1,5 +1,31 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-24 (UTC) — The owner published 0.9.2 and the site is open.** Dan
+> published draft `yes-master-v0.9.2-manual-10` as GitHub's latest release
+> (2026-11-24T00:10:34Z; tag at `6b3c7bb`) and instructed: fill in the release
+> config, deploy production, confirm the download button on yesdsp.com. Before
+> the config changed, both installers were downloaded from the public URLs
+> without credentials and matched the release's `SHA256SUMS.txt`, and the
+> `/releases/latest` channel served the same `latest.json` (version `0.9.2`).
+> `68634a2` fills `RELEASE_METADATA`, removes `noindex`, and teaches the
+> headless landing check the open state; 916 frontend tests, typecheck and
+> `npm run verify:headless` pass. Production is Vercel deployment
+> `dpl_EBWnfg17Co3XAwztU79UqMLoBd5W`, built from that commit through the
+> project's Git link; pushes to `main` still do not deploy. On
+> `www.yesdsp.com` (where `yesdsp.com` redirects) the page reports
+> `verified-public`, both download buttons point at the hashed files, the
+> production smoke lane passes with every outbound link at 200, the robots tag
+> is gone and so is the stale price line. **Dates:** `publishedAt` is the UTC
+> date, `2026-11-24`; the beta therefore ends `2027-01-19` (56 days). On the
+> owner's Pacific clock publication was November 23, which would give January
+> 18; the later date was used. The landing page does not show the end date,
+> though `docs/BETA_TESTING.md` says it is announced there — owner to confirm
+> the date and where it is stated. **Not claimed:** no installer was run from
+> the site, no in-app update has been observed, and this record holds no
+> listening verdict or updater-key backup evidence. Still open: the licence
+> wording against the beta terms (tracker C13), now that the download is
+> public; email updates are off (C15); the announcement is the owner's.
+
 > **2026-11-23 — Release run passed; draft manual-10 is the launch candidate.**
 > On the owner's request the Release workflow was started on `main` at
 > `6b3c7bb` (run `45283986699`). All seven jobs passed in about 57 minutes:
