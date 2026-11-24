@@ -7,8 +7,10 @@
 > allow). Before/after output of the peak meter and spectrum matches byte for
 > byte. In CI run #379, attempt 2, "Windows desktop and host bridge lanes" passed
 > clippy, 722 Rust tests and both bridge host tests on 1.100.0. The macOS lane
-> is still waiting on GitHub's Apple Silicon capacity. **Owner choice, open:**
-> pinning CI's Rust version. Details and numbers are in tracker C17.
+> is still waiting on GitHub's Apple Silicon capacity. **Owner decision ("Yes,
+> pin to 1.100.0"):** the CI, encoder and release workflows now install exactly
+> Rust 1.100.0, enforced by a contract test; bumping is a deliberate step
+> (`docs/TESTING.md`, Tooling Notes). Details and numbers are in tracker C17.
 
 > **2026-11-24 (UTC) — The owner published 0.9.2 and the site is open.** Dan
 > published draft `yes-master-v0.9.2-manual-10` as GitHub's latest release
