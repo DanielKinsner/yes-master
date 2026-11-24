@@ -84,6 +84,8 @@ impl Node {
             for child in &node.children {
                 let shift = (child.centre - node.centre) / node.radius;
                 let scale = child.radius / node.radius;
+                // Index form kept: k and m are exponents in the binomial shift, not just positions.
+                #[allow(clippy::needless_range_loop)]
                 for k in 0..=ORDER {
                     for m in 0..=k {
                         node.moments[k] += binomial()[k][m]

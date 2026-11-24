@@ -146,8 +146,7 @@ impl SpectrumAnalyzer {
             let e = self.bin_ends[b];
             let count = (e - s).max(1) as f32;
             let mut sum_pow = 0.0_f32;
-            for k in s..e {
-                let c = self.scratch[k];
+            for c in &self.scratch[s..e] {
                 sum_pow += c.re * c.re + c.im * c.im;
             }
             // RMS magnitude of the bin, scaled.
