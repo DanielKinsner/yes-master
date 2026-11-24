@@ -14,6 +14,7 @@ use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use yes_master_lib::fixture_matrix::run_manifest_path;
 use yes_master_lib::reference_tuning::run_reference_tuning_dir;
+use yes_master_lib::smart_balance_reference::{run_reference_measurement, ReferenceRunConfig};
 
 /// `set_current_dir` is process-global, so the relative-path tests must not
 /// interleave. Cargo runs tests in a binary on parallel threads.
@@ -186,6 +187,71 @@ fn reference_tuning_accepts_the_documented_relative_output_dir() {
     assert!(result.report_path.is_file(), "JSON report was not written");
     assert!(result.csv_path.is_file(), "CSV report was not written");
     assert!(!result.rows.is_empty(), "no comparison rows produced");
+}
+
+/// The Smart Balance reference runner measures a folder of released songs.
+/// Short fixtures keep the test fast; the 30 s minimum is pinned elsewhere.
+fn smart_balance_test_config() -> ReferenceRunConfig {
+    ReferenceRunConfig {
+        min_duration_sec: 1.0,
+        bootstrap_resamples: 8,
+        ..Default::default()
+    }
+}
+
+#[test]
+fn smart_balance_reference_accepts_the_documented_relative_output_dir() {
+    let root = temp_root("smart-balance-relative");
+    let references = write_reference_suite(&root);
+    let workdir = root.join("workdir");
+    fs::create_dir_all(&workdir).expect("create workdir");
+
+    let _cwd = CwdGuard::enter(&workdir);
+    let result = run_reference_measurement(
+        &references,
+        Path::new("../evidence/smart-balance"),
+        &smart_balance_test_config(),
+    )
+    .expect("documented relative output must be accepted");
+
+    assert!(result.stats_path.is_absolute());
+    assert!(result.ledger_json_path.is_absolute());
+    assert!(result.stats_path.is_file(), "statistics were not written");
+    assert!(result.ledger_json_path.is_file(), "ledger was not written");
+    assert!(
+        result.ledger_csv_path.is_file(),
+        "ledger CSV was not written"
+    );
+    let expected = root.join("evidence").join("smart-balance");
+    assert_eq!(
+        fs::canonicalize(&expected).expect("canonicalize expected"),
+        fs::canonicalize(&result.output_dir).expect("canonicalize actual"),
+    );
+}
+
+#[test]
+fn smart_balance_reference_rejects_an_output_dir_inside_the_reference_dir() {
+    let root = temp_root("smart-balance-inside-source");
+    let references = write_reference_suite(&root);
+    let inside = references.join("out");
+
+    let error = run_reference_measurement(&references, &inside, &smart_balance_test_config())
+        .expect_err("an output dir inside the reference dir must be rejected");
+    assert!(format!("{error}").contains("source"));
+    assert!(
+        !inside.exists(),
+        "the rejected directory must NOT have been created"
+    );
+}
+
+#[test]
+fn smart_balance_reference_rejects_an_output_dir_equal_to_the_reference_dir() {
+    let root = temp_root("smart-balance-equals-source");
+    let references = write_reference_suite(&root);
+
+    let error = run_reference_measurement(&references, &references, &smart_balance_test_config())
+        .expect_err("output dir equal to the reference dir must be rejected");
+    assert!(format!("{error}").contains("source"));
 }
 
 // ---------------------------------------------------------------------------
