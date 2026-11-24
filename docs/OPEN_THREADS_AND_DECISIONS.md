@@ -1,5 +1,29 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-24 — Smart Balance planned; nothing built yet.** Dan asked whether
+> the next move is a DAW plugin like LANDR's or a smarter engine. Decision:
+> **smarter engine first, plugin later**, because a plugin cannot analyze a
+> whole file and so needs a decision engine that works from a short listen.
+> "Smarter" means rule-based decisions from measurements, with no trained model
+> and no "AI" wording. Phase 1 is **Smart Balance**: an automatic tone
+> correction that runs before the Style, plus a readout of what it did. Owner
+> decisions, all recorded in the
+> [execution plan](plans/2026-11-24-smart-balance-execution-plan.md): it ships
+> as a switch that is **off by default** and bit-identical when off; proof is
+> measured gates with held-back songs, not a listening sitting; Standard gets a
+> switch with one plain line and Advanced gets a tone strip; the healthy range
+> is measured from the owner's own folder of 40 or more released songs, with
+> only numbers committed; correction is gentle (the share corrected equals
+> Adapt Strength, capped at 3 dB cut and 2 dB boost per band); Album stays
+> unadapted. Reference matching and smart drive are later phases. The Adaptive
+> Compressor, confidence gating and album character stay gated off and are not
+> part of this work. **Correction to an earlier same-day note in chat:** the
+> September research branch is not missing work; its head `4c139b4e` is in
+> `main`. **Owner item open:** put the reference songs in
+> `private-audio-fixtures/reference-masters/` on the office PC (the folder
+> exists and is git-ignored). **Not done:** no code, no measurement, no public
+> claim. Execution is intended for a separate Opus session.
+
 > **2026-11-24 — The Windows CI lane runs its Rust tests again (tracker C17).**
 > On the owner's word, the Rust 1.100.0 clippy findings were fixed now rather
 > than with 0.9.3. `1573b47` changes three loops in a behavior-preserving way
