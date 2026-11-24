@@ -633,9 +633,10 @@ fresh full-session requirement at every checkpoint:
 - Volume Match off and on.
 - Export and open output.
 
-## Evidence-runner output paths (both private runners)
+## Evidence-runner output paths (private runners)
 
-The two private runners below take `--output`. A few rules, pinned by
+The private runners below (fixture matrix, reference tuning, Smart Balance
+reference measurement) take `--output`. A few rules, pinned by
 `src-tauri/tests/evidence_runner_paths.rs`:
 
 - **Relative output is expected and supported.** `--output ../test-output/...`
@@ -711,6 +712,40 @@ Remove-Item Env:\YES_MASTER_CONFIDENCE_GATING
 
 Use the ledger as evidence, but do not treat it as a listening substitute. The
 runner output and rendered WAVs are private/ignored and must not be committed.
+
+## Smart Balance Reference Measurement
+
+Local-only runner for the Smart Balance healthy range
+(`docs/plans/2026-11-24-smart-balance-execution-plan.md`, Slices 1–2). It
+measures a folder of released songs, searched recursively, through the app's
+own six-band meter (`analysis::compute_spectral_balance_6band`; a unit test pins
+bit-identity with `analyze_one`). It renders nothing and changes no product
+behavior.
+
+```powershell
+cd src-tauri
+cargo run --release --example smart_balance_reference -- --references "../private-audio-fixtures/reference-masters" --output ../test-output/smart-balance/reference
+```
+
+From a git worktree, pass the main checkout's folder by absolute path instead;
+private audio exists only there.
+
+- Skipped with a logged reason, never failing the run: non-audio extensions,
+  unreadable or undecodable files, songs under 30 s, sample rates under 32 kHz
+  (the air band would be incomplete), silent files (peak under −60 dBFS), and
+  byte-identical duplicates.
+- `smart-balance-reference-ledger.{json,csv}` is private: it names files. It
+  stays under the ignored `test-output/`.
+- `smart-balance-reference-stats.json` holds only numbers and anonymous
+  10-hex-digit content-hash prefixes. It is the file that may be committed. The
+  same folder and seed give byte-identical statistics.
+- The split is 75/25 by seeded hash rank (`--seed`, default `20261124`). The
+  range comes from the build split only. Fewer than 40 accepted songs prints a
+  warning and sets `meets_minimum_library_size: false`. Do not use it as the
+  healthy range.
+
+The output rules in "Evidence-runner output paths" apply. The output may not be
+inside the reference folder.
 
 ## Preset Fingerprint Harness
 
