@@ -1,5 +1,17 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-24 — Smart Balance Slices 0–1 done on a branch; waiting on the
+> reference songs.** On branch `claude/smart-balance-2e58b2` (not pushed, not
+> merged): the baseline at `5a18eaf` was green, and the `chain_bench` speed
+> baseline was recorded. The reference measurement runner
+> (`examples/smart_balance_reference.rs`) now exists. It measures a folder
+> through the app's own six-band meter and writes a private ledger plus a
+> committable numbers-only statistics file. No product behavior changed.
+> Execution stopped before Slice 2 because
+> `private-audio-fixtures/reference-masters/` held 0 songs; it needs 40 or
+> more. Status, baseline numbers and the deviation log are in the plan's
+> "Execution status" section.
+
 > **2026-11-24 — Smart Balance planned; nothing built yet.** Dan asked whether
 > the next move is a DAW plugin like LANDR's or a smarter engine. Decision:
 > **smarter engine first, plugin later**, because a plugin cannot analyze a

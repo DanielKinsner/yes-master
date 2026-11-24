@@ -493,6 +493,84 @@ Not in this plan. Do not drift into any of it.
 - Landing page, marketing, pricing or release work.
 - Restructuring the Advanced "Adapt" controls.
 
+## Execution status
+
+### 2026-11-24: Slices 0 and 1 done; stopped before Slice 2
+
+Branch `claude/smart-balance-2e58b2` (a desktop-app worktree branch standing in
+for `feat/smart-balance`), cut from local `main` at `5a18eaf`. Not pushed, not
+merged.
+
+**Stopped on stop trigger 2.** `private-audio-fixtures/reference-masters/` on
+the office PC held 0 files when Slice 2 was due. Slice 2 needs 40 or more
+accepted songs (owner item O1).
+
+**Slice 0 baseline at `5a18eaf`** (office Windows PC, Rust 1.100.0, Node 24.15):
+
+| Check | Result |
+| --- | --- |
+| `cargo fmt --check` | Clean |
+| `cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings` | Clean |
+| `cargo test --target-dir target\codex-rc` | Every suite passed (513 library tests; 0 failures) |
+| `npm test` | 917 tests in 90 files passed |
+| `npm run build` | Succeeded |
+| `chain_bench`, release, 7 runs each | `It’s a coat-original-test.wav` (44.1 kHz): median **81.47×** realtime, range 81.15–81.77. `Doors Open.wav` (48 kHz): median **88.98×**, range 84.60–89.64 |
+
+The baseline `chain_bench` binary and raw output are kept, uncommitted, in
+`test-output/smart-balance/baseline/` on the office PC. G8 can then compare
+old and new binaries back to back.
+
+**Slice 1 delivered.** `src-tauri/src/smart_balance_reference.rs`, the runner
+`examples/smart_balance_reference.rs`, tests in
+`tests/smart_balance_reference.rs`, path tests added to
+`tests/evidence_runner_paths.rs`, and usage in `docs/TESTING.md` ("Smart
+Balance Reference Measurement"). Smoke runs on real private folders decoded
+MP3 and WAV and logged skips. Two runs on the same 30 real files gave
+byte-identical statistics. Those folders are stems and test renders, not a
+reference library, so their statistics were discarded.
+
+### Deviation log (Slices 0–1)
+
+1. **Branch and base.** The plan says to branch `feat/smart-balance` from
+   `origin/main`. The plan commit `5a18eaf` was not pushed, so the work started
+   from local `main` at `5a18eaf`, on the worktree branch named above, as the
+   starting session instructed.
+2. **Worktree paths.** Private audio exists only in the main checkout and is
+   passed by absolute path. Private evidence goes to the main checkout's
+   ignored `test-output/smart-balance/`.
+3. **No BandLab masters exist.** Slice 2 asks for "the saved LANDR and BandLab
+   masters in `tests for presets/`". That folder holds three LANDR masters and
+   no BandLab audio. No BandLab audio exists anywhere in the checkout (only
+   `test-output/yesmaster-fingerprint-runner/bandlab-role-targets.json`).
+   Slice 2 will place the LANDR masters and report BandLab as unavailable
+   unless the owner supplies them.
+4. **Two skip rules added** beyond the plan's four: sample rate under 32 kHz
+   (the meter's air band is cut off by Nyquist, which would bias the air
+   statistic) and byte-identical duplicates (one song counted twice would bias
+   the medians). "Silent" means a peak under −60 dBFS, or the meter finding no
+   energy.
+5. **Statistics choices the plan left open.** Robust spread is 1.4826 × the
+   median absolute deviation (the normal-consistent sigma). The typical shape is
+   the per-band median of dB shares. Deviation follows the plan's starting
+   hypothesis (minus the per-band median, then minus the song's median of six).
+   Shares are floored at 1e-9 (−90 dB) before conversion. Committed values are
+   rounded to four decimals. Edge stability uses 1,000 seeded bootstrap
+   resamples. An edge is flagged unstable when its bootstrap 90% interval is
+   wider than 1.0 dB.
+6. **Split.** The holdout is exactly `round(0.25 × n)` songs, chosen by rank of
+   a seeded hash of each file's content, not its name (seed `20261124`).
+   Membership is recorded as 10-hex-digit prefixes of the file's FNV-1a 64-bit
+   content hash.
+7. **Where the tool lives.** It is a crate module, so it calls the
+   `pub(crate)` meter directly. `analysis.rs` is untouched. It is a try-it
+   engine stamp source, so editing it would have forced a wasm rebuild.
+8. **Deferred to Slice 3.** Emitting the range table from the committed
+   statistics is not built yet. Note for that slice: the repo checks out with
+   `core.autocrlf=true`, so the "table and statistics agree" test should parse
+   the JSON rather than compare raw bytes.
+9. **Docs earlier than Slice 8.** The `docs/TESTING.md` section was written
+   with the tool, because it documents a runner that now exists.
+
 ## Kickoff prompt
 
 > Read `docs/plans/2026-11-24-smart-balance-execution-plan.md` in full, then
