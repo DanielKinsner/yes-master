@@ -10,8 +10,10 @@
 > `yes-master-v0.9.2-manual-10` (release id `456134497`, 14 assets) is
 > **unpublished**; `releases/latest` still returns 404. `latest.json` links
 > embed the tag name, so the draft has to be published under that exact tag, as
-> the latest release and not a pre-release. Five older drafts remain on GitHub
-> (tracker C1). Separately, GitHub dropped two Apple Silicon jobs of the CI run
+> the latest release and not a pre-release. **Owner decision ("Keep
+> manual-10"):** this draft is the one to test and publish; there is no rebuild
+> under a `v0.9.2` tag. Five older drafts remain on GitHub (tracker C1).
+> Separately, GitHub dropped two Apple Silicon jobs of the CI run
 > for the same commit for lack of machines, which skipped the desktop lanes;
 > on the owner's word those jobs were re-run after the release run (tracker
 > C17). Still open and owner-held: installed and listening checks on these
