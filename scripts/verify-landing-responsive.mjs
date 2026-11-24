@@ -381,6 +381,18 @@ for (const [width, height] of matrix) {
           state,
           deadLinks,
           activeDownloads: host?.querySelectorAll("a[data-platform]").length ?? 0,
+          // S-A2: what each live download action is and whether it is painted.
+          downloadLinks: Array.from(
+            host?.querySelectorAll("a[data-platform]") ?? [],
+          ).map((link) => {
+            const rect = link.getBoundingClientRect();
+            return {
+              platform: link.getAttribute("data-platform"),
+              href: link.getAttribute("href") ?? "",
+              label: link.textContent?.trim() ?? "",
+              visible: rect.width > 1 && rect.height > 1,
+            };
+          }),
           inactivePresent: Boolean(inactive),
           reasonText: reasonEl?.textContent?.trim() ?? null,
           // "Visible" means occupying space and painted — a reason rendered
@@ -490,8 +502,41 @@ for (const [width, height] of matrix) {
       `${width}x${height}: platform-support copy must state the Linux position and say nothing about mobile`,
     );
   }
-  // No release is verified yet, so the live page must be in a closed state.
-  // When one is verified this branch flips and S-A2 becomes observable here.
+  // S-A2 — a verified public release: the page offers exactly the Windows and
+  // Mac installers, each a direct file under this repository's releases, and no
+  // inactive action is left behind.
+  if (release?.state === "verified-public") {
+    const releaseDownloads =
+      "https://github.com/DanielKinsner/yes-master/releases/download/";
+    const platforms = (release.downloadLinks ?? []).map((link) => link.platform);
+    if (platforms.join(",") !== "windows,mac") {
+      failures.push(
+        `${width}x${height}: open state must offer windows then mac, found [${platforms.join(", ")}]`,
+      );
+    }
+    for (const link of release.downloadLinks ?? []) {
+      const suffix = link.platform === "windows" ? ".exe" : ".dmg";
+      if (!link.href.startsWith(releaseDownloads) || !link.href.endsWith(suffix)) {
+        failures.push(
+          `${width}x${height}: ${link.platform} download is not a ${suffix} under this repository's releases (${link.href})`,
+        );
+      }
+      if (!link.visible) {
+        failures.push(`${width}x${height}: ${link.platform} download is not visible`);
+      }
+      if (!/^Download for (Windows|Mac)/.test(link.label)) {
+        failures.push(
+          `${width}x${height}: ${link.platform} download has no plain label ("${link.label}")`,
+        );
+      }
+    }
+    if (release.inactivePresent) {
+      failures.push(
+        `${width}x${height}: open state still renders the inactive download action`,
+      );
+    }
+  }
+  // Closed states: no live download, and a visible reason instead.
   if (release?.state && release.state !== "verified-public") {
     if (release.activeDownloads > 0) {
       failures.push(
@@ -830,12 +875,24 @@ const reducedContext = await browser.newContext({
 const reducedPage = await reducedContext.newPage();
 await reducedPage.goto(url, { waitUntil: "networkidle" });
 const reducedText = await reducedPage.evaluate(() => document.body.innerText);
+const reducedReleaseState = await reducedPage.evaluate(
+  () =>
+    document
+      .querySelector("[data-release-state]")
+      ?.getAttribute("data-release-state") ?? null,
+);
+// The download block says different things open and closed; either way it must
+// say them without motion.
+const reducedDownloadCopy =
+  reducedReleaseState === "verified-public"
+    ? ["Download for Windows", "Download for Mac"]
+    : ["The download is not open"];
 for (const required of [
   "Three decisions.",
   "Find your sound.",
   "One record.",
   "A real tool.",
-  "The download is not open",
+  ...reducedDownloadCopy,
 ]) {
   if (!reducedText.includes(required)) {
     failures.push(`reduced-motion: "${required}" is missing with motion disabled`);
@@ -986,10 +1043,17 @@ const summary = {
   // Which named scenarios this lane actually observes, and which it cannot.
   // Recorded so a green run is not mistaken for coverage it does not have.
   scenarioCoverage: {
-    "S-A1": "observed — live page before a verified release exists",
+    // The page is in exactly one release state per run, so exactly one of
+    // S-A1 / S-A2 is observed; the other stays an injected-state unit test.
+    "S-A1":
+      reducedReleaseState === "verified-public"
+        ? "NOT observed here — a verified release is live; injected-state case lives in src/landing/BetaDownload.test.tsx"
+        : "observed — live page before a verified release exists",
     "S-I1": "observed — platform-support copy at every viewport incl. 360px",
     "S-A2":
-      "NOT observed here — needs a verified release; injected-state case lives in src/landing/BetaDownload.test.tsx, closed by U17",
+      reducedReleaseState === "verified-public"
+        ? "observed — live page offering the verified release's Windows and Mac installers at every viewport"
+        : "NOT observed here — needs a verified release; injected-state case lives in src/landing/BetaDownload.test.tsx, closed by U17",
     "S-B1":
       "NOT observed here — needs a real draft release; injected-state case lives in src/lib/release-readiness.test.ts, closed by U16",
   },

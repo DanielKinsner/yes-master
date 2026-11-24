@@ -28,9 +28,10 @@
 //
 // ACTIVATION IS NOT AN AGENT DECISION
 //
-// `RELEASE_METADATA` is `null` and stays `null` through this unit. U16 verifies
-// a published candidate and U17 authorises the public announcement. Setting it
-// here would be an agent publishing a release by editing a constant.
+// `RELEASE_METADATA` shipped as `null` until the owner published a release and
+// ordered the site opened (2026-11-24 UTC; see the constant below). Changing it
+// is what opens, repoints, or closes a public download, so it changes only on
+// the owner's word, from a release he has published.
 // -----------------------------------------------------------------------------
 
 export const REPO_URL = "https://github.com/DanielKinsner/yes-master";
@@ -210,15 +211,53 @@ function unavailable(
   };
 }
 
+const RELEASE_TAG = "yes-master-v0.9.2-manual-10";
+const RELEASE_DOWNLOAD_BASE = `${REPO_URL}/releases/download/${RELEASE_TAG}`;
+
 /**
- * `null` until an owner-verified public release exists.
+ * The release the landing page offers. `null` closes the download.
  *
- * Do not populate this to "make the button work". U16 owns verification and
- * U17 owns publication; both are owner actions with evidence requirements in
- * docs/plans/beta-go-no-go.md. An agent filling this in is an agent shipping a
- * release.
+ * ACTIVATED on the owner's instruction after he published
+ * `yes-master-v0.9.2-manual-10` and set it as GitHub's latest release
+ * (published 2026-11-24T00:10:34Z, built from `6b3c7bb`).
+ *
+ * - `publishedAt` is the UTC date of GitHub's publication timestamp, because
+ *   `resolveRelease` compares dates in UTC.
+ * - `betaEndsAt` is that date plus 56 calendar days (owner decision,
+ *   September 14).
+ * - `verifiedAt` is the day both installers were downloaded from the public
+ *   URLs without credentials and their SHA-256 digests matched the release's
+ *   `SHA256SUMS.txt`. It does not claim an installed or listening check.
+ * - Sizes and digests are those of the published bytes.
+ *
+ * Do not edit this to "make the button work" or to point at a newer build.
+ * U16 owns verification and U17 owns publication; both are owner actions with
+ * evidence requirements in docs/plans/beta-go-no-go.md. An agent changing this
+ * without the owner's word is an agent shipping a release.
  */
-export const RELEASE_METADATA: ReleaseMetadata | null = null;
+export const RELEASE_METADATA: ReleaseMetadata | null = {
+  version: "0.9.2",
+  publication: "published",
+  releaseUrl: `${REPO_URL}/releases/tag/${RELEASE_TAG}`,
+  updaterChannel: "latest",
+  publishedAt: "2026-11-24",
+  verifiedAt: "2026-11-24",
+  betaEndsAt: "2027-01-19",
+  artifacts: {
+    windowsExe: {
+      url: `${RELEASE_DOWNLOAD_BASE}/YES.Master_0.9.2_x64-setup.exe`,
+      sizeBytes: 14_562_600,
+      sha256:
+        "f251f88612e640ab303131de815aeb71635fc1756b09acf7ca89cd3c3b50bb4a",
+    },
+    macUniversalDmg: {
+      url: `${RELEASE_DOWNLOAD_BASE}/YES.Master_0.9.2_universal.dmg`,
+      sizeBytes: 34_121_201,
+      sha256:
+        "00a8d47e33e4689e9dd20c02ec6ed3fca6317d9f94ed299d96ea99e611b1a469",
+    },
+  },
+};
 
 /**
  * The single source of truth for whether a download exists.

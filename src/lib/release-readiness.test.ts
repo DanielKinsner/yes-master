@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   RELEASE_METADATA,
   RELEASES_INDEX_URL,
+  REPO_URL,
   detectPlatform,
   resolveRelease,
   type ReleaseMetadata,
@@ -638,15 +639,61 @@ describe("release state model (U5)", () => {
     expect(resolved.diagnostics).toEqual([]);
   });
 
-  it("ships closed: no release metadata is committed", () => {
-    // U16 verifies and U17 publishes. An agent populating this constant is an
-    // agent shipping a release, so the shipped default is pinned here.
-    expect(RELEASE_METADATA).toBeNull();
-    const resolved = resolveRelease();
+  it("stays closed when no release metadata exists", () => {
+    // `null` is how the download is closed again (withdrawal, or the next
+    // preparation cycle), so the closed path keeps its own pin.
+    const resolved = resolveRelease(null);
     expect(resolved.available).toBe(false);
     expect(resolved.reasonCode).toBe("no-release");
     expect(resolved.secondary.url).toBe(RELEASES_INDEX_URL);
     expect(resolved.secondary.url).not.toContain("/releases/latest");
+  });
+
+  it("the committed release is one coherent, time-boxed public release", () => {
+    // Until 2026-11-24 this pinned `RELEASE_METADATA` to `null`. The owner then
+    // published the release and ordered the site opened. Activation is still an
+    // owner action; what is pinned now is the shape of what was activated, so a
+    // later edit cannot quietly repoint one button, stretch the beta window, or
+    // mix two releases.
+    expect(RELEASE_METADATA).not.toBeNull();
+    const metadata = RELEASE_METADATA!;
+    expect(metadata.publication).toBe("published");
+    expect(metadata.updaterChannel).toBe("latest");
+
+    // One tag for the release page and both installers.
+    const tag = metadata.releaseUrl.split("/releases/tag/")[1];
+    expect(tag).toMatch(/^[0-9A-Za-z._-]+$/);
+    const base = `${REPO_URL}/releases/download/${tag}/`;
+    const windows = metadata.artifacts.windowsExe!;
+    const mac = metadata.artifacts.macUniversalDmg!;
+    expect(windows.url.startsWith(base)).toBe(true);
+    expect(mac.url.startsWith(base)).toBe(true);
+    expect(windows.url).toContain(`_${metadata.version}_`);
+    expect(mac.url).toContain(`_${metadata.version}_`);
+    expect(windows.sha256).not.toBe(mac.sha256);
+
+    // Eight weeks, owner decision of September 14: publication plus 56 days.
+    const day = 24 * 60 * 60 * 1000;
+    const published = Date.parse(`${metadata.publishedAt}T00:00:00Z`);
+    expect(metadata.betaEndsAt).toBe(
+      new Date(published + 56 * day).toISOString().slice(0, 10),
+    );
+
+    // Open from publication day through the last day, closed the day after.
+    const onPublication = resolveRelease(
+      metadata,
+      new Date(`${metadata.publishedAt}T12:00:00Z`),
+    );
+    expect(onPublication.state).toBe("verified-public");
+    expect(onPublication.diagnostics).toEqual([]);
+    expect(
+      resolveRelease(metadata, new Date(`${metadata.betaEndsAt}T23:59:59Z`))
+        .available,
+    ).toBe(true);
+    const dayAfter = new Date(
+      Date.parse(`${metadata.betaEndsAt}T00:00:00Z`) + day,
+    );
+    expect(resolveRelease(metadata, dayAfter).reasonCode).toBe("beta-ended");
   });
 
   it("rejects an active state without the beta end date", () => {
@@ -774,8 +821,11 @@ describe("release state model (U5)", () => {
   });
 
   it("treats malformed metadata exactly like absent metadata", () => {
+    // Absence is `null`. `undefined` is not in this list because it selects the
+    // function's default argument, the committed release, which is no longer
+    // absent.
     const malformed = [
-      undefined,
+      null,
       "0.9.1" as unknown as ReleaseMetadata,
       { version: "0.9.1" } as unknown as ReleaseMetadata,
       validRelease({ publication: "shipped" as never }),

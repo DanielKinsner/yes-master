@@ -15,18 +15,19 @@
     <!--
       U8 — indexability is tied to the beta state, not left to chance.
 
-      The landing page is not announced (docs/OWNER_INPUT_QUEUE.md: "Public beta
-      announcement date and publication authorization"), and no verified release
-      exists, so the download is closed. Letting search engines index it now
-      would send people to a page that cannot give them the thing it describes,
-      and would start the SEO clock on copy U6 is still shaping.
+      While no verified release existed this page carried
+      `noindex, nofollow`: indexing a page whose download is closed sends people
+      to a page that cannot give them the thing it describes.
 
-      This is the conservative default and it is MECHANICALLY CHECKED: a test
-      asserts noindex is present while the release resolves to unavailable, and
-      fails once it does not — so U17 cannot forget to remove it, and nobody can
-      remove it early.
+      The owner published the release and ordered the site opened on
+      2026-11-24 (UTC), so the tag is gone and the page is indexable.
+
+      This is MECHANICALLY CHECKED in both directions: a test fails if noindex
+      is present while a release resolves to available, and fails if it is
+      absent while the release resolves to unavailable. When the beta window
+      closes (`betaEndsAt` in src/landing/release-config.ts) that test asks for
+      the tag back.
     -->
-    <meta name="robots" content="noindex, nofollow" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="YES Master" />
