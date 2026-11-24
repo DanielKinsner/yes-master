@@ -3,7 +3,16 @@ set -eu
 
 cd "$PROJECT_DIR/rust"
 
-export PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH"
+# Put a rustup toolchain's own bin directory first, so a Homebrew `cargo`
+# without iOS targets cannot shadow it. Use the toolchain rustup selects (CI
+# pins it and adds the iOS targets there; see ci.yml); fall back to `stable`
+# when rustup is not on PATH, as in an Xcode GUI build.
+TOOLCHAIN_BIN="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin"
+if command -v rustup >/dev/null 2>&1 && CARGO_PATH="$(rustup which cargo 2>/dev/null)"; then
+  TOOLCHAIN_BIN="$(dirname "$CARGO_PATH")"
+fi
+export PATH="$TOOLCHAIN_BIN:$PATH"
+echo "Rust bridge toolchain: $TOOLCHAIN_BIN"
 
 LIB_NAME="libyes_master_iphone_native_bridge.a"
 PROFILE="debug"
