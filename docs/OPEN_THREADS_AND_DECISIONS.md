@@ -1,16 +1,23 @@
 # YES Master — Open Threads & Owner Decisions
 
-> **2026-11-24 — Smart Balance Slices 0–1 done on a branch; waiting on the
-> reference songs.** On branch `claude/smart-balance-2e58b2` (not pushed, not
-> merged): the baseline at `5a18eaf` was green, and the `chain_bench` speed
-> baseline was recorded. The reference measurement runner
-> (`examples/smart_balance_reference.rs`) now exists. It measures a folder
-> through the app's own six-band meter and writes a private ledger plus a
-> committable numbers-only statistics file. No product behavior changed.
-> Execution stopped before Slice 2 because
-> `private-audio-fixtures/reference-masters/` held 0 songs; it needs 40 or
-> more. Status, baseline numbers and the deviation log are in the plan's
-> "Execution status" section.
+> **2026-11-24 — Smart Balance at Checkpoint A: provisional range measured;
+> owner grade needed (O2).** On branch `claude/smart-balance-2e58b2` (not
+> pushed, not merged). Dan changed decision D8: the healthy range is first
+> measured from a free, openly licensed library and labelled provisional,
+> to be re-measured if he adds his own songs. Slice 2 measured 55 of its 57
+> tracks (41 build, 14 held out). The other two duplicate test-corpus pieces,
+> so they were kept out. Findings, in
+> `docs/reviews/2026-11-24-smart-balance-reference-range.md`:
+>
+> - The range is wide, about ±5 to ±10 dB per band, and its edges are unstable.
+> - "It’s a coat" sits inside in every band, so Smart Balance would leave it
+>   alone.
+> - Three of four finished corpus mixes would be corrected.
+> - An in-sample forecast says gate G3 needs the widest allowed settings and
+>   a lower boost cap to pass.
+>
+> No product behavior changed. Slices 0–1 history, baseline numbers and the
+> deviation log are in the plan's "Execution status" section.
 
 > **2026-11-24 — Smart Balance planned; nothing built yet.** Dan asked whether
 > the next move is a DAW plugin like LANDR's or a smarter engine. Decision:

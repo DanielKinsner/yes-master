@@ -44,7 +44,7 @@ on its own (`docs/reviews/2026-09-14-yes-export-vs-landr.md`, "Tone and stereo")
 | D5 | Proof is measured pass/fail gates, with songs held back from tuning. No formal listening sitting. | The owner tries the switch in normal use. Do not propose a listening session. |
 | D6 | The name is **Smart Balance**, shown with a small **Beta** tag. | "Smart Match" is reserved for phase 2. |
 | D7 | Standard view: a switch with one plain result line. Advanced view: the switch plus a tone strip showing six bands against the healthy range and what moved. | Copy is locked below. |
-| D8 | The healthy range is measured from the owner's own folder of at least 40 released songs. | Only numbers are committed. No audio, file names, artists or titles enter git. |
+| D8 | **Changed by the owner on 2026-11-24.** The healthy range is first measured from a free, openly licensed library (CC BY, CC BY-SA, CC0 or public domain only) and is labelled **provisional**. The owner may add their own songs later, and the range is then re-measured. The 40-song minimum still applies. Originally D8 read: "measured from the owner's own folder of at least 40 released songs." | No audio is committed. For this public library only, the source list (artist, title, licence, evidence link, download link, hash) is committed under `docs/reviews/evidence/` as attribution for openly licensed work. Songs the owner adds later stay private: numbers and anonymous IDs only, as before. The statistics, the Slice 2 note and the Checkpoint A report say "provisional". Smart Balance stays off by default, so a provisional range reaches only people who switch it on. |
 | D9 | Gentle. The share of the out-of-range excess that gets corrected equals Adapt Strength (default 0.5, so half). Hard caps per band: 3 dB cut, 2 dB boost. | Anything more aggressive needs the owner. Less aggressive is allowed and logged. |
 | D10 | It listens to the song, never to the user's knobs. | Manual EQ, Style and Intensity do not change the correction. The Style and the existing guardrail trims apply unchanged on top. |
 | D11 | Album mode stays unadapted, as today. | In Album the control is disabled with an explanation. |
@@ -115,7 +115,7 @@ balanced`, or `Smart Balance: on · cleared 1.2 dB mud, added 0.8 dB air`.
 
 | # | Item | Blocks |
 | --- | --- | --- |
-| O1 | Put 40 or more released songs you trust, across the genres you want YES Master to serve, into `private-audio-fixtures/reference-masters/` on the office PC. MP3, AAC/M4A, FLAC, WAV, AIFF and OGG work. Apple Lossless and copy-protected files do not. | Slice 2 and everything after it |
+| O1 | **Met another way on 2026-11-24 (D8 as changed).** A free library of 57 openly licensed tracks sits in `private-audio-fixtures/reference-masters/free-cc-2026-11-24/`, with its source list `_sources.json`. Optional later: add 40 or more released songs you trust beside it, and the range is re-measured. MP3, AAC/M4A, FLAC, WAV, AIFF and OGG work. Apple Lossless and copy-protected files do not. | Nothing now. Re-measurement only, if songs are added |
 | O2 | Grade checkpoint A (the measured healthy range). | Slice 3 |
 | O3 | Grade checkpoint B (the measured results) and say whether the UI should be built. | Slice 7 |
 | O4 | At checkpoint C: run the hand test, then decide on merge and push. | Merge to `main` |
@@ -238,6 +238,9 @@ Depends on O1.
   curly apostrophe and spaces; quote it and do not retype the apostrophe.)
 - The note must also say plainly if the library looks skewed (for example one
   genre dominating, or an unstable edge).
+- While the range comes from D8's provisional library, label the statistics,
+  the note and the Checkpoint A report "provisional". Commit the library's
+  public source list as attribution evidence, and no audio.
 - Verify: docs checks only. Confirm `git status` shows no audio and no private
   file names staged.
 
@@ -583,6 +586,74 @@ their statistics were discarded.
    the JSON rather than compare raw bytes.
 9. **Docs earlier than Slice 8.** The `docs/TESTING.md` section was written
    with the tool, because it documents a runner that now exists.
+
+### 2026-11-24, later: D8 changed; Slice 2 done; stopped at Checkpoint A
+
+The owner changed D8 and met O1 another way (see "Decisions locked" and "Owner
+lane"). Slice 2 ran on `private-audio-fixtures/reference-masters/free-cc-2026-11-24/`
+(57 openly licensed tracks, 30 artists). Accepted: **55** (41 build, 14 held
+out). Two tracks were excluded as test-corpus duplicates, and one non-audio
+file was skipped. A second run gave byte-identical statistics.
+
+Committed:
+
+- `docs/reviews/2026-11-24-smart-balance-reference-range.md`: the range in
+  plain words, where the corpus and the "It’s a coat" files sit, skew, and an
+  in-sample G3 forecast. Labelled provisional.
+- `docs/reviews/evidence/2026-11-24-smart-balance-reference-range/`:
+  `smart-balance-reference-stats.json` (`"provisional": true`) and
+  `library-sources.json` (attribution and licence evidence; no audio).
+
+**Stopped at Checkpoint A**, waiting for the owner (O2).
+
+### Deviation log (Slice 2)
+
+10. **D8 and O1 changed by the owner on 2026-11-24.** The range comes from a
+    free, openly licensed stand-in library and is labelled provisional in the
+    statistics, the note and the Checkpoint A report. For this public library
+    only, its source list is committed as attribution. The 40-song minimum is
+    unchanged. Private songs added later stay anonymous.
+11. **The locked tone-strip caption stays as written:** `Healthy range measured
+    from N released masters.` Provisional status lives in the statistics, the
+    note and the report, not in product copy. Note for Slice 5: the range is
+    computed from the build split, so the honest N is the build count (41 now),
+    not all accepted songs.
+12. **Test-corpus duplicates excluded.** Two library tracks are byte-identical
+    to September corpus pieces. Aphelion (a corpus holdout piece) would have
+    landed in the library's build split and shaped the range. Metalmania (a
+    corpus development piece) would have landed in the library's held-out
+    split. The run excludes any library file matching a file in
+    `test-output/mastering-quality-20260915/originals`, so 55 songs were
+    measured, not 57. Both still appear in the note as corpus pieces.
+13. **Tool additions for Slice 2**, each tested:
+    - `--provisional` records the label in the statistics;
+    - `--exclude-matching <dir>` adds the duplicate exclusion;
+    - a placement mode (`--stats` with `--place <dir>`) measures other songs
+      through the same meter against a stored range.
+
+    A Slice 1 bug was found and fixed: the ledger CSV's skip rows had 22
+    columns under a 21-column header. A new test checks every CSV row against
+    its header.
+14. **Holdout discipline.** The 14 held-out songs' positions were not examined.
+    The forecast uses build songs only. The three corpus holdout pieces were
+    placed, because Slice 2 asks for all eight corpus pieces. They stay outside
+    tuning.
+15. **"Preview" corrections in the note** are my reading of contract rules 3
+    to 7 with the starting parameters. The missing-band boost fades linearly
+    from 6 to 12 dB below the lower edge. The dead zone applies after caps and
+    fade. Slice 3 implements the rules properly, and its numbers may differ
+    slightly.
+16. **Findings for the owner, not plan errors:**
+    - The range is wide: about ±5 to ±10 dB per band.
+    - All twelve edges fail the stability check.
+    - "It’s a coat" sits inside in every band, so Smart Balance would leave it
+      alone.
+    - Three of the four finished, released mixes in the corpus would be
+      corrected by 1.6 to 3 dB.
+    - The in-sample G3 forecast fails at the starting parameters. It passes
+      only with the widest allowed range settings plus a boost cap lowered to
+      1 dB. Both are within the plan's bounds, so this is not stop trigger 4.
+      It is a product question for Checkpoint A.
 
 ## Kickoff prompt
 
