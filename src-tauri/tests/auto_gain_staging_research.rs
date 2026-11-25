@@ -148,6 +148,30 @@ fn the_drive_never_lands_above_target_and_stops_at_the_clean_limit() {
 }
 
 #[test]
+fn the_delivered_drive_never_lands_above_target_and_stops_at_the_clean_limit() {
+    let rate = 48_000; // includes the export's conversion to 44.1 kHz
+    let x = test_music(rate, 4.0, 0.3);
+    let settings = standard_export_settings(Preset::Clarity, -9.0, None, None);
+    let stage = stage_pass(&x, rate, 2, &settings, 0.0);
+    for target in [-14.0_f32, -9.0, -6.0] {
+        for clean in [Some(6.0_f32), Some(2.0)] {
+            let (r, load, samples, facts) =
+                resolve_drive_delivered(&stage, target, clean, 0.2, 4).expect("delivers");
+            for (_, delivered) in &r.trace {
+                assert!(*delivered <= target + 0.01, "target {target}: {delivered}");
+            }
+            assert!(load <= clean.unwrap() + 0.01, "load {load}");
+            assert!(facts.all_finite && facts.under_ceiling);
+            assert_eq!(samples.len() % 2, 0);
+            assert!(r.resolved || r.stopped_at_clean_limit || r.limiter_passes == 4);
+            if r.resolved {
+                assert!(facts.lufs >= target - 0.2);
+            }
+        }
+    }
+}
+
+#[test]
 fn the_turn_down_never_raises_the_level() {
     let rate = 44_100;
     let x = test_music(rate, 4.0, 0.99);

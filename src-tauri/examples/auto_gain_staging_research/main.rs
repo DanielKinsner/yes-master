@@ -20,6 +20,10 @@
 //!     --suno <suno-set folder> --unmastered <unmastered-mixes folder> \
 //!     --output <private dir> --evidence <committable dir> [--workers 8]
 //!
+//! G resolves its drive on the delivered loudness (contract rule 3) unless
+//! `--g-resolve chain-output` is given, which reproduces the first
+//! development run (the chain's output loudness before delivery).
+//!
 //! Optional: `--only <a|b|…>` keeps songs whose label contains any of the
 //! texts (smoke runs; the decision needs the full set), `--excerpt-seconds
 //! <s>` renders the first seconds only (smoke runs), `--timing 1` runs the
@@ -61,6 +65,10 @@ struct Args {
     only: Option<String>,
     excerpt_seconds: Option<f64>,
     timing: bool,
+    /// G resolves on the delivered loudness (contract rule 3; the default)
+    /// or, with `--g-resolve chain-output`, on the chain's output before
+    /// delivery (the first development run).
+    g_on_delivered: bool,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -93,6 +101,15 @@ fn parse_args() -> Result<Args, String> {
         only: map.get("only").cloned(),
         excerpt_seconds: map.get("excerpt-seconds").and_then(|s| s.parse().ok()),
         timing: map.get("timing").is_some_and(|v| v == "1"),
+        g_on_delivered: match map.get("g-resolve").map(String::as_str) {
+            None | Some("delivered") => true,
+            Some("chain-output") => false,
+            Some(other) => {
+                return Err(format!(
+                    "--g-resolve {other}: use delivered or chain-output"
+                ))
+            }
+        },
     })
 }
 
@@ -417,13 +434,29 @@ fn measure_delivery(
     anchors: &Anchors,
 ) -> Result<Measured, String> {
     let (delivered, facts) = deliver(render, src.rate, src.channels, target)?;
+    Ok(measure_delivered(
+        delivered,
+        facts,
+        src,
+        source_shape,
+        anchors,
+    ))
+}
+
+fn measure_delivered(
+    delivered: Vec<f32>,
+    facts: DeliveryFacts,
+    src: &Loaded,
+    source_shape: &Shape,
+    anchors: &Anchors,
+) -> Measured {
     let sample_peak_db = f64::from(lin_to_db(
         delivered.iter().map(|s| s.abs()).fold(0.0_f32, f32::max),
     ));
     let x48 = to_analysis_rate(&delivered, STANDARD_RATE, src.channels);
     drop(delivered);
     let render_shape = shape(&x48, src.channels, anchors);
-    Ok(Measured {
+    Measured {
         change: compare(source_shape, anchors, &render_shape),
         fingerprint: fingerprint(
             source_shape,
@@ -433,7 +466,7 @@ fn measure_delivery(
             sample_peak_db,
         ),
         facts,
-    })
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -479,7 +512,12 @@ fn row(
     }
 }
 
-fn process_song(song: &Song, nominal: Nominal, excerpt: Option<f64>) -> SongResult {
+fn process_song(
+    song: &Song,
+    nominal: Nominal,
+    excerpt: Option<f64>,
+    g_on_delivered: bool,
+) -> SongResult {
     let start = Instant::now();
     let mut errors = Vec::new();
     let src = match load(song, excerpt) {
@@ -652,17 +690,33 @@ fn process_song(song: &Song, nominal: Nominal, excerpt: Option<f64>) -> SongResu
                 }
                 continue;
             }
-            let (res, limited) = resolve_drive(
-                stage_for_g,
-                target,
-                STANDARD_CEILING_DBTP,
-                Some(CLEAN_LIMIT_DB),
-                TARGET_TOLERANCE_LU,
-                MAX_PASSES,
-            );
-            let load = limited.max_gain_reduction_db;
-            match measure_delivery(limited.samples, &src, target, &source_shape, &anchors) {
-                Ok(m) => rows.push(row(
+            let resolved = if g_on_delivered {
+                resolve_drive_delivered(
+                    stage_for_g,
+                    target,
+                    Some(CLEAN_LIMIT_DB),
+                    TARGET_TOLERANCE_LU,
+                    MAX_PASSES,
+                )
+                .map(|(res, load, samples, facts)| {
+                    let m = measure_delivered(samples, facts, &src, &source_shape, &anchors);
+                    (res, load, m)
+                })
+            } else {
+                let (res, limited) = resolve_drive(
+                    stage_for_g,
+                    target,
+                    STANDARD_CEILING_DBTP,
+                    Some(CLEAN_LIMIT_DB),
+                    TARGET_TOLERANCE_LU,
+                    MAX_PASSES,
+                );
+                let load = limited.max_gain_reduction_db;
+                measure_delivery(limited.samples, &src, target, &source_shape, &anchors)
+                    .map(|m| (res, load, m))
+            };
+            match resolved {
+                Ok((res, load, m)) => rows.push(row(
                     style,
                     target,
                     "G",
@@ -833,6 +887,7 @@ fn csv_ledger(results: &[SongResult]) -> String {
 struct Summary<'a> {
     schema: &'static str,
     commit: String,
+    g_resolves_on: &'static str,
     excerpt_seconds: Option<f64>,
     parameters: BTreeMap<&'static str, f64>,
     nominal: Nominal,
@@ -939,16 +994,14 @@ fn timing(songs: &[Song], nominal: Nominal, output: &Path) -> Result<(), String>
 
                 let t0 = Instant::now();
                 let stage = stage_pass(&src.samples, src.rate, ch, &settings, level_in);
-                let (res, lim) = resolve_drive(
+                let (res, _, _, _) = resolve_drive_delivered(
                     &stage,
                     target,
-                    STANDARD_CEILING_DBTP,
                     Some(CLEAN_LIMIT_DB),
                     TARGET_TOLERANCE_LU,
                     MAX_PASSES,
-                );
+                )?;
                 drop(stage);
-                deliver(lim.samples, src.rate, ch, target)?;
                 g_s.push(t0.elapsed().as_secs_f64());
                 g_passes = res.limiter_passes;
             }
@@ -1036,7 +1089,7 @@ fn run() -> Result<(), String> {
 
     let started = Instant::now();
     let results = parallel_map(&songs, args.workers, |song| {
-        let r = process_song(song, nominal, args.excerpt_seconds);
+        let r = process_song(song, nominal, args.excerpt_seconds, args.g_on_delivered);
         println!(
             "done {} ({:.0}s audio, {:.0}s wall, {} rows, {} errors)",
             song.label,
@@ -1116,6 +1169,11 @@ fn run() -> Result<(), String> {
     let summary = Summary {
         schema: "auto-gain-staging-phase-a-v1",
         commit: git_commit(),
+        g_resolves_on: if args.g_on_delivered {
+            "delivered loudness"
+        } else {
+            "chain output before delivery"
+        },
         excerpt_seconds: args.excerpt_seconds,
         parameters,
         nominal,

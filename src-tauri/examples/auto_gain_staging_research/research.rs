@@ -458,6 +458,69 @@ pub fn resolve_drive(
     }
 }
 
+/// G resolved as contract rule 3 words it: the drive is chosen so the
+/// **delivered** loudness equals the target. Every pass renders the limiter,
+/// converts to 44.1 kHz and runs the export's qualified finalizer, so the
+/// final peak protection is inside the loop. (`resolve_drive` resolves on
+/// the chain's output before delivery; the first development run used it.)
+///
+/// The first drive is the idle-limiter estimate, capped at the clean limit.
+/// Each further step adds the remaining delivered shortfall, still capped:
+/// a dB of drive adds at most a dB before the landing, and the landing never
+/// leaves the delivered loudness above the target, so no step overshoots.
+pub fn resolve_drive_delivered(
+    stage: &StagePass,
+    target_lufs: f32,
+    clean_limit_db: Option<f32>,
+    tolerance_lu: f32,
+    max_passes: usize,
+) -> Result<(DriveResolution, f32, Vec<f32>, DeliveryFacts), String> {
+    let ch = stage.channels;
+    let n = stage.frames;
+    let l0 = loudness(&stage.pre[..n * ch], stage.rate, ch);
+    let peak = limiter_detector_peak(&stage.pre, ch);
+    let peak_db = lin_to_db(peak);
+    let c_db = chain_ceiling_db(STANDARD_CEILING_DBTP);
+    let mut r = DriveResolution {
+        pre_limiter_lufs: l0,
+        pre_limiter_peak_db: peak_db,
+        idle_max_drive_db: c_db - peak_db,
+        ..Default::default()
+    };
+    if !l0.is_finite() || l0 <= -70.0 || !target_lufs.is_finite() || peak <= 0.0 {
+        r.inert = true;
+        let render = limiter_pass(stage, STANDARD_CEILING_DBTP, 0.0);
+        let load = render.max_gain_reduction_db;
+        let (samples, facts) = deliver(render.samples, stage.rate, ch, target_lufs)?;
+        r.limiter_passes = 1;
+        r.limiter_idle = load == 0.0;
+        return Ok((r, load, samples, facts));
+    }
+    let cap = clean_limit_db.map_or(f32::INFINITY, |limit| c_db + limit - peak_db);
+    let mut d = (target_lufs - l0).min(cap);
+    loop {
+        let render = limiter_pass(stage, STANDARD_CEILING_DBTP, d);
+        let load = render.max_gain_reduction_db;
+        let (samples, facts) = deliver(render.samples, stage.rate, ch, target_lufs)?;
+        r.limiter_passes += 1;
+        r.drive_db = d;
+        r.limiter_idle = load == 0.0;
+        r.trace.push((d, facts.lufs));
+        if facts.lufs >= target_lufs - tolerance_lu {
+            r.resolved = true;
+            return Ok((r, load, samples, facts));
+        }
+        if d >= cap {
+            r.stopped_at_clean_limit = true;
+            return Ok((r, load, samples, facts));
+        }
+        if r.limiter_passes >= max_passes || !facts.lufs.is_finite() {
+            return Ok((r, load, samples, facts));
+        }
+        d = (d + (target_lufs - facts.lufs)).min(cap);
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TurnDownResolution {
     /// The reduction moved in front of the chain (≤ 0).
