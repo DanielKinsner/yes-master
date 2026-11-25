@@ -21,6 +21,21 @@
     "compression_mode": "manual",
     "lufs_offset_db": -12.5,
     "presence_air": 0.25,
+    "smart_match": {
+      "amount": 0.5,
+      "enabled": true,
+      "reference": {
+        "name": "Wire sample",
+        "spectral_6": {
+          "air": 0.125,
+          "low": 0.25,
+          "low_mid": 0.1875,
+          "mid": 0.1875,
+          "presence": 0.125,
+          "sub": 0.125
+        }
+      }
+    },
     "source_profile": {
       "dynamic_range_lu": 8.5,
       "dynamic_range_p95_p10_db": 9.5,
@@ -152,6 +167,21 @@
         "compression_mode": "manual",
         "lufs_offset_db": -12.5,
         "presence_air": 0.25,
+        "smart_match": {
+          "amount": 0.5,
+          "enabled": true,
+          "reference": {
+            "name": "Wire sample",
+            "spectral_6": {
+              "air": 0.125,
+              "low": 0.25,
+              "low_mid": 0.1875,
+              "mid": 0.1875,
+              "presence": 0.125,
+              "sub": 0.125
+            }
+          }
+        },
         "source_profile": {
           "dynamic_range_lu": 8.5,
           "dynamic_range_p95_p10_db": 9.5,
@@ -489,6 +519,21 @@
       "compression_mode": "manual",
       "lufs_offset_db": -12.5,
       "presence_air": 0.25,
+      "smart_match": {
+        "amount": 0.5,
+        "enabled": true,
+        "reference": {
+          "name": "Wire sample",
+          "spectral_6": {
+            "air": 0.125,
+            "low": 0.25,
+            "low_mid": 0.1875,
+            "mid": 0.1875,
+            "presence": 0.125,
+            "sub": 0.125
+          }
+        }
+      },
       "source_profile": {
         "dynamic_range_lu": 8.5,
         "dynamic_range_p95_p10_db": 9.5,
@@ -609,6 +654,21 @@
         "compression_mode": "manual",
         "lufs_offset_db": -12.5,
         "presence_air": 0.25,
+        "smart_match": {
+          "amount": 0.5,
+          "enabled": true,
+          "reference": {
+            "name": "Wire sample",
+            "spectral_6": {
+              "air": 0.125,
+              "low": 0.25,
+              "low_mid": 0.1875,
+              "mid": 0.1875,
+              "presence": 0.125,
+              "sub": 0.125
+            }
+          }
+        },
         "source_profile": {
           "dynamic_range_lu": 8.5,
           "dynamic_range_p95_p10_db": 9.5,
@@ -715,6 +775,21 @@
           "compression_mode": "manual",
           "lufs_offset_db": -12.5,
           "presence_air": 0.25,
+          "smart_match": {
+            "amount": 0.5,
+            "enabled": true,
+            "reference": {
+              "name": "Wire sample",
+              "spectral_6": {
+                "air": 0.125,
+                "low": 0.25,
+                "low_mid": 0.1875,
+                "mid": 0.1875,
+                "presence": 0.125,
+                "sub": 0.125
+              }
+            }
+          },
           "source_profile": {
             "dynamic_range_lu": 8.5,
             "dynamic_range_p95_p10_db": 9.5,
@@ -879,6 +954,21 @@
         "compression_mode": "manual",
         "lufs_offset_db": -12.5,
         "presence_air": 0.25,
+        "smart_match": {
+          "amount": 0.5,
+          "enabled": true,
+          "reference": {
+            "name": "Wire sample",
+            "spectral_6": {
+              "air": 0.125,
+              "low": 0.25,
+              "low_mid": 0.1875,
+              "mid": 0.1875,
+              "presence": 0.125,
+              "sub": 0.125
+            }
+          }
+        },
         "source_profile": {
           "dynamic_range_lu": 8.5,
           "dynamic_range_p95_p10_db": 9.5,

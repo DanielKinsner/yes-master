@@ -485,7 +485,7 @@ including every case the plan lists. Two integration tests in
 `tests/smart_match.rs` pin the typical shape against the committed statistics
 and the product's median against the runner's.
 
-### Deviation log
+### Deviation log (Slice 3)
 
 1. **The order the rules apply in.** The contract lists caps (4), the dead
    zone (5) and missing bands (6) in that order. The function applies, per
@@ -537,3 +537,129 @@ and the product's median against the runner's.
    starting values. `within_plan_bounds` encodes the "You may move it" column,
    so the evaluation runner can try other values and prove each one is
    allowed. No parameter has moved.
+
+### Slice 4: done
+
+Smart Match state lives on `AdvancedSettings.smart_match`:
+`SmartMatchSettings { reference: Option<{ name, spectral_6 }>, enabled, amount }`.
+It defaults to absent and is never written when absent.
+`ChainCoeffs::from_settings` asks `smart_match::decide_for_settings` for the
+decision. When the decision changes something, `smart_match::realize` solves
+for EQ gains, and the gains are added to the seven bands. Otherwise nothing
+changes, bit for bit.
+
+Gate-relevant results (the full Slice 6 run will restate them):
+
+- **Off identity.** No reference, switched off, amount zero and a
+  self-match give equal coefficients and bit-identical rendered samples for
+  all nine presets at 44.1, 48 and 96 kHz.
+- **Realization (G4).** The worst error is 0.015 dB, across every single-band
+  cap case and 20 seeded mixed cases at all three rates, with every filter
+  placement. This is measured through the chain's real coefficients on a
+  240-point-per-band grid.
+- **Level (G5).** ±12 dB on the track or on the reference moves no correction
+  by more than 0.1 dB (synthetic audio through the real meter).
+- **Speed (`chain_bench`, release, 7 alternating runs per configuration,
+  against the saved `5a18eaf` binary).**
+  - No reference: coat −0.12% and Doors +0.16% against baseline.
+  - Active match: coat 96.0% and Doors 100.9% of no-reference.
+  - Context, not gated: with both Advanced shelves on, the match needs its own
+    stage, and costs coat 92.6% and Doors 97.8%.
+
+Lanes run for Slice 4 (office PC):
+
+| Lane | Result |
+| --- | --- |
+| `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings` | Clean |
+| Slow fixture lane (`AMS_RUN_REAL_FIXTURE=1`, `AMS_REAL_FIXTURE_PATH` = `It’s a coat-original-test.wav`) | 46 suites, 778 passed, 0 failed, 35 ignored. The four real-fixture contract tests ran. `preset_byte_identity` and `preset_fingerprint` passed with their goldens untouched |
+| iPhone bridge (`cargo check --all-targets`; `cargo test`) | 46 passed, 0 failed, 1 ignored |
+| Android bridge (`cargo test`; `cargo ndk -t arm64-v8a --platform 29 check`) | 26 passed, 0 failed; the NDK check built |
+| Try-it engine (`npm run build:tryit-wasm`; `npx vitest run src/tryit`) | Rebuilt; 32 passed |
+| `npm test`; `npm run build` | 920 passed; the build (which includes the wire-shape type gate) succeeded |
+| `chain_bench` against the saved Slice 0 binary | See "Speed" above |
+
+### Deviation log (Slice 4)
+
+8. **Realization needs one extra filter.** Rule 8's starting hypothesis was to
+   adjust only the seven existing bands. That cannot meet G4. In a prototype
+   on the gate's cases, the seven alone missed:
+   - mixed targets by 2.1 to 4.3 dB;
+   - single-band cap cases by 1.2 to 4.1 dB.
+
+   The 80 Hz peak sits on the border between the meter's sub band (20–80 Hz)
+   and bass band (80–250 Hz), and the 200 Hz shelf lifts both, so the two
+   bands cannot be moved separately. I added one corrective peaking filter at
+   140 Hz with Q 0.9, the centre of the bass band, as the plan allows when the
+   gate cannot be met otherwise. With it the worst G4 error is 0.015 dB.
+9. **Where that filter runs.** It runs in whichever Advanced shelf slot is
+   idle, Warmth first and then Presence/Air. Those are identity biquads the
+   chain processes anyway, so the usual case adds no per-sample work. Only
+   when both sliders are in use does the filter get its own stage.
+   - The stage is skipped while idle. Its state is zeroed on every coefficient
+     install that leaves it idle, which equals having run an identity filter,
+     so re-activation is clean.
+   - All of this happens inside the existing coefficient-update path; there is
+     no new transition mechanism.
+   - The first build always used the separate stage. It missed G8 on coat
+     (92.9%); slot reuse brought it to 96.0%.
+10. **The solver changed three times during testing.**
+    - The regularization weight (1e-3) biased results short by up to 0.4 dB
+      once Universal's 24 Hz high-pass made the sub band less responsive. It
+      is now 1e-6, which only picks the smallest of the exact fits.
+    - At 96 kHz, f32 rounding in the low bands' coefficients made a 0.05 dB
+      forward-difference slope pure noise. It is now a central difference of
+      ±0.25 dB.
+    - A band layout the user has squeezed (mid at 2.68 kHz, high-mid at
+      2.57 kHz) made the plain Gauss-Newton solve diverge. It is now
+      Levenberg-Marquardt: a step is kept only if it lowers the miss.
+
+    A release-build solve takes 6 to 10 µs.
+11. **What "realized" is measured as.** The target is each meter band's power
+    change for pink noise (equal power per octave), relative to the same EQ
+    without the match. The meter sums FFT power uniformly across a band, so
+    pink weighting is what the meter itself would report for pink noise. Real
+    songs are not pink inside a band; G3 and G6 test real songs end to end.
+12. **One definition of the seven band shapes.** `dsp::eq_band_coeffs` now
+    builds the seven EQ bands for both `from_settings` and the solver. This is
+    a byte-identical refactor: the preset byte-identity snapshots pass
+    untouched.
+13. **The setting is omitted when absent, not written as null; 0.9.2
+    compatibility.** At tag `yes-master-v0.9.2-manual-10`, `load_project`
+    calls `read_session`. That clamps floats and then calls
+    `serde_json::from_value::<ProjectState>`. No settings type there has
+    `deny_unknown_fields`; only `export_format::EncodingWire` does. So:
+    - a project with a reference also opens in 0.9.2, which ignores the field;
+    - a project without one is written exactly as before (a test pins that).
+
+    Stop trigger 9 does not apply.
+14. **Presets (M12).** The backend strips `smart_match` when a preset is saved
+    and again when presets are read, so a hand-edited file cannot carry one
+    either. The frontend's `applyUserPreset` keeps the song's current state,
+    through a pure helper (`src/lib/smart-match.ts`) with its own tests.
+    Saving needed no frontend change, because the backend is the authority.
+15. **Caches.** The search found three that key on settings:
+    - `audio.rs::settings_landing_hash` hashes the serialized settings, so it
+      includes Smart Match. I added a finiteness guard and the regression
+      test: changing the reference, the amount or the switch misses the
+      cache.
+    - `audio/preparation_cache.rs` keys on `ChainCoeffs` equality, which
+      includes the new filter and stage flag.
+    - The hook's readout identity is the settings object's identity, so any
+      Smart Match change re-requests the readout.
+16. **Wire samples, without the golden variable.** The plan forbids setting
+    `YES_MASTER_UPDATE_GOLDEN`. `tests/wire_shape.rs` regenerates
+    `src/wire-samples.json` with that same variable, so I did not set it.
+    Instead I inserted the new keys with a script. The unchanged
+    `wire_shape` test confirms the committed JSON equals what Rust emits.
+    The sample is a self-match, so no other sampled value changed.
+17. **The browser engine.** It now compiles `smart_match.rs` and the
+    generated table; all three stamp lists (`build.rs`,
+    `build-tryit-wasm.mjs`, `engine-stamp.ts`) name both files. The browser
+    never stores a reference, so it renders as before, and the try-it tests
+    pass. Its wasm grew from 424 KB to about 451 KB, because the solver is
+    compiled in.
+18. **`chain_bench` gained `--smart-match` and `--with-shelves`.** Without
+    flags it runs the baseline configuration. The new binary is kept beside
+    the baseline in `test-output/smart-balance/baseline/`.
+19. **The phone bridges.** They build settings with `..Default::default()`, so
+    Smart Match is absent and inert there (M18).

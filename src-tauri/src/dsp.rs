@@ -722,6 +722,16 @@ pub struct ChainCoeffs {
     /// the main High band. High-shelf @ 10 kHz, slope 0.7. Slider 0..1 in
     /// `AdvancedSettings::presence_air` maps to 0..+4 dB; clamped on read.
     pub presence_air: BiquadCoeffs,
+    /// Smart Match's corrective bass filter (peaking at
+    /// `smart_match::BASS_FILTER_HZ`) when it needs a stage of its own.
+    /// Usually it runs in the idle `warmth` or `presence_air` slot instead and
+    /// this stays identity. Skipped unless `smart_match_active`.
+    pub smart_match_bass: BiquadCoeffs,
+    /// True only while Smart Match's own corrective stage is in use (a match
+    /// is changing something AND both Advanced shelf slots are taken). False
+    /// keeps the stage out of the per-sample path entirely, so an idle chain
+    /// costs and sounds exactly as before (contract rules 8 and 9).
+    pub smart_match_active: bool,
     /// Phase A5 — preset transient shaper amount. Positive values lift
     /// attacks; negative values soften them. Custom defaults to 0.0.
     pub transient_amount: f32,
@@ -875,6 +885,29 @@ fn manual_release_ms(value: Option<f32>, fallback: f32) -> f32 {
     )
 }
 
+/// One of the chain's seven EQ bands at `gain_db`, in chain order: 0 sub
+/// peak, 1 low shelf, 2 low-mid peak, 3 mid peak, 4 high-mid peak, 5 high
+/// shelf, 6 sparkle shelf (any index above 6). `bands` must already be
+/// clamped. The single definition of each band's shape: `from_settings` and
+/// Smart Match's realization both build bands here, so the solver models
+/// exactly the filters the chain runs.
+pub fn eq_band_coeffs(
+    sr: f32,
+    bands: &EqBandFrequencies,
+    index: usize,
+    gain_db: f32,
+) -> BiquadCoeffs {
+    match index {
+        0 => BiquadCoeffs::peaking(sr, bands.sub_hz, 0.8, gain_db),
+        1 => BiquadCoeffs::low_shelf(sr, bands.low_hz, gain_db, 0.7),
+        2 => BiquadCoeffs::peaking(sr, bands.low_mid_hz, 0.9, gain_db),
+        3 => BiquadCoeffs::peaking(sr, bands.mid_hz, 0.8, gain_db),
+        4 => BiquadCoeffs::peaking(sr, bands.high_mid_hz, 0.9, gain_db),
+        5 => BiquadCoeffs::high_shelf(sr, bands.high_hz, gain_db, 0.7),
+        _ => BiquadCoeffs::high_shelf(sr, bands.sparkle_hz, gain_db, 0.7),
+    }
+}
+
 #[inline]
 fn finite_or(value: f32, default: f32) -> f32 {
     if value.is_finite() {
@@ -979,20 +1012,6 @@ impl ChainCoeffs {
         // so the engine — not the UI — owns the guarantee that bands cannot
         // cross or leave their range. Q / shelf slope stay fixed.
         let bands = settings.eq_bands.clamped();
-        let sub = BiquadCoeffs::peaking(sr, bands.sub_hz, 0.8, effective_sub_db);
-        let low = BiquadCoeffs::low_shelf(sr, bands.low_hz, effective_low_db, 0.7);
-        let low_mid = BiquadCoeffs::peaking(sr, bands.low_mid_hz, 0.9, effective_low_mid_db);
-        let mid = BiquadCoeffs::peaking(sr, bands.mid_hz, 0.8, effective_mid_db);
-        let high_mid = BiquadCoeffs::peaking(sr, bands.high_mid_hz, 0.9, effective_high_mid_db);
-        let high = BiquadCoeffs::high_shelf(sr, bands.high_hz, effective_high_db, 0.7);
-        let sparkle = BiquadCoeffs::high_shelf(sr, bands.sparkle_hz, effective_sparkle_db, 0.7);
-
-        // Compatibility shims for the rest of from_settings, which expects
-        // legacy names. preset_gain_db / preset_sat / preset_width map to
-        // PresetCalibration fields directly.
-        let preset_gain_db = preset.baseline_gain_push_db;
-        let preset_sat = preset.warmth;
-        let preset_width = preset.stereo_width;
 
         // Phase 12.2 — Advanced warmth (low-shelf @ 300 Hz). Slider value clamped
         // into [0, 1] then scaled to a 0..+4 dB lift. When the slider is None or
@@ -1000,14 +1019,77 @@ impl ChainCoeffs {
         // early-return at `gain_db < 1e-4`.
         let warmth_db =
             clamp_finite_or(settings.advanced.warmth.unwrap_or(0.0), 0.0, 0.0, 1.0) * 4.0;
-        let warmth = BiquadCoeffs::low_shelf(sr, 300.0, warmth_db, 0.7);
+        let mut warmth = BiquadCoeffs::low_shelf(sr, 300.0, warmth_db, 0.7);
 
         // Phase 12.2 — Advanced presence/air (high-shelf @ 10 kHz). Same clamp +
         // scale pattern as warmth. Sits above the main High band (6 kHz) so the
         // two controls shape distinct perceptual regions.
         let presence_air_db =
             clamp_finite_or(settings.advanced.presence_air.unwrap_or(0.0), 0.0, 0.0, 1.0) * 4.0;
-        let presence_air = BiquadCoeffs::high_shelf(sr, 10_000.0, presence_air_db, 0.7);
+        let mut presence_air = BiquadCoeffs::high_shelf(sr, 10_000.0, presence_air_db, 0.7);
+
+        // ----- Smart Match (Smart Match plan, contract rules 7–9) -----
+        // The decision reads only the two songs' shares, the switch and the
+        // amount (M14). When it changes nothing, the seven gains below are the
+        // untouched effective values and the corrective filter is skipped, so
+        // the chain is bit-identical to a build without Smart Match (rule 9).
+        let mut band_gains_db = [
+            effective_sub_db,
+            effective_low_db,
+            effective_low_mid_db,
+            effective_mid_db,
+            effective_high_mid_db,
+            effective_high_db,
+            effective_sparkle_db,
+        ];
+        let smart_match = crate::smart_match::decide_for_settings(settings);
+        let mut smart_match_bass = BiquadCoeffs::identity();
+        if smart_match.changes_anything() {
+            let realization = crate::smart_match::realize(
+                sample_rate,
+                &bands,
+                &band_gains_db,
+                &[sub_highpass, sub_highpass, warmth, presence_air],
+                &smart_match.correction_db,
+            );
+            for (gain, delta) in band_gains_db.iter_mut().zip(realization.band_deltas_db) {
+                *gain += delta;
+            }
+            let corrective = BiquadCoeffs::peaking(
+                sr,
+                crate::smart_match::BASS_FILTER_HZ,
+                crate::smart_match::BASS_FILTER_Q,
+                realization.bass_filter_db,
+            );
+            // The corrective filter runs in whichever Advanced shelf slot is
+            // idle (an identity biquad the chain processes anyway), so the
+            // usual case adds no per-sample work. Only when the user has both
+            // the Warmth and the Presence/Air sliders in use does it need its
+            // own stage. The cascade, and so the response, is the same either
+            // way: the solver already modelled those slots as identity.
+            if warmth == BiquadCoeffs::identity() {
+                warmth = corrective;
+            } else if presence_air == BiquadCoeffs::identity() {
+                presence_air = corrective;
+            } else {
+                smart_match_bass = corrective;
+            }
+        }
+        let smart_match_active = smart_match_bass != BiquadCoeffs::identity();
+        let sub = eq_band_coeffs(sr, &bands, 0, band_gains_db[0]);
+        let low = eq_band_coeffs(sr, &bands, 1, band_gains_db[1]);
+        let low_mid = eq_band_coeffs(sr, &bands, 2, band_gains_db[2]);
+        let mid = eq_band_coeffs(sr, &bands, 3, band_gains_db[3]);
+        let high_mid = eq_band_coeffs(sr, &bands, 4, band_gains_db[4]);
+        let high = eq_band_coeffs(sr, &bands, 5, band_gains_db[5]);
+        let sparkle = eq_band_coeffs(sr, &bands, 6, band_gains_db[6]);
+
+        // Compatibility shims for the rest of from_settings, which expects
+        // legacy names. preset_gain_db / preset_sat / preset_width map to
+        // PresetCalibration fields directly.
+        let preset_gain_db = preset.baseline_gain_push_db;
+        let preset_sat = preset.warmth;
+        let preset_width = preset.stereo_width;
         let transient_amount = (preset.transient_punch * preset_scale).clamp(-0.25, 0.25);
         let transient_fast_attack_alpha = alpha_from_time_ms(sr, 1.0);
         let transient_fast_release_alpha = alpha_from_time_ms(sr, 35.0);
@@ -1415,6 +1497,8 @@ impl ChainCoeffs {
             sparkle,
             warmth,
             presence_air,
+            smart_match_bass,
+            smart_match_active,
             transient_amount,
             transient_fast_attack_alpha,
             transient_fast_release_alpha,
@@ -1456,6 +1540,19 @@ impl ChainCoeffs {
     }
 }
 
+/// While Smart Match's corrective filter is idle it is skipped, so its state
+/// would otherwise hold whatever it last had. Zero it on every coefficient
+/// install that leaves it idle: an identity biquad's state is always zero, so
+/// a later activation starts exactly as if the filter had run as identity.
+/// Allocation-free; part of the existing coefficient-update path.
+fn clear_idle_smart_match_state(states: &mut [ChannelState], coeffs: &ChainCoeffs) {
+    if !coeffs.smart_match_active {
+        for state in states {
+            state.smart_match_bass = BiquadState::default();
+        }
+    }
+}
+
 /// Apply an in-place M/S width transform to a stereo frame. `frame` must be
 /// at least length 2; channels beyond index 1 are untouched. `side_scale`
 /// scales the L-R component (0 collapses to mono, 1 is a no-op, > 1 widens).
@@ -1492,6 +1589,11 @@ pub struct ChannelState {
     sparkle: BiquadState,
     warmth: BiquadState,
     presence_air: BiquadState,
+    /// Smart Match's own corrective stage (used only when both Advanced
+    /// shelf slots are taken). Zeroed whenever the stage is idle, which is
+    /// exactly the state an identity biquad keeps, so re-activation starts as
+    /// if it had been running as identity all along.
+    smart_match_bass: BiquadState,
     transient_fast_env: f32,
     transient_slow_env: f32,
     // Phase 12.2: multiband compressor — per-channel crossover network state.
@@ -2100,9 +2202,11 @@ impl MasteringChain {
         // computed from the same clamped `effective_ceiling_dbtp()` the limiter
         // uses, so this is exactly the value a rebuilt limiter would hold.
         limiter.ceiling_lin = coeffs.ceiling_lin;
+        let mut states = prior.states.clone();
+        clear_idle_smart_match_state(&mut states, &coeffs);
         Self {
             coeffs,
-            states: prior.states.clone(),
+            states,
             limiter,
             gr_snapshots: prior.gr_snapshots.clone(),
         }
@@ -2129,6 +2233,7 @@ impl MasteringChain {
         for (dst, src) in self.states.iter_mut().zip(prior.states.iter()) {
             dst.clone_from(src);
         }
+        clear_idle_smart_match_state(&mut self.states, &self.coeffs);
         self.gr_snapshots = prior.gr_snapshots.clone();
         true
     }
@@ -2145,6 +2250,7 @@ impl MasteringChain {
         if channels == 0 {
             return;
         }
+        let smart_match_active = self.coeffs.smart_match_active;
         // Pass 1: per-channel input gain + 7-band EQ.
         // Phase A2: low-mid peaking band inserted between low and mid so the
         // mud-zone cleanup (250–800 Hz) sits in the natural frequency order.
@@ -2162,6 +2268,11 @@ impl MasteringChain {
             y = state.sparkle.process(&self.coeffs.sparkle, y);
             y = state.warmth.process(&self.coeffs.warmth, y);
             y = state.presence_air.process(&self.coeffs.presence_air, y);
+            if smart_match_active {
+                y = state
+                    .smart_match_bass
+                    .process(&self.coeffs.smart_match_bass, y);
+            }
             *sample = y;
         }
         // Phase 12.2 — 3-band multiband downward compressor (LR4 split,

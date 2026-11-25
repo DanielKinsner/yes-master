@@ -1846,6 +1846,24 @@ fn settings_landing_values_are_finite(settings: &MasteringSettings) -> bool {
             .advanced
             .source_profile
             .is_none_or(source_profile_is_finite)
+        && settings
+            .advanced
+            .smart_match
+            .as_ref()
+            .is_none_or(smart_match_is_finite)
+}
+
+/// Smart Match values serialize into the landing hash; a non-finite one would
+/// serialize as `null` and could collide with another state, so treat it like
+/// any other non-finite setting: always measure.
+fn smart_match_is_finite(state: &crate::types::SmartMatchSettings) -> bool {
+    state.amount.is_finite()
+        && state.reference.as_ref().is_none_or(|r| {
+            let s = r.spectral_6;
+            [s.sub, s.low, s.low_mid, s.mid, s.presence, s.air]
+                .into_iter()
+                .all(f32::is_finite)
+        })
 }
 
 fn settings_landing_hash(settings: &MasteringSettings) -> LandingSettingsHash {
@@ -4528,6 +4546,54 @@ mod tests {
             settings_landing_hash(&a),
             settings_landing_hash(&b),
             "intensity change must produce a different hash"
+        );
+    }
+
+    /// Smart Match plan, Slice 4 cache invariant: every Smart Match change
+    /// that can change the chain (a reference picked, its numbers, the amount,
+    /// the switch) must miss the preview-loudness cache, or Mastered would
+    /// play at a level measured for a different tone.
+    #[test]
+    fn changing_the_smart_match_reference_invalidates_the_preview_loudness() {
+        use crate::types::{SmartMatchReference, SmartMatchSettings, SpectralBalance6};
+        let shares = |air: f32| SpectralBalance6 {
+            sub: 0.2,
+            low: 0.25,
+            low_mid: 0.2,
+            mid: 0.15,
+            presence: 0.15 - air,
+            air: 0.05 + air,
+        };
+        let with = |air: f32, amount: f32, enabled: bool| {
+            let mut s = settings_with_intensity(0.5);
+            s.advanced.smart_match = Some(SmartMatchSettings {
+                reference: Some(SmartMatchReference {
+                    name: "Ref".into(),
+                    spectral_6: shares(air),
+                }),
+                enabled,
+                amount,
+            });
+            s
+        };
+        let mut cache = PreviewLandingCache::new();
+        let base = with(0.0, 0.5, true);
+        cache.insert(&base, 0.8);
+        assert_eq!(cache.get(&base), Some(0.8), "the same state must hit");
+        let none = settings_with_intensity(0.5);
+        for (label, changed) in [
+            ("no Smart Match", none),
+            ("another reference", with(0.02, 0.5, true)),
+            ("another amount", with(0.0, 0.75, true)),
+            ("switched off", with(0.0, 0.5, false)),
+        ] {
+            assert_eq!(cache.get(&changed), None, "{label} must miss the cache");
+        }
+        // A non-finite stored value always re-measures rather than risking a
+        // collision through JSON `null`.
+        assert_eq!(
+            settings_landing_hash(&with(0.0, f32::NAN, true)),
+            LandingSettingsHash::AlwaysMiss
         );
     }
 

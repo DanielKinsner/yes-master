@@ -46,6 +46,7 @@ import {
   isValueControlTarget,
 } from "../lib/shortcuts";
 import { buildExportReport } from "../lib/export-receipt";
+import { presetSettingsKeepingSmartMatch } from "../lib/smart-match";
 import { userErrorMessage, type UserErrorContext } from "../lib/user-errors";
 import {
   AUDIO_DIALOG_FILTER,
@@ -2900,7 +2901,15 @@ export function useTrackMaster() {
       const currentVolumeMatch = editingAlbumIntent
         ? albumIntent?.volume_match ?? false
         : selectedSettings.volume_match;
-      const applied = { ...preset.settings, volume_match: currentVolumeMatch };
+      // A Smart Match reference belongs to the song, not the preset (M12):
+      // keep the current one, whatever the preset carries.
+      const currentSmartMatch = editingAlbumIntent
+        ? albumIntent?.advanced.smart_match
+        : selectedSettings.advanced.smart_match;
+      const applied = {
+        ...presetSettingsKeepingSmartMatch(preset.settings, currentSmartMatch),
+        volume_match: currentVolumeMatch,
+      };
       if (editingAlbumIntent) {
         // Apply to album intent.
         setAlbumIntent(applied);

@@ -815,6 +815,61 @@ pub struct AdvancedSettings {
     /// ignored unless the shared runtime gate is ON.
     #[serde(skip)]
     pub compression_guards: Option<crate::guardrails::CompressionGuards>,
+    /// Smart Match: the chosen reference, the on/off switch and the match
+    /// amount (Smart Match plan, Slice 4). `None` means no Smart Match state
+    /// and is never written, so a project without a reference has exactly the
+    /// shape earlier builds wrote. (The public 0.9.2 build also ignores
+    /// unknown fields: its `read_session` parses with plain serde and no
+    /// settings type denies unknown fields, checked at its tag.) Saved user
+    /// presets never carry it (plan M12; `settings.rs` strips it).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smart_match: Option<SmartMatchSettings>,
+}
+
+/// Smart Match state saved with a song (plan M9): the reference's measured
+/// numbers and its display name, never its audio or its path, so a project
+/// reopens with the same match on any machine without the reference file.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct SmartMatchSettings {
+    /// The chosen reference; `None` when the user has not chosen one.
+    #[serde(default)]
+    pub reference: Option<SmartMatchReference>,
+    /// The on/off switch. A newly chosen reference starts on.
+    #[serde(default = "smart_match_default_enabled")]
+    pub enabled: bool,
+    /// Match amount in `[0, 1]`; starts at `smart_match::DEFAULT_AMOUNT`.
+    /// Out-of-range values are clamped where the decision reads them.
+    #[serde(default = "smart_match_default_amount")]
+    pub amount: f32,
+}
+
+impl Default for SmartMatchSettings {
+    fn default() -> Self {
+        Self {
+            reference: None,
+            enabled: smart_match_default_enabled(),
+            amount: smart_match_default_amount(),
+        }
+    }
+}
+
+fn smart_match_default_enabled() -> bool {
+    true
+}
+
+fn smart_match_default_amount() -> f32 {
+    crate::smart_match::DEFAULT_AMOUNT
+}
+
+/// A reference song as Smart Match stores it.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct SmartMatchReference {
+    /// Display name: the file name without its extension. Plain text only;
+    /// nothing ever uses it as a path.
+    pub name: String,
+    /// The reference's six band shares, measured by the same meter as the
+    /// track (`analysis::compute_spectral_balance_6band`).
+    pub spectral_6: SpectralBalance6,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

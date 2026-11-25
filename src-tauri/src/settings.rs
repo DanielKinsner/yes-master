@@ -66,7 +66,7 @@ pub fn save_user_preset_at_path(
         id: uuid::Uuid::new_v4().to_string(),
         name: trimmed,
         kind,
-        settings,
+        settings: without_smart_match(settings),
         created_at_iso: now_iso(),
     };
     presets.push(preset.clone());
@@ -93,7 +93,25 @@ pub fn read_presets(path: &Path) -> CommandResult<Vec<UserPreset>> {
         return Ok(Vec::new());
     }
     let json = std::fs::read(path).map_err(|e| CommandError::Io(e.to_string()))?;
-    serde_json::from_slice(&json).map_err(|e| CommandError::Other(format!("presets parse: {e}")))
+    let presets: Vec<UserPreset> = serde_json::from_slice(&json)
+        .map_err(|e| CommandError::Other(format!("presets parse: {e}")))?;
+    Ok(presets
+        .into_iter()
+        .map(|mut preset| {
+            preset.settings = without_smart_match(preset.settings);
+            preset
+        })
+        .collect())
+}
+
+/// A saved user preset is a tonal recipe; a Smart Match reference belongs to
+/// a song (Smart Match plan, M12). Strip it on save, and again on read so a
+/// hand-edited presets file cannot carry one into a song either. Applying a
+/// preset then has no reference to impose, and the frontend keeps the
+/// current one.
+fn without_smart_match(mut settings: MasteringSettings) -> MasteringSettings {
+    settings.advanced.smart_match = None;
+    settings
 }
 
 pub fn write_presets(path: &Path, presets: &[UserPreset]) -> CommandResult<()> {

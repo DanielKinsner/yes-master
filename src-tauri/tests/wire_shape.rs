@@ -28,8 +28,8 @@ use yes_master_lib::types::{
     AnalysisProgress, AnalysisResult, CompressionMode, ExportReport, ImportedTrack,
     InferenceConfidence, JobStatus, LandingStatus, PlaybackTick, Preset, PresetKind, ProjectMode,
     ProjectState, QualityCheck, QualityLevel, RenderJob, RenderKind, RenderedMeasurements,
-    SourceProfile, SpectralBalance, SpectralBalance6, TrackCharacter, TrackId, TrackRole,
-    TransitionSpec, UserPreset, WaveformPeaks,
+    SmartMatchReference, SmartMatchSettings, SourceProfile, SpectralBalance, SpectralBalance6,
+    TrackCharacter, TrackId, TrackRole, TransitionSpec, UserPreset, WaveformPeaks,
 };
 
 mod common;
@@ -88,6 +88,16 @@ fn advanced_sample() -> AdvancedSettings {
         // correctly invisible to this wire gate and absent from bindings.ts.
         source_confidence: None,
         compression_guards: None,
+        // A self-match (reference = the sample profile) so every downstream
+        // sampled value, such as the readout, stays unchanged.
+        smart_match: Some(SmartMatchSettings {
+            reference: Some(SmartMatchReference {
+                name: "Wire sample".to_string(),
+                spectral_6: spectral6_sample(),
+            }),
+            enabled: true,
+            amount: 0.5,
+        }),
     }
 }
 

@@ -28,6 +28,11 @@ pub mod deep_analysis;
 pub mod confidence;
 #[path = "../../../../src-tauri/src/guardrails.rs"]
 pub mod guardrails;
+// Smart Match is in the chain's build path (`dsp.rs` asks it for a decision).
+// The browser never stores a reference, so it is always inert here and the
+// browser renders exactly as before (Smart Match plan, M18).
+#[path = "../../../../src-tauri/src/smart_match.rs"]
+pub mod smart_match;
 mod stubs;
 pub use stubs::{decode, files, mp3};
 

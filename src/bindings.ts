@@ -68,7 +68,32 @@ export interface AdvancedSettings {
   /// (B2): the backend resolves it from its SourceProfileStore before each chain
   /// build; a value set here is honored as an FE override. Not user-facing.
   source_profile?: SourceProfile | null;
+  /// Smart Match: the chosen reference, the switch and the amount. Mirrors
+  /// `types::SmartMatchSettings`. Absent when there is no Smart Match state
+  /// (the backend never writes `null` here). Saved user presets never carry
+  /// it; applying a preset keeps the current value.
+  smart_match?: SmartMatchSettings | null;
 }
+
+/// Mirrors `types::SmartMatchSettings`. The reference's measured numbers and
+/// display name only; never the audio or a file path.
+export interface SmartMatchSettings {
+  reference: SmartMatchReference | null;
+  enabled: boolean;
+  /// Match amount in [0, 1]. Default `SMART_MATCH_DEFAULT_AMOUNT`.
+  amount: number;
+}
+
+/// Mirrors `types::SmartMatchReference`. `name` is plain display text (the
+/// file name without its extension), never a path.
+export interface SmartMatchReference {
+  name: string;
+  spectral_6: SpectralBalance6;
+}
+
+/// Keep in sync with `smart_match::DEFAULT_AMOUNT` in
+/// `src-tauri/src/smart_match.rs`; the backend is authoritative.
+export const SMART_MATCH_DEFAULT_AMOUNT = 0.5;
 
 /// Phase A3 — delivery profile presets. Mirrors `types::DeliveryProfile`
 /// in the Rust crate. Serializes as kebab-case so it round-trips through

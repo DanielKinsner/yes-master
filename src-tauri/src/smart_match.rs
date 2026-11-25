@@ -1,9 +1,11 @@
-//! Smart Match: the decision function (Smart Match plan, Slice 3).
+//! Smart Match: the decision function (Smart Match plan, Slice 3) and its
+//! realization as EQ gain (Slice 4).
 //!
 //! The user picks a reference song; Smart Match closes part of the tonal gap
 //! between the track and that reference, band by band, and the Style applies
-//! on top as before. This module is the **decision** only: two measured
-//! profiles in, six per-band corrections out. It touches no audio.
+//! on top as before. [`decide`] is the **decision**: two measured profiles
+//! in, six per-band corrections out. [`realize`] turns those six corrections
+//! into EQ gains for the chain (contract rule 8).
 //!
 //! **Inputs, and nothing else (contract rule 1, plan M14).** The track's six
 //! band shares, the reference's six band shares, the on/off state and the
@@ -32,7 +34,8 @@
 //! static, no I/O. It builds unchanged for desktop, the mobile bridges and the
 //! browser engine.
 
-use crate::types::SpectralBalance6;
+use crate::dsp::BiquadCoeffs;
+use crate::types::{EqBandFrequencies, MasteringSettings, SpectralBalance6};
 use serde::{Deserialize, Serialize};
 
 /// Number of meter bands.
@@ -177,6 +180,24 @@ impl SmartMatchDecision {
     }
 }
 
+/// The decision a chain build uses: the resolved track profile
+/// (`settings.advanced.source_profile`; Album resolves to none) and the stored
+/// Smart Match state. The chain and the readout both call this, so every
+/// number the user sees comes from the computation the audio uses (plan M17).
+pub fn decide_for_settings(settings: &MasteringSettings) -> SmartMatchDecision {
+    let state = settings.advanced.smart_match.as_ref();
+    let track = settings
+        .advanced
+        .source_profile
+        .as_ref()
+        .map(|p| &p.spectral_6);
+    let reference = state
+        .and_then(|s| s.reference.as_ref())
+        .map(|r| &r.spectral_6);
+    let (enabled, amount) = state.map_or((false, 0.0), |s| (s.enabled, s.amount));
+    decide(track, reference, enabled, amount)
+}
+
 /// Decide with the product parameters.
 pub fn decide(
     track: Option<&SpectralBalance6>,
@@ -264,6 +285,17 @@ pub fn decide_with(
     }
 }
 
+/// Measure six band shares through the app's own meter, exactly as the
+/// track analysis calls it, so a reference and a track are always measured
+/// the same way (contract rule 12). `None` for silent or too-short audio.
+pub fn measure_shares(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: usize,
+) -> Option<SpectralBalance6> {
+    crate::analysis::compute_spectral_balance_6band(samples, sample_rate, channels)
+}
+
 /// The meter's six shares in band order, widened losslessly to f64.
 pub fn shares_array(balance: &SpectralBalance6) -> [f64; BAND_COUNT] {
     [
@@ -334,6 +366,367 @@ pub fn boost_fade(params: &SmartMatchParams, below_typical_db: f64) -> f32 {
     } else {
         ((end - below_typical_db) / (end - start)) as f32
     }
+}
+
+// ---------------------------------------------------------------------------
+// Realization (contract rule 8)
+// ---------------------------------------------------------------------------
+
+/// Centre of Smart Match's one corrective filter, in Hz: the middle of the
+/// meter's bass band (80–250 Hz). See [`realize`] for why it exists.
+pub const BASS_FILTER_HZ: f32 = 140.0;
+/// Q of the corrective filter: about the bass band's width.
+pub const BASS_FILTER_Q: f32 = 0.9;
+/// The chain's existing EQ bands, in chain order (sub peak, low shelf,
+/// low-mid peak, mid peak, high-mid peak, high shelf, sparkle shelf).
+pub const EQ_BAND_COUNT: usize = 7;
+
+const UNKNOWNS: usize = EQ_BAND_COUNT + 1;
+/// Frequencies per meter band where the solver compares responses.
+const GRID_PER_BAND: usize = 12;
+const GRID_POINTS: usize = GRID_PER_BAND * BAND_COUNT;
+/// Tikhonov weight. Picks the smallest set of filter moves among the many
+/// that fit (eight unknowns, six targets) without costing accuracy.
+const SOLVER_REGULARIZATION: f64 = 1.0e-6;
+/// Half-width of the central-difference step for the Jacobian, in dB of
+/// filter gain. Wide on purpose: at 96 kHz the low bands' f32 coefficients
+/// carry rounding wobble of a few hundredths of a dB, which a narrow step
+/// would read as slope.
+const SOLVER_STEP_DB: f64 = 0.25;
+const SOLVER_MAX_ITERATIONS: usize = 12;
+/// Levenberg-Marquardt damping: starting value, floor, and how many times a
+/// rejected step is retried with more damping before the solver stops.
+const SOLVER_INITIAL_DAMPING: f64 = 1.0e-3;
+const SOLVER_MIN_DAMPING: f64 = 1.0e-9;
+const SOLVER_MAX_DAMPING_TRIES: usize = 8;
+/// Stop once every band is this close to its target, in dB.
+const SOLVER_TOLERANCE_DB: f64 = 0.005;
+/// No filter moves further than this, in dB. Corrections are capped at a
+/// 4 dB cut and a 3 dB boost per band, so this is a safety rail only.
+const MAX_FILTER_MOVE_DB: f64 = 12.0;
+
+/// EQ gains that realize a six-band correction.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Realization {
+    /// Added to each existing EQ band's effective gain, in dB, chain order.
+    pub band_deltas_db: [f32; EQ_BAND_COUNT],
+    /// Gain of the corrective bass filter, in dB.
+    pub bass_filter_db: f32,
+}
+
+impl Realization {
+    pub const NONE: Self = Self {
+        band_deltas_db: [0.0; EQ_BAND_COUNT],
+        bass_filter_db: 0.0,
+    };
+}
+
+/// Turn a six-band correction into EQ gains (contract rule 8).
+///
+/// The target is each meter band's **power change**: the change the meter
+/// would report for pink noise (equal power per octave) through the EQ,
+/// relative to the same EQ without the correction. The solver adjusts the
+/// seven existing bands' gains, on top of whatever the Style, Intensity,
+/// guardrails and manual EQ already set (`base_gains_db`), plus one
+/// corrective peaking filter at [`BASS_FILTER_HZ`]. `fixed` holds the other
+/// filters in the EQ cascade (subsonic high-pass, warmth, air), which shape
+/// the weighting but do not move.
+///
+/// **Why the extra filter.** The seven existing bands cannot move the sub
+/// (20–80 Hz) and bass (80–250 Hz) bands independently: the 80 Hz peak sits
+/// on the border between them and the 200 Hz shelf lifts both. Measured on
+/// the gate's cases, the seven alone missed mixed targets by up to 4 dB. With
+/// one filter centred in the bass band the system is well-conditioned. The
+/// chain runs it in an idle Advanced shelf slot when one is free, and in its
+/// own stage only when both are in use; either way only while a match changes
+/// something, so the idle chain is unchanged (`ChainCoeffs::from_settings`).
+///
+/// Method: damped Gauss-Newton (Levenberg-Marquardt) on the band levels, with
+/// a central-difference Jacobian and a small Tikhonov term that picks the
+/// smallest filter moves among exact fits, on a fixed log-spaced grid. A step
+/// is kept only if it lowers the misfit, so the result is never worse than
+/// doing nothing. Allocation-free and deterministic.
+pub fn realize(
+    sample_rate: u32,
+    bands: &EqBandFrequencies,
+    base_gains_db: &[f32; EQ_BAND_COUNT],
+    fixed: &[BiquadCoeffs],
+    correction_db: &[f32; BAND_COUNT],
+) -> Realization {
+    if sample_rate == 0
+        || correction_db.iter().any(|c| !c.is_finite())
+        || base_gains_db.iter().any(|g| !g.is_finite())
+    {
+        return Realization::NONE;
+    }
+    let grid = Grid::new(sample_rate, fixed);
+    let sr = sample_rate as f32;
+    let base_gain = |i: usize| -> f64 {
+        if i < EQ_BAND_COUNT {
+            f64::from(base_gains_db[i])
+        } else {
+            0.0
+        }
+    };
+    let filter = |i: usize, gain_db: f64| -> BiquadCoeffs {
+        if i < EQ_BAND_COUNT {
+            crate::dsp::eq_band_coeffs(sr, bands, i, gain_db as f32)
+        } else {
+            BiquadCoeffs::peaking(sr, BASS_FILTER_HZ, BASS_FILTER_Q, gain_db as f32)
+        }
+    };
+
+    let mut x = [0.0_f64; UNKNOWNS];
+    let mut mags = [[0.0_f64; GRID_POINTS]; UNKNOWNS];
+    for (i, m) in mags.iter_mut().enumerate() {
+        grid.mag2(&filter(i, base_gain(i)), m);
+    }
+    let base_levels = grid.levels(&mags, None);
+    let mut goal = [0.0_f64; BAND_COUNT];
+    for b in 0..BAND_COUNT {
+        goal[b] = base_levels[b] + f64::from(correction_db[b]);
+    }
+
+    let mut trial = [0.0_f64; GRID_POINTS];
+    let mut candidate = mags;
+    // Levenberg-Marquardt: a step is kept only when it lowers the cost
+    // (squared misses plus the small Tikhonov term); otherwise the damping
+    // grows and a shorter step is tried. A band layout the user has squeezed
+    // (two filters nearly on top of each other) then yields a partial fit,
+    // never a divergent one.
+    let mut damping = SOLVER_INITIAL_DAMPING;
+    let (mut residual, mut cost) = misfit(&grid, &mags, &goal, &x);
+    for _ in 0..SOLVER_MAX_ITERATIONS {
+        let worst = residual.iter().fold(0.0_f64, |w, r| w.max(r.abs()));
+        if !worst.is_finite() || worst < SOLVER_TOLERANCE_DB {
+            break;
+        }
+        let mut jacobian = [[0.0_f64; UNKNOWNS]; BAND_COUNT];
+        for i in 0..UNKNOWNS {
+            grid.mag2(&filter(i, base_gain(i) + x[i] + SOLVER_STEP_DB), &mut trial);
+            let up = grid.levels(&mags, Some((i, &trial)));
+            grid.mag2(&filter(i, base_gain(i) + x[i] - SOLVER_STEP_DB), &mut trial);
+            let down = grid.levels(&mags, Some((i, &trial)));
+            for b in 0..BAND_COUNT {
+                jacobian[b][i] = (up[b] - down[b]) / (2.0 * SOLVER_STEP_DB);
+            }
+        }
+        // (JᵀJ + (λ + μ)I) s = Jᵀr − λx.
+        let mut jtj = [[0.0_f64; UNKNOWNS]; UNKNOWNS];
+        let mut rhs = [0.0_f64; UNKNOWNS];
+        for i in 0..UNKNOWNS {
+            for j in 0..UNKNOWNS {
+                jtj[i][j] = jacobian.iter().map(|row| row[i] * row[j]).sum();
+            }
+            let jtr: f64 = jacobian
+                .iter()
+                .zip(&residual)
+                .map(|(row, r)| row[i] * r)
+                .sum();
+            rhs[i] = jtr - SOLVER_REGULARIZATION * x[i];
+        }
+        let mut accepted = false;
+        for _ in 0..SOLVER_MAX_DAMPING_TRIES {
+            let mut a = jtj;
+            for (i, row) in a.iter_mut().enumerate() {
+                row[i] += SOLVER_REGULARIZATION + damping;
+            }
+            let Some(step) = solve_linear(a, rhs) else {
+                damping *= 4.0;
+                continue;
+            };
+            let mut next = x;
+            for i in 0..UNKNOWNS {
+                next[i] = (x[i] + step[i]).clamp(-MAX_FILTER_MOVE_DB, MAX_FILTER_MOVE_DB);
+                grid.mag2(&filter(i, base_gain(i) + next[i]), &mut candidate[i]);
+            }
+            let (next_residual, next_cost) = misfit(&grid, &candidate, &goal, &next);
+            if next_cost.is_finite() && next_cost < cost {
+                x = next;
+                mags = candidate;
+                residual = next_residual;
+                cost = next_cost;
+                damping = (damping / 3.0).max(SOLVER_MIN_DAMPING);
+                accepted = true;
+                break;
+            }
+            damping *= 4.0;
+        }
+        if !accepted {
+            break;
+        }
+    }
+    if x.iter().any(|v| !v.is_finite()) {
+        return Realization::NONE;
+    }
+    let mut band_deltas_db = [0.0_f32; EQ_BAND_COUNT];
+    for (d, v) in band_deltas_db.iter_mut().zip(&x) {
+        *d = *v as f32;
+    }
+    Realization {
+        band_deltas_db,
+        bass_filter_db: x[EQ_BAND_COUNT] as f32,
+    }
+}
+
+/// Per-band miss (goal minus level) and the cost the solver minimizes: the
+/// squared misses plus the Tikhonov term.
+fn misfit(
+    grid: &Grid,
+    mags: &[[f64; GRID_POINTS]; UNKNOWNS],
+    goal: &[f64; BAND_COUNT],
+    x: &[f64; UNKNOWNS],
+) -> ([f64; BAND_COUNT], f64) {
+    let levels = grid.levels(mags, None);
+    let mut residual = [0.0; BAND_COUNT];
+    for b in 0..BAND_COUNT {
+        residual[b] = goal[b] - levels[b];
+    }
+    let cost = residual.iter().map(|r| r * r).sum::<f64>()
+        + SOLVER_REGULARIZATION * x.iter().map(|v| v * v).sum::<f64>();
+    (residual, cost)
+}
+
+/// Each meter band's power change, in dB, between two filter cascades, for
+/// pink noise. `grid_per_band` sets the measurement density; the gate uses a
+/// much finer grid than the solver so it checks the solver, not itself.
+pub fn band_power_change_db(
+    sample_rate: u32,
+    before: &[BiquadCoeffs],
+    after: &[BiquadCoeffs],
+    grid_per_band: usize,
+) -> [f64; BAND_COUNT] {
+    let mut out = [0.0; BAND_COUNT];
+    let n = grid_per_band.max(1);
+    let edges = band_edges(sample_rate);
+    for (b, o) in out.iter_mut().enumerate() {
+        let (lo, hi) = (edges[b].ln(), edges[b + 1].ln());
+        let mut sum_before = 0.0;
+        let mut sum_after = 0.0;
+        for k in 0..n {
+            let f = (lo + (k as f64 + 0.5) / n as f64 * (hi - lo)).exp();
+            let w = std::f64::consts::TAU * f / f64::from(sample_rate);
+            let (cw, c2w) = (w.cos(), (2.0 * w).cos());
+            sum_before += before.iter().map(|c| mag2(c, cw, c2w)).product::<f64>();
+            sum_after += after.iter().map(|c| mag2(c, cw, c2w)).product::<f64>();
+        }
+        *o = 10.0 * (sum_after / sum_before).log10();
+    }
+    out
+}
+
+/// The meter's band edges at this rate: the top edge is `min(Nyquist, 16 kHz)`.
+fn band_edges(sample_rate: u32) -> [f64; BAND_COUNT + 1] {
+    let mut edges = BAND_EDGES_HZ;
+    edges[BAND_COUNT] = (f64::from(sample_rate) / 2.0).min(BAND_EDGES_HZ[BAND_COUNT]);
+    edges
+}
+
+/// `|H(e^{jω})|²` of a biquad, from `cos ω` and `cos 2ω`.
+fn mag2(c: &BiquadCoeffs, cw: f64, c2w: f64) -> f64 {
+    let (b0, b1, b2) = (f64::from(c.b0), f64::from(c.b1), f64::from(c.b2));
+    let (a1, a2) = (f64::from(c.a1), f64::from(c.a2));
+    let num = b0 * b0 + b1 * b1 + b2 * b2 + 2.0 * (b0 * b1 + b1 * b2) * cw + 2.0 * b0 * b2 * c2w;
+    let den = 1.0 + a1 * a1 + a2 * a2 + 2.0 * (a1 + a1 * a2) * cw + 2.0 * a2 * c2w;
+    num / den
+}
+
+/// The solver's frequency grid: `GRID_PER_BAND` log-spaced points per meter
+/// band, and the fixed filters' response at each.
+struct Grid {
+    cw: [f64; GRID_POINTS],
+    c2w: [f64; GRID_POINTS],
+    fixed: [f64; GRID_POINTS],
+}
+
+impl Grid {
+    fn new(sample_rate: u32, fixed: &[BiquadCoeffs]) -> Self {
+        let edges = band_edges(sample_rate);
+        let mut grid = Self {
+            cw: [0.0; GRID_POINTS],
+            c2w: [0.0; GRID_POINTS],
+            fixed: [1.0; GRID_POINTS],
+        };
+        for b in 0..BAND_COUNT {
+            let (lo, hi) = (edges[b].ln(), edges[b + 1].ln());
+            for k in 0..GRID_PER_BAND {
+                let p = b * GRID_PER_BAND + k;
+                let f = (lo + (k as f64 + 0.5) / GRID_PER_BAND as f64 * (hi - lo)).exp();
+                let w = std::f64::consts::TAU * f / f64::from(sample_rate);
+                grid.cw[p] = w.cos();
+                grid.c2w[p] = (2.0 * w).cos();
+                grid.fixed[p] = fixed
+                    .iter()
+                    .map(|c| mag2(c, grid.cw[p], grid.c2w[p]))
+                    .product();
+            }
+        }
+        grid
+    }
+
+    fn mag2(&self, c: &BiquadCoeffs, out: &mut [f64; GRID_POINTS]) {
+        for (p, o) in out.iter_mut().enumerate() {
+            *o = mag2(c, self.cw[p], self.c2w[p]);
+        }
+    }
+
+    /// Band levels (dB) of the whole cascade; `swap` replaces one adjustable
+    /// filter's response, for the Jacobian.
+    fn levels(
+        &self,
+        mags: &[[f64; GRID_POINTS]; UNKNOWNS],
+        swap: Option<(usize, &[f64; GRID_POINTS])>,
+    ) -> [f64; BAND_COUNT] {
+        let mut out = [0.0; BAND_COUNT];
+        for (b, o) in out.iter_mut().enumerate() {
+            let mut sum = 0.0;
+            for k in 0..GRID_PER_BAND {
+                let p = b * GRID_PER_BAND + k;
+                let mut prod = self.fixed[p];
+                for (i, m) in mags.iter().enumerate() {
+                    prod *= match swap {
+                        Some((j, alt)) if j == i => alt[p],
+                        _ => m[p],
+                    };
+                }
+                sum += prod;
+            }
+            *o = 10.0 * (sum / GRID_PER_BAND as f64).log10();
+        }
+        out
+    }
+}
+
+/// Solve `a · x = b` by Gaussian elimination with partial pivoting. `None`
+/// when the system is singular (it cannot be with λ > 0, but never panic).
+fn solve_linear(
+    mut a: [[f64; UNKNOWNS]; UNKNOWNS],
+    mut b: [f64; UNKNOWNS],
+) -> Option<[f64; UNKNOWNS]> {
+    for col in 0..UNKNOWNS {
+        let pivot = (col..UNKNOWNS).max_by(|&i, &j| a[i][col].abs().total_cmp(&a[j][col].abs()))?;
+        if !a[pivot][col].is_finite() || a[pivot][col].abs() < 1.0e-12 {
+            return None;
+        }
+        a.swap(col, pivot);
+        b.swap(col, pivot);
+        for row in col + 1..UNKNOWNS {
+            let factor = a[row][col] / a[col][col];
+            for k in col..UNKNOWNS {
+                a[row][k] -= factor * a[col][k];
+            }
+            b[row] -= factor * b[col];
+        }
+    }
+    let mut x = [0.0; UNKNOWNS];
+    for row in (0..UNKNOWNS).rev() {
+        let mut sum = b[row];
+        for k in row + 1..UNKNOWNS {
+            sum -= a[row][k] * x[k];
+        }
+        x[row] = sum / a[row][row];
+    }
+    x.iter().all(|v| v.is_finite()).then_some(x)
 }
 
 /// Shares in dB, or `None` when they cannot describe a song: any non-finite or
@@ -505,10 +898,10 @@ mod tests {
         assert_eq!(d.correction_db, [0.0; 6]);
         assert!(d.is_active());
         assert!(!d.changes_anything());
-        // Gap 0.6 dB at amount 0.5 -> 0.3 dB: kept.
-        let kept = from_db(with_band_offset(TYPICAL_SHAPE_DB, 3, 0.6));
+        // Gap 0.7 dB at amount 0.5 -> 0.35 dB: kept.
+        let kept = from_db(with_band_offset(TYPICAL_SHAPE_DB, 3, 0.7));
         let d = decide(Some(&track), Some(&kept), true, 0.5);
-        assert!((d.correction_db[3] - 0.3).abs() < 1e-3);
+        assert!((d.correction_db[3] - 0.35).abs() < 1e-3);
     }
 
     #[test]

@@ -45,6 +45,8 @@ import type {
   QualityCheck,
   RenderJob,
   RenderedMeasurements,
+  SmartMatchReference,
+  SmartMatchSettings,
   SourceProfile,
   SpectralBalance,
   SpectralBalance6,
@@ -182,6 +184,19 @@ export type Drift_SourceProfile_RustOnly = AssertNever<
 >;
 export type Drift_SourceProfile_TsOnly = AssertNever<
   TsOnly<typeof samples.advanced.source_profile, SourceProfile>
+>;
+
+export type Drift_SmartMatchSettings_RustOnly = AssertNever<
+  RustOnly<typeof samples.advanced.smart_match, SmartMatchSettings>
+>;
+export type Drift_SmartMatchSettings_TsOnly = AssertNever<
+  TsOnly<typeof samples.advanced.smart_match, SmartMatchSettings>
+>;
+export type Drift_SmartMatchReference_RustOnly = AssertNever<
+  RustOnly<typeof samples.advanced.smart_match.reference, SmartMatchReference>
+>;
+export type Drift_SmartMatchReference_TsOnly = AssertNever<
+  TsOnly<typeof samples.advanced.smart_match.reference, SmartMatchReference>
 >;
 
 export type Drift_SpectralBalance6_RustOnly = AssertNever<

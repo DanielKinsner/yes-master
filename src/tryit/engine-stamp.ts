@@ -16,6 +16,8 @@ export const TRACKED_SOURCES = [
   "src-tauri/src/deep_analysis.rs",
   "src-tauri/src/confidence.rs",
   "src-tauri/src/guardrails.rs",
+  "src-tauri/src/smart_match.rs",
+  "src-tauri/src/smart_match_typical_shape.rs",
   "web/tryit/wasm/src/lib.rs",
   "web/tryit/wasm/src/stubs.rs",
   "web/tryit/wasm/Cargo.toml",
