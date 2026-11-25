@@ -1031,6 +1031,12 @@ pub fn read_stats(path: &Path) -> CommandResult<ReferenceStats> {
     Ok(stats)
 }
 
+/// The anonymous ID the committable statistics use for a file's bytes: the
+/// first ten hex digits of its FNV-1a 64-bit hash.
+pub fn anon_id_for_bytes(bytes: &[u8]) -> String {
+    format!("{:016x}", fnv1a64(bytes, FNV_OFFSET))[..ANON_ID_HEX_LEN].to_string()
+}
+
 /// Where Smart Match's generated typical-shape table lives, relative to the
 /// `src-tauri` crate root.
 pub const TYPICAL_SHAPE_RUST_FILE: &str = "src/smart_match_typical_shape.rs";

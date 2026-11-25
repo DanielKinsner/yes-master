@@ -30,6 +30,8 @@ pub mod settings;
 pub mod smart_balance_reference;
 pub mod smart_match;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod smart_match_evaluation;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod smart_match_reference;
 pub mod sources;
 pub mod spectrum;
