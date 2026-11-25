@@ -23,6 +23,19 @@
 > - Only 5 quiet, dynamic development pieces were available; the plan asks
 >   for 6 before the holdout.
 
+> **2026-11-24 — Found in today's app: the limiter and the export's final
+> true-peak check can disagree by about 2.8 dB.** Not fixed; it needs its own
+> investigation.
+>
+> - **Funkorama** (44.1 kHz), Tape at −9 LUFS: the limiter holds every sample
+>   at or below −1.10 dBFS, but the qualified true-peak meter reads
+>   +1.80 dBTP. The export turns the master down 2.80 dB and delivers
+>   −12.71 LUFS. With Universal it delivers −13.15 LUFS for both −11 and −9.
+> - Smaller pull-downs (0.2–1 dB) are common at −9 on dense songs.
+> - Detail in `docs/IDEAS_BACKLOG.md` ("Analysis / DSP internals") and the
+>   auto gain staging Phase A note, surprise 1.
+> - The limiter and the final check stay on that plan's do-not-touch list.
+
 > **2026-11-24 — Smart Match at Checkpoint C: interface built; owner hand test
 > and merge/push decision needed (O1).** On branch `claude/smart-balance-2e58b2`
 > (not merged; the planning session pushes after its review). Smart Balance

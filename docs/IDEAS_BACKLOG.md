@@ -123,6 +123,25 @@ Generated 2026-06-22 from the docs-hygiene recon.
 - **yes-dsp crate extraction** (decouple `MasteringSettings.album` from album types).
 - A real **lite-adaptive phone path** (new FFI/Swift wiring) vs running full
   DeepAnalysis on mobile.
+- **The limiter and the export's final true-peak check disagree** on some
+  songs, by up to about 2.8 dB (found 2026-11-24 in auto gain staging Phase A;
+  `docs/reviews/2026-11-24-auto-gain-staging-phase-a.md`, surprise 1).
+  - **Funkorama** (corpus, 44.1 kHz, no sample-rate conversion), Tape at
+    −9 LUFS:
+    - the limiter holds every sample at or below −1.10 dBFS;
+    - the qualified true-peak meter reads +1.80 dBTP on the same audio;
+    - the export therefore turns the master down 2.80 dB and delivers
+      −12.71 LUFS.
+  - Universal and Clarity on the same song are turned down 2.39–2.41 dB.
+    With Universal, today's app delivers −13.15 LUFS for both −11 and −9.
+  - Smaller pull-downs (0.2–1 dB) are common at −9 on dense songs.
+  - Either the limiter's four-phase detector misses real intersample peaks,
+    or the qualified bound is conservative on this material; not yet
+    diagnosed.
+  - Today hides it when the chain overshoots and is turned down anyway. A
+    design that aims at the target meets it head-on.
+  - The limiter and the final check are on the auto gain staging plan's
+    do-not-touch list; this needs its own investigation and owner decision.
 
 ## Contracts / bindings / drift
 
