@@ -10,6 +10,7 @@ import type { MasteringSettings, Preset } from "../bindings";
 import { ADAPTIVE_STRENGTH_DEFAULT, EQ_BAND_DEFAULTS } from "../bindings";
 import { eqBandsAreDefault } from "./tone-reset";
 import { presetToStyle } from "./standard-mapping";
+import { hasSmartMatchAmountEdit, resetSmartMatchAmount } from "./smart-match";
 
 export function hasNonManagedEdits(s: MasteringSettings): boolean {
   if (
@@ -52,6 +53,9 @@ export function hasNonManagedEdits(s: MasteringSettings): boolean {
   if ((a.adaptive_strength ?? ADAPTIVE_STRENGTH_DEFAULT) !== ADAPTIVE_STRENGTH_DEFAULT) {
     return true;
   }
+  // Smart Match (plan M13): the reference and its switch are Standard-managed;
+  // a non-default Match amount is an Advanced value.
+  if (hasSmartMatchAmountEdit(s)) return true;
   return false;
 }
 
@@ -60,8 +64,10 @@ export function hasNonManagedEdits(s: MasteringSettings): boolean {
 /// format. Broader than `resetToneSettings` (which also resets intensity
 /// and only touches EQ) — used by the Advanced->Standard return.
 export function resetToStandardManaged(s: MasteringSettings): MasteringSettings {
+  // Smart Match keeps its reference and switch; the amount goes back to 50%.
+  const managed = resetSmartMatchAmount(s);
   return {
-    ...s,
+    ...managed,
     eq_sub_db: 0,
     eq_low_db: 0,
     eq_low_mid_db: 0,
@@ -73,7 +79,7 @@ export function resetToStandardManaged(s: MasteringSettings): MasteringSettings 
     input_gain_db: 0,
     output_gain_db: 0,
     advanced: {
-      ...s.advanced,
+      ...managed.advanced,
       width: null,
       warmth: null,
       presence_air: null,

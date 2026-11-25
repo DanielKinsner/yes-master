@@ -305,6 +305,13 @@ export function ExportReceiptCard({
           </span>
         )}
         <MasteringStyle settings={settings} />
+        {/* Smart Match (plan Slice 7): the render's own digest, so the line
+            reports the moves the written file used. Absent when the song has
+            no reference; there is no "off" line for a song that never used
+            Smart Match. */}
+        {measurements?.smart_match_digest && (
+          <p className="receipt-smart-match">{measurements.smart_match_digest}</p>
+        )}
           </div>
           <div className="receipt-col">
             <div className="receipt-panel">

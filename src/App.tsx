@@ -581,6 +581,13 @@ function App() {
               canResetAll={hasNonManagedEdits(tm.selectedSettings)}
               liveGr={tm.transport.compressionGr}
               isPlayingMaster={tm.transport.isPlaying && tm.transport.playbackKind === "master"}
+              smartMatch={{
+                view: tm.smartMatch,
+                onChoose: () => void tm.chooseSmartMatchReference(),
+                onToggle: tm.toggleSmartMatch,
+                onRemove: tm.removeSmartMatchReference,
+                onAmount: tm.setSmartMatchAmount,
+              }}
             />
           ) : undefined
         }

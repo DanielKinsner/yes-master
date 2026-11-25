@@ -19,6 +19,9 @@ import type {
   MasteringSettings,
   ProjectState,
   RenderJob,
+  SmartMatchReadout,
+  SmartMatchReference,
+  SmartMatchReferenceMeasurement,
   TrackId,
   WaveformPeaks,
 } from "../bindings";
@@ -70,6 +73,7 @@ const mocks = vi.hoisted(() => {
     planAlbum: vi.fn(),
     renderAlbumPlan: vi.fn(),
     cancelRender: vi.fn(),
+    measureSmartMatchReference: vi.fn(),
   };
   return {
     api,
@@ -5113,5 +5117,353 @@ describe("listening follow-through", () => {
     expect(mocks.api.playTrack).not.toHaveBeenCalled();
     await act(async()=>{pending.resolve();});
     await act(async()=>harness.root.unmount());
+  });
+});
+
+describe("Smart Match (plan Slice 7)", () => {
+  const SHARES = { sub: 0.2, low: 0.28, low_mid: 0.2, mid: 0.16, presence: 0.1, air: 0.06 };
+  const REF_A: SmartMatchReference = { name: "Reference A", spectral_6: SHARES };
+  const REF_B: SmartMatchReference = { name: "Reference B", spectral_6: { ...SHARES, air: 0.08 } };
+
+  function smartMatchReadout(
+    state: SmartMatchReadout["state"],
+    corrections: number[] = [0, 0, 0, 0, 0, 0],
+    partial = false,
+  ): SmartMatchReadout {
+    return {
+      state,
+      amount: 0.5,
+      partial,
+      bands: corrections.map((correction_db) => ({
+        gap_db: correction_db * 2,
+        correction_db,
+        capped: false,
+      })),
+    };
+  }
+
+  // The real readout answers for the settings it is given; this stand-in
+  // does the same for the Smart Match section, so every test sees the
+  // backend state that matches its edits.
+  function answerReadouts(
+    applied: SmartMatchReadout = smartMatchReadout("applied", [0, 0, -1.2, 0, 0, 0.8]),
+  ) {
+    mocks.api.guardrailReadout.mockImplementation(
+      (settings: MasteringSettings, _id: TrackId, album: boolean) => {
+        const sm = settings.advanced.smart_match;
+        const base = makeGuardrailReadout(false);
+        if (album) return Promise.resolve({ ...base, smart_match: smartMatchReadout("album_disabled") });
+        if (!sm?.reference) return Promise.resolve({ ...base, smart_match: smartMatchReadout("no_reference") });
+        if (!sm.enabled) return Promise.resolve({ ...base, smart_match: smartMatchReadout("switched_off") });
+        if (sm.amount <= 0) return Promise.resolve({ ...base, smart_match: smartMatchReadout("zero_amount") });
+        return Promise.resolve({ ...base, smart_match: applied });
+      },
+    );
+  }
+
+  function measured(reference: SmartMatchReference): SmartMatchReferenceMeasurement {
+    return { status: "measured", reference };
+  }
+
+  async function importWithProfile(id: string) {
+    const track = makeTrack(id, `C:/audio/${id}.wav`);
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockImplementation((tracks: Array<{ id: TrackId }>) =>
+      Promise.resolve(
+        (tracks ?? []).map((t) => ({ ...makeAnalysis(t.id), spectral_balance_6band: SHARES })),
+      ),
+    );
+    const harness = await renderHookHarness();
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+      expect(harness.current().selectedAnalysis).not.toBeNull();
+    });
+    return harness;
+  }
+
+  // Edits closer together than the undo coalescing window become one step;
+  // a person's clicks are further apart than that.
+  async function pastCoalesceWindow() {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 320));
+    });
+  }
+
+  async function pickReference(
+    harness: Awaited<ReturnType<typeof importWithProfile>>,
+    reference: SmartMatchReference,
+  ) {
+    mocks.open.mockResolvedValue(`C:/refs/${reference.name}.wav`);
+    mocks.api.measureSmartMatchReference.mockResolvedValueOnce(measured(reference));
+    await act(async () => {
+      await harness.current().chooseSmartMatchReference();
+    });
+    await waitFor(() => expect(harness.current().smartMatch.state).toBe("applied"));
+  }
+
+  it("prompts for a reference, measures the pick and applies it switched on", async () => {
+    answerReadouts();
+    const harness = await importWithProfile("sm-pick");
+    expect(harness.current().smartMatch.state).toBe("no_reference");
+    expect(harness.current().smartMatch.line).toBe(
+      "Pick a song you want this track to sit next to.",
+    );
+
+    const measurement = deferred<SmartMatchReferenceMeasurement>();
+    mocks.open.mockResolvedValue("C:/refs/Reference A.wav");
+    mocks.api.measureSmartMatchReference.mockReturnValue(measurement.promise);
+    let pick: Promise<void> | undefined;
+    await act(async () => {
+      pick = harness.current().chooseSmartMatchReference();
+    });
+    await waitFor(() => {
+      expect(harness.current().smartMatch.state).toBe("measuring");
+    });
+    expect(harness.current().smartMatch.measuring).toBe(true);
+    expect(harness.current().smartMatch.line).toBe("Listening to your reference…");
+    expect(mocks.open).toHaveBeenCalledWith(
+      expect.objectContaining({ multiple: false, title: "Choose a reference song" }),
+    );
+    expect(mocks.api.measureSmartMatchReference).toHaveBeenCalledWith("C:/refs/Reference A.wav");
+
+    await act(async () => {
+      measurement.resolve(measured(REF_A));
+      await pick;
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedSettings.advanced.smart_match).toEqual({
+        reference: REF_A,
+        enabled: true,
+        amount: 0.5,
+      });
+      expect(harness.current().smartMatch.state).toBe("applied");
+    });
+    expect(harness.current().smartMatch.line).toBe(
+      'Matching "Reference A": cleared 1.2 dB of mud, added 0.8 dB of air.',
+    );
+    await act(async () => harness.root.unmount());
+  });
+
+  it("does nothing when the file dialog is cancelled", async () => {
+    answerReadouts();
+    const harness = await importWithProfile("sm-cancel");
+    mocks.open.mockResolvedValue(null);
+    await act(async () => {
+      await harness.current().chooseSmartMatchReference();
+    });
+    expect(mocks.api.measureSmartMatchReference).not.toHaveBeenCalled();
+    expect(harness.current().selectedSettings.advanced.smart_match).toBeUndefined();
+    expect(harness.current().smartMatch.state).toBe("no_reference");
+    await act(async () => harness.root.unmount());
+  });
+
+  it("lets a newer pick supersede an older one still being measured", async () => {
+    answerReadouts();
+    const harness = await importWithProfile("sm-supersede");
+    const first = deferred<SmartMatchReferenceMeasurement>();
+    const second = deferred<SmartMatchReferenceMeasurement>();
+    mocks.open.mockResolvedValueOnce("C:/refs/a.wav").mockResolvedValueOnce("C:/refs/b.wav");
+    mocks.api.measureSmartMatchReference
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    let pickA: Promise<void> | undefined;
+    let pickB: Promise<void> | undefined;
+    await act(async () => {
+      pickA = harness.current().chooseSmartMatchReference();
+    });
+    await waitFor(() => expect(mocks.api.measureSmartMatchReference).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      pickB = harness.current().chooseSmartMatchReference();
+    });
+    await waitFor(() => expect(mocks.api.measureSmartMatchReference).toHaveBeenCalledTimes(2));
+
+    // The newer pick lands first; the older one's late answer is ignored.
+    await act(async () => {
+      second.resolve(measured(REF_B));
+      await pickB;
+    });
+    await act(async () => {
+      first.resolve(measured(REF_A));
+      await pickA;
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedSettings.advanced.smart_match?.reference).toEqual(REF_B);
+      expect(harness.current().smartMatch.measuring).toBe(false);
+    });
+    await act(async () => harness.root.unmount());
+  });
+
+  it("keeps the previous reference when a pick is refused, and says why", async () => {
+    answerReadouts();
+    const harness = await importWithProfile("sm-refuse");
+    await pickReference(harness, REF_A);
+
+    mocks.open.mockResolvedValue("C:/refs/short.wav");
+    mocks.api.measureSmartMatchReference.mockResolvedValueOnce({
+      status: "refused",
+      reason: "too_short",
+    });
+    await act(async () => {
+      await harness.current().chooseSmartMatchReference();
+    });
+    await waitFor(() => {
+      expect(harness.current().smartMatch.line).toBe(
+        "That file can't be used as a reference: it is shorter than 30 seconds.",
+      );
+    });
+    expect(harness.current().selectedSettings.advanced.smart_match?.reference).toEqual(REF_A);
+    expect(harness.current().smartMatch.name).toBe("Reference A");
+
+    // A measurement that fails outright reads as unreadable.
+    mocks.api.measureSmartMatchReference.mockRejectedValueOnce(new Error("decode failed"));
+    await act(async () => {
+      await harness.current().chooseSmartMatchReference();
+    });
+    await waitFor(() => {
+      expect(harness.current().smartMatch.line).toBe(
+        "That file can't be used as a reference: it could not be read.",
+      );
+    });
+
+    // The next action clears the refusal line.
+    await pastCoalesceWindow();
+    await act(async () => harness.current().toggleSmartMatch());
+    await waitFor(() => {
+      expect(harness.current().smartMatch.line).toBe('Match to "Reference A" is off.');
+    });
+    await act(async () => harness.root.unmount());
+  });
+
+  it("switches off and on, and removes the reference, one undo step each", async () => {
+    answerReadouts();
+    const harness = await importWithProfile("sm-toggle");
+    await pickReference(harness, REF_A);
+
+    await pastCoalesceWindow();
+    await act(async () => harness.current().toggleSmartMatch());
+    await waitFor(() => {
+      expect(harness.current().selectedSettings.advanced.smart_match?.enabled).toBe(false);
+      expect(harness.current().smartMatch.state).toBe("switched_off");
+    });
+    expect(harness.current().smartMatch.line).toBe('Match to "Reference A" is off.');
+
+    await pastCoalesceWindow();
+    await act(async () => harness.current().toggleSmartMatch());
+    await waitFor(() => expect(harness.current().smartMatch.state).toBe("applied"));
+
+    await pastCoalesceWindow();
+    await act(async () => harness.current().removeSmartMatchReference());
+    await waitFor(() => {
+      expect(harness.current().selectedSettings.advanced.smart_match).toBeUndefined();
+      expect(harness.current().smartMatch.state).toBe("no_reference");
+    });
+
+    // Undo walks back one action at a time: remove, switch on, switch off, pick.
+    await act(async () => harness.current().undo());
+    await waitFor(() => expect(harness.current().smartMatch.state).toBe("applied"));
+    await act(async () => harness.current().undo());
+    await waitFor(() => expect(harness.current().smartMatch.state).toBe("switched_off"));
+    await act(async () => harness.current().undo());
+    await waitFor(() => expect(harness.current().smartMatch.state).toBe("applied"));
+    await act(async () => harness.current().undo());
+    await waitFor(() => {
+      expect(harness.current().selectedSettings.advanced.smart_match).toBeUndefined();
+      expect(harness.current().smartMatch.state).toBe("no_reference");
+    });
+    await act(async () => harness.root.unmount());
+  });
+
+  it("sets the match amount, and says so when it is at 0", async () => {
+    answerReadouts();
+    const harness = await importWithProfile("sm-amount");
+    await pickReference(harness, REF_A);
+
+    await act(async () => harness.current().setSmartMatchAmount(0));
+    await waitFor(() => {
+      expect(harness.current().selectedSettings.advanced.smart_match?.amount).toBe(0);
+      expect(harness.current().smartMatch.state).toBe("zero_amount");
+    });
+    expect(harness.current().smartMatch.line).toBe(
+      "Match amount is at 0, so Smart Match is idle.",
+    );
+    await act(async () => harness.root.unmount());
+  });
+
+  it("keeps the last numbers on screen, marked pending, while a fresh readout is on its way", async () => {
+    answerReadouts();
+    const harness = await importWithProfile("sm-stale");
+    await pickReference(harness, REF_A);
+    const appliedLine = harness.current().smartMatch.line;
+    expect(harness.current().smartMatch.pending).toBe(false);
+
+    const fresh = deferred<GuardrailReadout>();
+    mocks.api.guardrailReadout.mockReturnValue(fresh.promise);
+    await act(async () => harness.current().setIntensity(0.7));
+    await waitFor(() => expect(harness.current().smartMatch.pending).toBe(true));
+    expect(harness.current().smartMatch.line).toBe(appliedLine);
+    expect(harness.current().smartMatch.bands?.[2].correction_db).toBe(-1.2);
+
+    await act(async () => {
+      fresh.resolve({
+        ...makeGuardrailReadout(false),
+        smart_match: smartMatchReadout("applied", [0, 0, -1.4, 0, 0, 0.8]),
+      });
+    });
+    await waitFor(() => {
+      expect(harness.current().smartMatch.pending).toBe(false);
+      expect(harness.current().smartMatch.line).toBe(
+        'Matching "Reference A": cleared 1.4 dB of mud, added 0.8 dB of air.',
+      );
+    });
+    await act(async () => harness.root.unmount());
+  });
+
+  it("says the track has too little audio when its analysis has no six-band profile", async () => {
+    // Without a six-band profile the backend cannot decide: track_not_ready.
+    mocks.api.guardrailReadout.mockResolvedValue({
+      ...makeGuardrailReadout(false),
+      smart_match: smartMatchReadout("track_not_ready"),
+    });
+    const track = makeTrack("sm-no-profile", "C:/audio/sm-no-profile.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => expect(harness.current().selectedAnalysis).not.toBeNull());
+    mocks.open.mockResolvedValue("C:/refs/a.wav");
+    mocks.api.measureSmartMatchReference.mockResolvedValue(measured(REF_A));
+    await act(async () => {
+      await harness.current().chooseSmartMatchReference();
+    });
+    await waitFor(() => {
+      expect(harness.current().smartMatch.state).toBe("no_profile");
+    });
+    expect(harness.current().smartMatch.line).toBe("Not enough audio to analyze this track.");
+    await act(async () => harness.root.unmount());
+  });
+
+  it("is disabled in Album mode and ignores its actions there", async () => {
+    answerReadouts();
+    const harness = await importWithProfile("sm-album");
+    await act(async () => harness.current().setMode("album"));
+    await waitFor(() => expect(harness.current().smartMatch.state).toBe("album_disabled"));
+    expect(harness.current().smartMatch.line).toBe(
+      "Smart Match applies to Track Master, not Album renders.",
+    );
+
+    const before = harness.current().selectedSettings;
+    await act(async () => {
+      await harness.current().chooseSmartMatchReference();
+    });
+    await act(async () => harness.current().toggleSmartMatch());
+    await act(async () => harness.current().setSmartMatchAmount(0.9));
+    expect(mocks.open).not.toHaveBeenCalled();
+    expect(mocks.api.measureSmartMatchReference).not.toHaveBeenCalled();
+    expect(harness.current().selectedSettings).toEqual(before);
+    await act(async () => harness.root.unmount());
   });
 });

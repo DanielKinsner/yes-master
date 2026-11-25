@@ -38,6 +38,7 @@ import { formatDuration } from "../lib/time-format";
 // pulse and entering Advanced can finish the guide — but the chip no longer
 // renders inline in the rails (it used to push their layout).
 import type { FirstRunGuide } from "../hooks/useFirstRunGuide";
+import { SmartMatchRow } from "./SmartMatchRow";
 
 type TM = ReturnType<typeof useTrackMaster>;
 
@@ -742,7 +743,11 @@ export function StandardView({
             />
           </div>
 
-          <div className="std-step std-step-loudness" ref={seamRefs.loudness}>
+          {/* The right half stacks Loudness over Smart Match. The seam ref
+              sits on the column, so the rail still aligns to the pair's
+              bottom edge. */}
+          <div className="std-pair-side" ref={seamRefs.loudness}>
+          <div className="std-step std-step-loudness">
             <span className="std-step-label">
               3 · Loudness
               <PanelResetButton
@@ -756,6 +761,15 @@ export function StandardView({
               targetLufs={effectiveLoudnessTarget(s)}
               onSelect={tm.setLoudnessTarget}
             />
+          </div>
+          <div className="std-step std-smart-match">
+            <SmartMatchRow
+              view={tm.smartMatch}
+              onChoose={() => void tm.chooseSmartMatchReference()}
+              onToggle={tm.toggleSmartMatch}
+              onRemove={tm.removeSmartMatchReference}
+            />
+          </div>
           </div>
           </div>
         </div>

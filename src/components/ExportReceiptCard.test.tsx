@@ -178,6 +178,39 @@ describe("ExportReceiptCard", () => {
     expect(container.textContent).toContain("Compression · compression eased low 20%");
   });
 
+  it("carries the render's Smart Match line only when the render reported one", () => {
+    const digest = 'Smart Match: "Reference" at 50% · cleared 1.2 dB mud, added 0.8 dB air';
+    const base = receipt([]);
+    const withMatch: ExportReceipt = {
+      ...base,
+      job: { ...base.job, measurements: { ...base.job.measurements!, smart_match_digest: digest } },
+    };
+    const container = render(
+      <ExportReceiptCard
+        receipt={withMatch}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    expect(container.querySelector(".receipt-smart-match")?.textContent).toBe(digest);
+  });
+
+  it("shows no Smart Match line for a render that never used it", () => {
+    const without = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    expect(without.querySelector(".receipt-smart-match")).toBeNull();
+    expect(without.textContent).not.toContain("Smart Match");
+  });
+
   it("says why a render was saved under a new name, and stays silent otherwise", () => {
     // S6.4 (2026-09-01): never-overwrite diverted the write to a __n sibling.
     const diverted: ExportReceipt = {

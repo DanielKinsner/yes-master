@@ -278,3 +278,39 @@ describe("non-Standard preset on the Advanced→Standard return", () => {
     expect(out.eq_low_db).toBe(0);
   });
 });
+
+describe("Smart Match under Standard (plan M13)", () => {
+  const reference = {
+    name: "Reference",
+    spectral_6: { sub: 0.2, low: 0.28, low_mid: 0.2, mid: 0.16, presence: 0.1, air: 0.06 },
+  };
+  const withMatch = (enabled: boolean, amount: number): MasteringSettings => {
+    const s = base();
+    return { ...s, advanced: { ...s.advanced, smart_match: { reference, enabled, amount } } };
+  };
+
+  it("treats the reference and its switch as managed", () => {
+    expect(hasNonManagedEdits(withMatch(true, 0.5))).toBe(false);
+    expect(hasNonManagedEdits(withMatch(false, 0.5))).toBe(false);
+  });
+
+  it("treats a non-default match amount as an Advanced edit", () => {
+    expect(hasNonManagedEdits(withMatch(true, 0.8))).toBe(true);
+    expect(hasNonManagedEdits(withMatch(true, 0))).toBe(true);
+  });
+
+  it("the Standard reset keeps the reference and switch and puts the amount back to 50%", () => {
+    const reset = resetToStandardManaged(withMatch(false, 0.8));
+    expect(reset.advanced.smart_match).toEqual({ reference, enabled: false, amount: 0.5 });
+    expect(hasNonManagedEdits(reset)).toBe(false);
+    expect(resetForStandardReturn(withMatch(true, 0.2)).advanced.smart_match).toEqual({
+      reference,
+      enabled: true,
+      amount: 0.5,
+    });
+  });
+
+  it("a song with no reference gets no Smart Match state from the reset", () => {
+    expect(resetToStandardManaged(base()).advanced).not.toHaveProperty("smart_match");
+  });
+});

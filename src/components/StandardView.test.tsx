@@ -143,6 +143,12 @@ function fakeTm(overrides: Partial<TM> = {}): TM {
     setRegion: noop, clearRegion: noop, openImportDialog: noop, selectTrack: noop,
     reanalyzeTrack: noop, reanalyzeAll: noop,
     exportStandardMaster: noop, clearExportReceipt: noop,
+    smartMatch: {
+      state: "no_reference", name: null, enabled: true, amount: 0.5,
+      line: "Pick a song you want this track to sit next to.",
+      partial: false, measuring: false, pending: false, bands: null,
+    },
+    chooseSmartMatchReference: noop, toggleSmartMatch: noop, removeSmartMatchReference: noop,
     ...overrides,
   } as unknown as TM;
 }
@@ -721,6 +727,57 @@ describe("Standard export receipt", () => {
     expect(container.querySelector(".std-export-done")).toBeNull();
     expect(container.textContent).not.toContain("Other Song.wav");
     expect(container.textContent).not.toContain("Other render failed");
+    await act(async () => root.unmount());
+  });
+});
+
+describe("Smart Match row in Standard (plan Slice 7)", () => {
+  it("sits under Loudness in the right column and routes its controls", async () => {
+    const chooseSmartMatchReference = vi.fn();
+    const { container, root } = await render(
+      <StandardView tm={fakeTm({ chooseSmartMatchReference })} onEnterAdvanced={() => {}} />,
+    );
+    const side = container.querySelector(".std-pair-side");
+    expect(side?.querySelector(".std-step-loudness")).not.toBeNull();
+    const row = side?.querySelector(".std-smart-match .smart-match-row");
+    expect(row).not.toBeNull();
+    // Loudness first, then Smart Match.
+    expect(side?.lastElementChild?.classList.contains("std-smart-match")).toBe(true);
+    expect(row?.querySelector('[role="status"]')?.textContent).toBe(
+      "Pick a song you want this track to sit next to.",
+    );
+    await act(async () => {
+      row?.querySelector<HTMLButtonElement>(".smart-match-choose")?.click();
+    });
+    expect(chooseSmartMatchReference).toHaveBeenCalledTimes(1);
+    // Standard shows no strip and no amount slider: those are Advanced.
+    expect(container.querySelector(".smart-match-strip")).toBeNull();
+    expect(container.querySelector('input[aria-label="Match amount"]')).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("routes the switch and remove with a reference chosen", async () => {
+    const toggleSmartMatch = vi.fn();
+    const removeSmartMatchReference = vi.fn();
+    const smartMatch = {
+      state: "applied", name: "Reference", enabled: true, amount: 0.5,
+      line: 'Matching "Reference": cleared 1.2 dB of mud.',
+      partial: false, measuring: false, pending: false, bands: null,
+    };
+    const { container, root } = await render(
+      <StandardView
+        tm={fakeTm({ smartMatch, toggleSmartMatch, removeSmartMatchReference } as Partial<TM>)}
+        onEnterAdvanced={() => {}}
+      />,
+    );
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('.std-smart-match [role="switch"]')?.click();
+    });
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('.std-smart-match [aria-label="Remove reference"]')?.click();
+    });
+    expect(toggleSmartMatch).toHaveBeenCalledTimes(1);
+    expect(removeSmartMatchReference).toHaveBeenCalledTimes(1);
     await act(async () => root.unmount());
   });
 });

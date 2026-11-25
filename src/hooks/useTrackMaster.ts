@@ -46,7 +46,15 @@ import {
   isValueControlTarget,
 } from "../lib/shortcuts";
 import { buildExportReport } from "../lib/export-receipt";
-import { presetSettingsKeepingSmartMatch } from "../lib/smart-match";
+import {
+  presetSettingsKeepingSmartMatch,
+  smartMatchView,
+  withSmartMatchAmount,
+  withSmartMatchEnabled,
+  withSmartMatchReference,
+  withoutSmartMatchReference,
+  type SmartMatchView,
+} from "../lib/smart-match";
 import { userErrorMessage, type UserErrorContext } from "../lib/user-errors";
 import {
   AUDIO_DIALOG_FILTER,
@@ -54,6 +62,9 @@ import {
   supportedAudioExtensionFromName,
 } from "../lib/supported-formats";
 import type {
+  SmartMatchReadout,
+  SmartMatchReferenceMeasurement,
+  SmartMatchRefusal,
   AdvancedSettings,
   AlbumArcKind,
   AnalysisResult,
@@ -1122,6 +1133,18 @@ export function useTrackMaster() {
     updating: lastAutoWidth.surface !== widthSurface || lastAutoWidth.settings !== selectedSettings || guardrailReadout === null,
   } : null;
   const compressionPlanSurface = useRef<string | null>(null);
+  // Smart Match (plan Slice 7). The last readout section per track keeps the
+  // row's numbers on screen while a fresh readout is on its way; it is
+  // presentation only and marked pending. A pick in flight and a refusal are
+  // per track and transient.
+  const [lastSmartMatchReadout, setLastSmartMatchReadout] = useState<{
+    trackId: TrackId; value: SmartMatchReadout | null;
+  } | null>(null);
+  const [smartMatchMeasuring, setSmartMatchMeasuring] = useState<TrackId | null>(null);
+  const [smartMatchRefusal, setSmartMatchRefusal] = useState<{
+    trackId: TrackId; reason: SmartMatchRefusal;
+  } | null>(null);
+  const smartMatchPickReq = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -1183,6 +1206,7 @@ export function useTrackMaster() {
           setResolvedReadout(r ? {
             value: r, settings: selectedSettings, analysis: selectedAnalysis, surface: widthSurface,
           } : null);
+          setLastSmartMatchReadout({ trackId: selectedTrackId, value: r?.smart_match ?? null });
           setLastAutoWidth(r && typeof r.effective_auto_width === "number" && Number.isFinite(r.effective_auto_width)
             ? { trackId: selectedTrackId, surface: widthSurface, settings: selectedSettings, value: r.effective_auto_width }
             : null);
@@ -1450,6 +1474,77 @@ export function useTrackMaster() {
       sendUpdateChain,
       effectivePreviewLanding,
     ],
+  );
+
+  // The latest updateSettings, for edits applied after an await (a reference
+  // measured while the user kept editing must not overwrite those edits).
+  const updateSettingsRef = useRef(updateSettings);
+  useEffect(() => {
+    updateSettingsRef.current = updateSettings;
+  }, [updateSettings]);
+
+  // Smart Match (plan Slice 7, contract rule 12). Choosing, switching,
+  // removing and the amount are each one settings edit, so one undo step. A
+  // newer pick supersedes an older one still being measured; a refused or
+  // failed pick leaves the previous reference in place.
+  const chooseSmartMatchReference = useCallback(async () => {
+    const trackId = selectedTrackId;
+    if (!trackId || mode === "album") return;
+    let path: string | null;
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [AUDIO_DIALOG_FILTER],
+        title: "Choose a reference song",
+      });
+      path = Array.isArray(selected) ? selected[0] ?? null : selected;
+    } catch (err) {
+      setError(messageOf(err));
+      return;
+    }
+    if (!path) return;
+    const req = ++smartMatchPickReq.current;
+    setSmartMatchRefusal(null);
+    setSmartMatchMeasuring(trackId);
+    let result: SmartMatchReferenceMeasurement;
+    try {
+      result = await api.measureSmartMatchReference(path);
+    } catch {
+      result = { status: "refused", reason: "unreadable" };
+    }
+    if (smartMatchPickReq.current !== req) return;
+    setSmartMatchMeasuring(null);
+    if (result.status === "measured") {
+      const reference = result.reference;
+      updateSettingsRef.current(trackId, (prev) => withSmartMatchReference(prev, reference));
+    } else {
+      setSmartMatchRefusal({ trackId, reason: result.reason });
+    }
+  }, [selectedTrackId, mode]);
+
+  const toggleSmartMatch = useCallback(() => {
+    if (!selectedTrackId || mode === "album") return;
+    setSmartMatchRefusal(null);
+    updateSettings(selectedTrackId, (prev) =>
+      withSmartMatchEnabled(prev, !(prev.advanced.smart_match?.enabled ?? true)),
+    );
+  }, [selectedTrackId, mode, updateSettings]);
+
+  const removeSmartMatchReference = useCallback(() => {
+    if (!selectedTrackId || mode === "album") return;
+    // A pick still being measured is superseded by the removal.
+    smartMatchPickReq.current += 1;
+    setSmartMatchMeasuring(null);
+    setSmartMatchRefusal(null);
+    updateSettings(selectedTrackId, (prev) => withoutSmartMatchReference(prev));
+  }, [selectedTrackId, mode, updateSettings]);
+
+  const setSmartMatchAmount = useCallback(
+    (amount: number) => {
+      if (!selectedTrackId || mode === "album") return;
+      updateSettings(selectedTrackId, (prev) => withSmartMatchAmount(prev, amount));
+    },
+    [selectedTrackId, mode, updateSettings],
   );
 
   const toggleOverrideAlbum = useCallback(
@@ -3157,6 +3252,27 @@ export function useTrackMaster() {
     });
   }, []);
 
+  // Smart Match row and strip: settings decide the switch, the amount and the
+  // reference; every number comes from the backend readout (plan M17).
+  const freshSmartMatch = guardrailReadout ? guardrailReadout.smart_match ?? null : undefined;
+  const lastSmartMatch =
+    lastSmartMatchReadout && lastSmartMatchReadout.trackId === selectedTrackId
+      ? lastSmartMatchReadout.value
+      : null;
+  const smartMatch: SmartMatchView = smartMatchView({
+    settings: selectedSettings,
+    readout: freshSmartMatch !== undefined ? freshSmartMatch : lastSmartMatch,
+    pending: freshSmartMatch === undefined && lastSmartMatch !== null,
+    album: mode === "album",
+    measuring: smartMatchMeasuring !== null && smartMatchMeasuring === selectedTrackId,
+    refusal:
+      smartMatchRefusal && smartMatchRefusal.trackId === selectedTrackId
+        ? smartMatchRefusal.reason
+        : null,
+    analysisReady: selectedAnalysis != null,
+    analysisHasProfile: selectedAnalysis?.spectral_balance_6band != null,
+  });
+
   return {
     tracks,
     selectedTrackId,
@@ -3236,6 +3352,11 @@ export function useTrackMaster() {
     guardrailReadout,
     autoWidthReadout,
     compressionPlan,
+    smartMatch,
+    chooseSmartMatchReference,
+    toggleSmartMatch,
+    removeSmartMatchReference,
+    setSmartMatchAmount,
     exportMaster,
     exportStandardMaster,
     cancelActiveRender,

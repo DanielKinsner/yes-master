@@ -174,6 +174,16 @@ function baseTrackMasterState(): Record<string, unknown> {
     clearError: vi.fn(),
     lastExportReceipt: null,
     clearExportReceipt: vi.fn(),
+    // Smart Match (plan Slice 7): the real hook always supplies a view.
+    smartMatch: {
+      state: "no_reference", name: null, enabled: true, amount: 0.5,
+      line: "Pick a song you want this track to sit next to.",
+      partial: false, measuring: false, pending: false, bands: null,
+    },
+    chooseSmartMatchReference: vi.fn(),
+    toggleSmartMatch: vi.fn(),
+    removeSmartMatchReference: vi.fn(),
+    setSmartMatchAmount: vi.fn(),
     reorderTracks: vi.fn(),
     overrideAlbum: new Set(),
     albumArcKind: "cinematic",

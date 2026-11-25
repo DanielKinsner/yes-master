@@ -74,7 +74,11 @@ export type PreviewScenarioName =
   | "album-4"
   | "album-12"
   | "album-long"
-  | "album-warning";
+  | "album-warning"
+  | "smart-match-none"
+  | "smart-match-active"
+  | "smart-match-partial"
+  | "smart-match-off";
 
 interface PreviewScenario {
   /// Human-readable purpose, surfaced to the headless lane for failure output.
@@ -103,6 +107,10 @@ interface PreviewScenario {
   readonly albumSourceFormats: Readonly<
     Record<number, { sampleRate: number; channels: number }>
   >;
+  /// Smart Match (plan Slice 7): the seeded track's reference state. "none"
+  /// seeds no reference; the others seed a reference that is on with a
+  /// typical gap, on with a far gap that hits the caps, or switched off.
+  readonly smartMatch: "none" | "active" | "partial" | "off";
 }
 
 const BASE_SCENARIO: PreviewScenario = {
@@ -115,6 +123,7 @@ const BASE_SCENARIO: PreviewScenario = {
   albumDirectory: "cancel",
   overridePositions: [],
   albumSourceFormats: {},
+  smartMatch: "none",
 };
 
 export const PREVIEW_SCENARIOS: Record<PreviewScenarioName, PreviewScenario> = {
@@ -194,6 +203,25 @@ export const PREVIEW_SCENARIOS: Record<PreviewScenarioName, PreviewScenario> = {
       3: { sampleRate: 48_000, channels: 4 },
       4: { sampleRate: 48_000, channels: 2 },
     },
+  },
+  "smart-match-none": {
+    ...BASE_SCENARIO,
+    purpose: "Smart Match with no reference: the Choose reference button and the prompt line.",
+  },
+  "smart-match-active": {
+    ...BASE_SCENARIO,
+    purpose: "Smart Match on with a reference: the applied sentence and the Advanced strip.",
+    smartMatch: "active",
+  },
+  "smart-match-partial": {
+    ...BASE_SCENARIO,
+    purpose: "Smart Match with a very different reference: capped moves and the partial notice.",
+    smartMatch: "partial",
+  },
+  "smart-match-off": {
+    ...BASE_SCENARIO,
+    purpose: "Smart Match switched off with the reference kept.",
+    smartMatch: "off",
   },
 };
 
@@ -379,7 +407,7 @@ function previewProject(): ProjectState {
     mode: "track",
     tracks: [track],
     track_order: [PREVIEW_TRACK_ID],
-    track_settings: { [PREVIEW_TRACK_ID]: DEFAULT_SETTINGS },
+    track_settings: { [PREVIEW_TRACK_ID]: previewSmartMatchSettings(scenario.smartMatch) },
     album_intent: null,
     track_override_album: [],
     selected_track_id: PREVIEW_TRACK_ID,
@@ -772,8 +800,23 @@ export async function mockInvoke<T>(
     // Read-only adaptive readouts. Fixed, plausible values -- the preview does
     // not run the DSP, and inventing a *varying* readout would imply it does.
     // -----------------------------------------------------------------------
-    case "guardrail_readout":
-      return PREVIEW_GUARDRAIL_READOUT as unknown as T;
+    case "guardrail_readout": {
+      const smartMatch = previewSmartMatchReadout(
+        args?.settings as MasteringSettings | undefined,
+        args?.album === true,
+      );
+      return (smartMatch
+        ? { ...PREVIEW_GUARDRAIL_READOUT, smart_match: smartMatch }
+        : PREVIEW_GUARDRAIL_READOUT) as unknown as T;
+    }
+
+    case "measure_smart_match_reference": {
+      // The preview cannot decode a picked file. It answers like a real pick:
+      // the file's name without its extension, and fixed shares.
+      const path = typeof args?.path === "string" ? args.path : "";
+      const name = path.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, "") || "Reference";
+      return { status: "measured", reference: { name, spectral_6: PREVIEW_REFERENCE_SHARES } } as unknown as T;
+    }
 
     case "resolve_compression_plan":
       return PREVIEW_COMPRESSION_PLAN as unknown as T;
@@ -816,6 +859,66 @@ const NATIVE_ONLY_COMMANDS = new Set<string>([
 // Owner-gated systems: OFF by default, exactly as they ship.
 let mockAdaptiveCompression = false;
 let mockConfidenceGating = false;
+
+// ---------------------------------------------------------------------------
+// Smart Match stand-in (browser preview only). The real numbers come from the
+// Rust decision; the preview cannot run it, so it answers with fixed,
+// plausible gaps and the same visible rules (50% default, 4 dB cut and 3 dB
+// boost caps, 0.3 dB dead zone), enough to show every row state.
+// ---------------------------------------------------------------------------
+
+const PREVIEW_REFERENCE_SHARES = { sub: 0.2, low: 0.28, low_mid: 0.2, mid: 0.16, presence: 0.1, air: 0.06 };
+const PREVIEW_GAPS_TYPICAL = [-0.6, -2.4, -2.6, 0.4, 0.9, 1.6];
+const PREVIEW_GAPS_FAR = [3.2, -9.5, -6.0, 0.4, 7.8, 9.0];
+const FAR_REFERENCE_NAME = "Far Reference (browser preview)";
+
+function previewSmartMatchSettings(state: PreviewScenario["smartMatch"]): MasteringSettings {
+  if (state === "none") return DEFAULT_SETTINGS;
+  return {
+    ...DEFAULT_SETTINGS,
+    advanced: {
+      ...DEFAULT_SETTINGS.advanced,
+      smart_match: {
+        reference: {
+          name: state === "partial" ? FAR_REFERENCE_NAME : "Warm Reference (browser preview)",
+          spectral_6: PREVIEW_REFERENCE_SHARES,
+        },
+        enabled: state !== "off",
+        amount: 0.5,
+      },
+    },
+  };
+}
+
+function previewSmartMatchReadout(
+  settings: MasteringSettings | undefined,
+  album: boolean,
+): GuardrailReadout["smart_match"] {
+  const sm = settings?.advanced?.smart_match;
+  if (!sm) return undefined;
+  const gaps = sm.reference?.name === FAR_REFERENCE_NAME ? PREVIEW_GAPS_FAR : PREVIEW_GAPS_TYPICAL;
+  const amount = Math.min(1, Math.max(0, sm.amount));
+  const active = !album && !!sm.reference && sm.enabled && amount > 0;
+  const bands = gaps.map((gap) => {
+    const intended = active ? amount * gap : 0;
+    const limited = Math.min(3, Math.max(-4, intended));
+    const correction = Math.abs(limited) < 0.3 ? 0 : limited;
+    return { gap_db: sm.reference ? gap : null, correction_db: correction, capped: limited !== intended };
+  });
+  const changes = bands.some((b) => b.correction_db !== 0);
+  const state = album
+    ? "album_disabled"
+    : !sm.reference
+      ? "no_reference"
+      : !sm.enabled
+        ? "switched_off"
+        : amount <= 0
+          ? "zero_amount"
+          : changes
+            ? "applied"
+            : "nothing_to_change";
+  return { state, amount, partial: bands.some((b) => b.capped), bands };
+}
 
 const PREVIEW_GUARDRAIL_READOUT: GuardrailReadout = {
   signal_chain: { eq_active: true, warmth_active: false, air_active: false, compression_active: true, width: 1.11, saturation: 0.055 },
@@ -977,6 +1080,13 @@ export async function mockOpen(
   if (opts?.directory && activeScenario().albumDirectory === "path") {
     const chosen = "/preview/exports";
     console.info(`[preview-mock] open() returned ${chosen} (scenario album directory)`);
+    return chosen;
+  }
+  // Smart Match: the no-reference scenario lets a reference pick resolve, so
+  // the browser lane can drive Choose reference… through to a match.
+  if (opts?.title === "Choose a reference song" && activeScenarioName() === "smart-match-none") {
+    const chosen = "/preview/references/Warm Reference (browser preview).wav";
+    console.info(`[preview-mock] open() returned ${chosen} (scenario reference pick)`);
     return chosen;
   }
   // Browser-preview can't access the OS filesystem. Returning null mimics

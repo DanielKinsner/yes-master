@@ -77,6 +77,37 @@ const EXPORT_MASTER = {
   label: "Export action",
   selector: "button.right-rail-export",
 };
+const CREATE_MASTER = {
+  label: "Create Master button",
+  selector: "button.std-create-master",
+};
+
+// Smart Match (plan Slice 7). The preview mock answers with fixed gaps and the
+// same visible rules as the backend (50% amount, 4 dB cut / 3 dB boost caps,
+// 0.3 dB dead zone), so these sentences are the locked copy applied to them.
+const SMART_MATCH_REFERENCE = "Warm Reference (browser preview)";
+const SMART_MATCH_APPLIED =
+  `Matching "${SMART_MATCH_REFERENCE}": cleared 1.3 dB of mud, tamed 1.2 dB of boom, added 0.8 dB of air.`;
+const SMART_MATCH_OFF = `Match to "${SMART_MATCH_REFERENCE}" is off.`;
+const SMART_MATCH_PARTIAL =
+  'Matching "Far Reference (browser preview)": tamed 4.0 dB of boom, cleared 3.0 dB of mud, ' +
+  "added 3.0 dB of presence. Your reference is very different from this track, so the match is partial.";
+const SMART_MATCH_CAPTIONS = [
+  "Tone only. Loudness and width are not matched.",
+  "Moves are applied before the compressor and limiter, so the final change can be smaller on loud material.",
+];
+const SMART_MATCH_SWITCH = {
+  label: "Smart Match switch",
+  selector: 'button.smart-match-switch[role="switch"]',
+};
+const SMART_MATCH_CARD = {
+  label: "Smart Match card (Advanced)",
+  selector: "#jump-smart-match",
+};
+const SMART_MATCH_AMOUNT = {
+  label: "Match amount slider",
+  selector: 'input[type="range"][aria-label="Match amount"]',
+};
 
 // The preview's staged analysis runs 5 x 800ms. Settling is detected by
 // polling for a terminal state rather than sleeping a fixed amount, but this
@@ -199,11 +230,96 @@ const SCENARIOS = [
       "File format",
     ],
     mustHaveControls: ["Advanced", "Create Master", "Original", "Mastered"],
-    mustReach: [
-      { label: "Create Master button", selector: "button.std-create-master" },
-    ],
+    mustReach: [CREATE_MASTER],
     // Audit A-02 via Task 8: loaded Standard joins the axe matrix.
     axe: true,
+  },
+  // Smart Match (plan Slice 7). In Standard the row sits under Loudness and
+  // must fit at both supported sizes without moving or covering any existing
+  // control (the geometry probe checks every Standard control and the row).
+  {
+    name: "smart-match-none",
+    label: "smart-match-standard-pick",
+    scenarioId: "S-F1",
+    purpose:
+      "Smart Match in Standard: Choose reference measures the pick and shows the applied " +
+      "sentence; the switch turns it off and back on; Remove returns to the prompt.",
+    viewports: [LAPTOP, MIN_DESKTOP],
+    settle: "ready",
+    drive: async (page) => {
+      await driveToLoadedStandard(page);
+      await page.locator("button.smart-match-choose").click();
+      await waitForText(
+        page,
+        (text) => text.includes(SMART_MATCH_APPLIED),
+        "the applied Smart Match sentence after a pick",
+        documentText,
+      );
+    },
+    beforeScreenshot: standardControlsGeometryProbe,
+    mustContainAfterDrive: [SMART_MATCH_APPLIED],
+    mustReach: [SMART_MATCH_SWITCH, CREATE_MASTER],
+    assert: smartMatchStandardInteractions,
+  },
+  {
+    name: "smart-match-active",
+    label: "smart-match-standard-active",
+    scenarioId: "S-F1",
+    purpose: "Smart Match on in Standard: the reference, the switch and the applied sentence.",
+    viewports: [LAPTOP, MIN_DESKTOP],
+    settle: "ready",
+    drive: driveToLoadedStandard,
+    beforeScreenshot: standardControlsGeometryProbe,
+    mustContainAfterDrive: [SMART_MATCH_APPLIED],
+    mustHaveControls: ["Smart Match", "Change…", "Remove reference", "Create Master"],
+    mustReach: [SMART_MATCH_SWITCH, CREATE_MASTER],
+    axe: true,
+  },
+  {
+    name: "smart-match-off",
+    label: "smart-match-standard-off",
+    scenarioId: "S-F1",
+    purpose: "Smart Match switched off in Standard: the reference is kept and the line says it is off.",
+    viewports: [LAPTOP, MIN_DESKTOP],
+    settle: "ready",
+    drive: driveToLoadedStandard,
+    beforeScreenshot: standardControlsGeometryProbe,
+    mustContainAfterDrive: [SMART_MATCH_OFF],
+    mustReach: [SMART_MATCH_SWITCH, CREATE_MASTER],
+    assert: async (page, report) => {
+      const checked = await page
+        .locator(SMART_MATCH_SWITCH.selector)
+        .first()
+        .getAttribute("aria-checked");
+      if (checked !== "false") report(`Smart Match switch is aria-checked=${checked}, expected false`);
+    },
+  },
+  {
+    name: "smart-match-active",
+    label: "smart-match-advanced",
+    scenarioId: "S-F1",
+    purpose:
+      "Smart Match in Advanced: the row, the six-band strip, the Match amount slider and " +
+      "both locked captions, reachable without hiding Delivery Format or Export.",
+    viewports: [LAPTOP, MIN_DESKTOP],
+    settle: "ready",
+    mustContainAfterDrive: [SMART_MATCH_APPLIED, ...SMART_MATCH_CAPTIONS],
+    mustReach: [SMART_MATCH_CARD, SMART_MATCH_AMOUNT, DELIVERY_FORMAT, EXPORT_MASTER],
+    axe: true,
+    assert: smartMatchStripCheck(0),
+  },
+  {
+    name: "smart-match-partial",
+    label: "smart-match-advanced-partial",
+    scenarioId: "S-F1",
+    purpose:
+      "Smart Match with a very different reference: capped bands are marked and the line " +
+      "carries the partial notice.",
+    viewports: [LAPTOP, MIN_DESKTOP],
+    settle: "ready",
+    mustContainAfterDrive: [SMART_MATCH_PARTIAL],
+    mustReach: [SMART_MATCH_CARD, SMART_MATCH_AMOUNT],
+    assert: smartMatchStripCheck(3),
   },
   {
     name: "warning",
@@ -660,7 +776,9 @@ async function exportClean(page, expectReceipt = true, filename = "preview-maste
 }
 
 async function standardControlsGeometryProbe(page, report) {
-  const controls = await page.locator('.std-zone-chip, .std-tile, .std-seg-option, .std-create-master').evaluateAll(nodes => nodes.map(node => {
+  // Smart Match (plan Slice 7): its buttons and name chip join the controls
+  // that must be visible and clickable before any scrolling.
+  const controls = await page.locator('.std-zone-chip, .std-tile, .std-seg-option, .std-create-master, .std-smart-match button, .std-smart-match .smart-match-name').evaluateAll(nodes => nodes.map(node => {
     const r = node.getBoundingClientRect();
     const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
     return { label: node.textContent?.trim(), top: r.top, bottom: r.bottom,
@@ -684,7 +802,84 @@ async function standardControlsGeometryProbe(page, report) {
   for (const readout of preview.readouts) {
     if (readout.bottom > preview.bottom + 1) report(`Standard Preview ${readout.label} overflows its card (${readout.bottom} > ${preview.bottom})`);
   }
-  return { controls, preview };
+  // The Smart Match card sits below Loudness, never over it, and its result
+  // line is fully inside the card and the window (the card clips overflow,
+  // so a line pushed past it would be silently cut).
+  const smartMatch = await page.evaluate(() => {
+    const card = document.querySelector('.std-smart-match');
+    const loudness = document.querySelector('.std-pair-side > .std-step-loudness');
+    const line = document.querySelector('.std-smart-match .smart-match-line');
+    if (!card || !loudness || !line) return { found: false };
+    const c = card.getBoundingClientRect();
+    const l = loudness.getBoundingClientRect();
+    const t = line.getBoundingClientRect();
+    return {
+      found: true,
+      cardTop: c.top, cardBottom: c.bottom, loudnessBottom: l.bottom,
+      lineTop: t.top, lineBottom: t.bottom, lineHeight: t.height,
+      viewportHeight: innerHeight,
+    };
+  });
+  if (!smartMatch.found) {
+    report('Standard Smart Match row, its line or the Loudness card is missing');
+  } else {
+    if (smartMatch.cardTop < smartMatch.loudnessBottom - 1) report(`Smart Match card overlaps Loudness (${smartMatch.cardTop} < ${smartMatch.loudnessBottom})`);
+    if (smartMatch.lineHeight <= 0) report('Smart Match line renders to nothing');
+    if (smartMatch.lineBottom > smartMatch.cardBottom + 1) report(`Smart Match line is cut by its card (${smartMatch.lineBottom} > ${smartMatch.cardBottom})`);
+    if (smartMatch.lineBottom > smartMatch.viewportHeight) report(`Smart Match line is below the window (${smartMatch.lineBottom} > ${smartMatch.viewportHeight})`);
+  }
+  return { controls, preview, smartMatch };
+}
+
+/**
+ * Smart Match in Standard after a pick: the switch turns it off and back on,
+ * and Remove returns the row to Choose reference. Runs after the screenshot.
+ */
+async function smartMatchStandardInteractions(page, report) {
+  const line = () => page.locator('.std-smart-match .smart-match-line').first().textContent();
+  const toggle = page.locator(`.std-smart-match ${SMART_MATCH_SWITCH.selector}`).first();
+  await toggle.click();
+  await page.waitForTimeout(150);
+  if ((await toggle.getAttribute('aria-checked')) !== 'false') report('Smart Match switch did not turn off');
+  const off = await line();
+  if (off !== SMART_MATCH_OFF) report(`after switching off the line reads "${off}", expected "${SMART_MATCH_OFF}"`);
+  await toggle.click();
+  await page.waitForTimeout(150);
+  const on = await line();
+  if (on !== SMART_MATCH_APPLIED) report(`after switching back on the line reads "${on}", expected the applied sentence`);
+  await page.locator('.std-smart-match button[aria-label="Remove reference"]').first().click();
+  await page.waitForTimeout(150);
+  if ((await page.locator('.std-smart-match button.smart-match-choose').count()) !== 1) report('Remove reference did not bring back Choose reference');
+  const prompt = await line();
+  if (prompt !== 'Pick a song you want this track to sit next to.') report(`after Remove the line reads "${prompt}"`);
+}
+
+/**
+ * Smart Match in Advanced: six bands with a gap and a closed value each, and
+ * the expected number of bands marked as limited by a cap.
+ */
+function smartMatchStripCheck(expectedCapped) {
+  return async (page, report) => {
+    const strip = await page.evaluate(() => {
+      const table = document.querySelector('table.smart-match-strip');
+      if (!table) return { found: false };
+      const rows = [...table.querySelectorAll('tbody tr')];
+      return {
+        found: true,
+        heads: [...table.querySelectorAll('thead th')].length,
+        cells: rows.map((row) => [...row.querySelectorAll('td')].map((td) => td.textContent)),
+        capped: table.querySelectorAll('td.is-capped').length,
+      };
+    });
+    if (!strip.found) {
+      report('Smart Match strip not found in Advanced');
+      return;
+    }
+    if (strip.heads !== 7) report(`Smart Match strip has ${strip.heads} header cells, expected 7`);
+    if (strip.cells.length !== 2 || strip.cells.some((row) => row.length !== 6)) report(`Smart Match strip shape is ${JSON.stringify(strip.cells)}`);
+    if (strip.cells.flat().some((cell) => cell === '—')) report('Smart Match strip shows a dash where numbers should be');
+    if (strip.capped !== expectedCapped) report(`Smart Match strip marks ${strip.capped} capped bands, expected ${expectedCapped}`);
+  };
 }
 
 /**

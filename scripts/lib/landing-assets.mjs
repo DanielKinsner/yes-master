@@ -67,6 +67,7 @@ export const CAPTURE_INPUTS = [
   "src/components/RightRail.tsx",
   "src/components/SettingsGroup.tsx",
   "src/components/SignalChain.tsx",
+  "src/components/SmartMatchRow.tsx",
   "src/components/StandardView.tsx",
   "src/components/Toast.tsx",
   "src/components/TransportGlyph.tsx",

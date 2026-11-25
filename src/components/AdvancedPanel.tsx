@@ -28,6 +28,8 @@ import {
 import { compressorAutoReadouts } from "../lib/compressor-auto";
 import { adaptiveReadoutEnabled } from "../lib/debug-flags";
 import { grLabel, grToFill } from "../lib/gain-reduction";
+import { SmartMatchCard, type SmartMatchActions } from "./SmartMatchRow";
+import type { SmartMatchView } from "../lib/smart-match";
 
 /// UI_LAYOUT_REVISION_1600x940 L3 — AdvancedPanel renders four
 /// separate rail cards (Delivery Profile, Advanced Controls,
@@ -55,6 +57,7 @@ export function AdvancedPanel({
   canResetAll = false,
   liveGr = null,
   isPlayingMaster = false,
+  smartMatch,
 }: {
   analysis?: AnalysisResult;
   settings: MasteringSettings;
@@ -92,6 +95,12 @@ export function AdvancedPanel({
   /// the MASTER is auditioning — Original has no compressor to meter.
   liveGr?: { low: number; mid: number; high: number } | null;
   isPlayingMaster?: boolean;
+  /// Smart Match (plan Slice 7): the row, the six-band strip and the Match
+  /// amount slider. Absent in isolated renders.
+  smartMatch?: SmartMatchActions & {
+    view: SmartMatchView;
+    onAmount: (amount: number) => void;
+  };
 }) {
   const a = settings.advanced;
   const update = (
@@ -163,6 +172,15 @@ export function AdvancedPanel({
         settings={settings}
         onDeliveryProfile={onDeliveryProfile}
       />
+      {smartMatch && (
+        <SmartMatchCard
+          view={smartMatch.view}
+          onChoose={smartMatch.onChoose}
+          onToggle={smartMatch.onToggle}
+          onRemove={smartMatch.onRemove}
+          onAmount={smartMatch.onAmount}
+        />
+      )}
       <AdvancedControlsCard
         settings={settings}
         update={update}
