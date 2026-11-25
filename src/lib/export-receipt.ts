@@ -43,6 +43,7 @@ export function buildExportReport(args: {
     source_profile_digest: m?.source_profile_digest ?? null,
     confidence_digest: m?.confidence_digest ?? null,
     compression_digest: m?.compression_digest ?? null,
+    smart_match_digest: m?.smart_match_digest ?? null,
     // Gates the backend's target_not_reached check: only a rendered-output
     // measurement may be compared against the delivery target. MUST stay
     // exactly `m != null`.

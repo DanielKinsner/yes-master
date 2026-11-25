@@ -27,6 +27,9 @@ data class WireMeasurements(
     @SerializedName("source_profile_digest") val sourceProfileDigest: String? = null,
     @SerializedName("confidence_digest") val confidenceDigest: String? = null,
     @SerializedName("compression_digest") val compressionDigest: String? = null,
+    // Smart Match receipt line. Phones never store a reference, so the Rust
+    // side never writes it there; mirrored so the wire models stay complete.
+    @SerializedName("smart_match_digest") val smartMatchDigest: String? = null,
 )
 
 data class WireRenderJob(

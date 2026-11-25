@@ -57,8 +57,11 @@ pub const CUT_CAP_DB: f32 = 4.0;
 pub const BOOST_CAP_DB: f32 = 3.0;
 /// The match amount a new reference starts at (plan M8). Not tunable.
 pub const DEFAULT_AMOUNT: f32 = 0.5;
-/// Corrections smaller than this become exactly zero, in dB.
-pub const DEAD_ZONE_DB: f32 = 0.25;
+/// Corrections smaller than this become exactly zero, in dB. Moved from the
+/// plan's 0.25 to 0.3 (inside its 0.1–0.5 bounds) so it equals the smallest
+/// move the locked result line names ([`NAMED_MOVE_MIN_DB`]): every move the
+/// chain makes is then one the text reports (contract rule 11).
+pub const DEAD_ZONE_DB: f32 = 0.3;
 /// A boost starts to fade when the track's band is this far below the typical
 /// shape, in dB.
 pub const MISSING_BAND_FADE_START_DB: f32 = 8.0;
@@ -366,6 +369,173 @@ pub fn boost_fade(params: &SmartMatchParams, below_typical_db: f64) -> f32 {
     } else {
         ((end - below_typical_db) / (end - start)) as f32
     }
+}
+
+// ---------------------------------------------------------------------------
+// Readout and receipt (Slice 5). Built from the same decision the chain uses,
+// so what the user reads is what the audio does (rules 10 and 11, M17).
+// ---------------------------------------------------------------------------
+
+/// Which copy-table state the Smart Match row is in. The frontend owns the
+/// two transient states (measuring a reference, a refused pick); everything
+/// the chain knows about is here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SmartMatchState {
+    /// No usable reference is stored.
+    NoReference,
+    /// On, but the track's own analysis is not ready.
+    TrackNotReady,
+    /// On, and at least one band changes.
+    Applied,
+    /// On, and the songs are already close: nothing changes.
+    NothingToChange,
+    /// A reference is stored and the switch is off.
+    SwitchedOff,
+    /// A reference is stored and on, but the amount is zero. The copy table
+    /// has no line for this; the interface slice decides its wording.
+    ZeroAmount,
+    /// Album renders: Smart Match applies to Track Master only (M15).
+    AlbumDisabled,
+}
+
+/// One band of the readout.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SmartMatchBandReadout {
+    /// Reference minus track, offset removed; `None` until both are measured.
+    pub gap_db: Option<f32>,
+    /// The correction the chain applies, in dB.
+    pub correction_db: f32,
+    /// True when a cap limited this band.
+    pub capped: bool,
+}
+
+/// What the readout reports about Smart Match.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SmartMatchReadout {
+    pub state: SmartMatchState,
+    /// The amount the decision used, in `[0, 1]`.
+    pub amount: f32,
+    /// The "match is partial" notice: a cap limited at least one band.
+    pub partial: bool,
+    /// The six meter bands, in meter order.
+    pub bands: [SmartMatchBandReadout; BAND_COUNT],
+}
+
+/// The readout for these resolved settings, or `None` when the song has no
+/// Smart Match state at all (so readouts for songs, phones and the browser
+/// that never use it keep their exact shape).
+pub fn readout_for_settings(
+    settings: &MasteringSettings,
+    album: bool,
+) -> Option<SmartMatchReadout> {
+    settings.advanced.smart_match.as_ref()?;
+    let decision = decide_for_settings(settings);
+    let state = if album {
+        SmartMatchState::AlbumDisabled
+    } else {
+        match decision.inactive {
+            None if decision.changes_anything() => SmartMatchState::Applied,
+            None => SmartMatchState::NothingToChange,
+            Some(SmartMatchInactive::NoReference | SmartMatchInactive::InvalidReference) => {
+                SmartMatchState::NoReference
+            }
+            Some(SmartMatchInactive::SwitchedOff) => SmartMatchState::SwitchedOff,
+            Some(SmartMatchInactive::ZeroAmount) => SmartMatchState::ZeroAmount,
+            Some(SmartMatchInactive::NoTrackProfile | SmartMatchInactive::InvalidTrack) => {
+                SmartMatchState::TrackNotReady
+            }
+        }
+    };
+    let mut bands = [SmartMatchBandReadout {
+        gap_db: None,
+        correction_db: 0.0,
+        capped: false,
+    }; BAND_COUNT];
+    for (b, band) in bands.iter_mut().enumerate() {
+        band.gap_db = decision.gap_db.map(|g| g[b]);
+        band.correction_db = decision.correction_db[b];
+        band.capped = decision.capped[b];
+    }
+    Some(SmartMatchReadout {
+        state,
+        amount: decision.amount,
+        partial: decision.partial,
+        bands,
+    })
+}
+
+/// Moves this small or larger are named in the result line and the receipt
+/// (locked copy). The dead zone is set to the same value, so every move the
+/// chain makes is one the text can name.
+pub const NAMED_MOVE_MIN_DB: f32 = 0.3;
+/// At most this many moves are named, largest first (locked copy).
+pub const NAMED_MOVES_MAX: usize = 3;
+
+// Every move the chain makes must be one the text can name (contract rule 11).
+const _: () = assert!(
+    DEAD_ZONE_DB >= NAMED_MOVE_MIN_DB,
+    "the dead zone must not let through a move the result line cannot name"
+);
+
+/// The receipt phrase for a band's move, without "of": cut wording, then
+/// boost wording, with `{}` for the amount (locked copy).
+const RECEIPT_PHRASES: [(&str, &str); BAND_COUNT] = [
+    ("tamed {} dB sub rumble", "added {} dB deep bass"),
+    ("tamed {} dB boom", "added {} dB bass"),
+    ("cleared {} dB mud", "added {} dB warmth"),
+    ("eased {} dB midrange", "added {} dB midrange"),
+    ("softened {} dB harshness", "added {} dB presence"),
+    ("softened {} dB brightness", "added {} dB air"),
+];
+
+/// The bands to name, largest move first, at most three, each at least
+/// [`NAMED_MOVE_MIN_DB`]. Ties keep meter order.
+pub fn named_moves(correction_db: &[f32; BAND_COUNT]) -> Vec<(usize, f32)> {
+    let mut moves: Vec<(usize, f32)> = correction_db
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| c.abs() >= NAMED_MOVE_MIN_DB)
+        .map(|(b, c)| (b, *c))
+        .collect();
+    moves.sort_by(|a, b| b.1.abs().total_cmp(&a.1.abs()).then(a.0.cmp(&b.0)));
+    moves.truncate(NAMED_MOVES_MAX);
+    moves
+}
+
+/// The export receipt's Smart Match line (locked copy), or `None` when no
+/// reference is stored: `Smart Match: off`, `Smart Match: "<name>" at 50% ·
+/// already close`, or `Smart Match: "<name>" at 50% · cleared 1.2 dB mud,
+/// added 0.8 dB air`.
+pub fn receipt_digest(settings: &MasteringSettings) -> Option<String> {
+    let reference = settings
+        .advanced
+        .smart_match
+        .as_ref()
+        .and_then(|s| s.reference.as_ref())?;
+    let decision = decide_for_settings(settings);
+    if !decision.is_active() {
+        return Some("Smart Match: off".to_string());
+    }
+    let percent = (decision.amount * 100.0).round() as i32;
+    let moves = named_moves(&decision.correction_db);
+    let detail = if moves.is_empty() {
+        "already close".to_string()
+    } else {
+        moves
+            .iter()
+            .map(|&(b, c)| {
+                let (cut, boost) = RECEIPT_PHRASES[b];
+                let phrase = if c < 0.0 { cut } else { boost };
+                phrase.replace("{}", &format!("{:.1}", c.abs()))
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    Some(format!(
+        "Smart Match: \"{}\" at {percent}% · {detail}",
+        reference.name
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -892,8 +1062,8 @@ mod tests {
     #[test]
     fn dead_zone_zeroes_small_corrections_exactly() {
         let track = typical();
-        // Gap 0.4 dB at amount 0.5 -> 0.2 dB intended: inside the dead zone.
-        let small = from_db(with_band_offset(TYPICAL_SHAPE_DB, 3, 0.4));
+        // Gap 0.5 dB at amount 0.5 -> 0.25 dB intended: inside the dead zone.
+        let small = from_db(with_band_offset(TYPICAL_SHAPE_DB, 3, 0.5));
         let d = decide(Some(&track), Some(&small), true, 0.5);
         assert_eq!(d.correction_db, [0.0; 6]);
         assert!(d.is_active());
@@ -1078,6 +1248,15 @@ mod tests {
             ..SmartMatchParams::DEFAULT
         };
         assert!(!dead.within_plan_bounds());
+    }
+
+    #[test]
+    fn named_moves_are_the_largest_three_of_at_least_three_tenths() {
+        let c = [0.0, -1.2, 0.8, 0.29, 2.0, -0.3];
+        assert_eq!(named_moves(&c), vec![(4, 2.0), (1, -1.2), (2, 0.8)]);
+        let tie = [0.5, -0.5, 0.0, 0.0, 0.0, 0.0];
+        assert_eq!(named_moves(&tie), vec![(0, 0.5), (1, -0.5)]);
+        assert!(named_moves(&[0.0; 6]).is_empty());
     }
 
     #[test]

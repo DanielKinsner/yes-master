@@ -129,6 +129,14 @@ describe("buildExportReport", () => {
     expect(report.effective_adaptive_strength).toBe(0.5);
     expect(report.source_profile_digest).toBe("bass +1.2");
     expect(report.compression_digest).toContain("compression eased low 20%");
+    // No reference was stored for this render: no Smart Match line.
+    expect(report.smart_match_digest).toBeNull();
+  });
+
+  it("carries the render's Smart Match line onto the receipt", () => {
+    const line = 'Smart Match: "Reference" at 50% · cleared 1.2 dB mud, added 0.8 dB air';
+    const report = build({ ...MEASUREMENTS, smart_match_digest: line });
+    expect(report.smart_match_digest).toBe(line);
   });
 
   it("falls back to source analysis and stays unmarked without measurements", () => {

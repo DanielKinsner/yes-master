@@ -950,6 +950,12 @@ pub struct RenderedMeasurements {
     /// per-band compression easing, or `None` while the gate is off/inert.
     #[serde(default)]
     pub compression_digest: Option<String>,
+    /// Smart Match traceability: the export receipt's locked Smart Match line
+    /// (`smart_match::receipt_digest`), or `None` when no reference is stored.
+    /// Never written when `None`, so receipts that never used Smart Match
+    /// (and every phone receipt) keep their exact shape.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smart_match_digest: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -990,6 +996,9 @@ pub struct ExportReport {
     pub confidence_digest: Option<String>,
     #[serde(default)]
     pub compression_digest: Option<String>,
+    /// Smart Match line, mirrored from the render's `RenderedMeasurements`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smart_match_digest: Option<String>,
     /// 2026-06-09 export-metrics inquiry — true when the measured_* fields
     /// describe the rendered output (`RenderedMeasurements`) rather than the
     /// legacy source-analysis fallback. Gates checks that compare delivered

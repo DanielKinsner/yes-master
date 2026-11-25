@@ -1393,6 +1393,8 @@ pub fn mastering_render_format_with_cancel(
         .map(|c| c.digest());
     let compression_digest =
         crate::guardrails::compression_plan_for_resolved_settings(&render_settings).digest;
+    // Smart Match: the receipt line, from the same decision the chain used.
+    let smart_match_digest = crate::smart_match::receipt_digest(&render_settings);
     let mut measurements = RenderedMeasurements {
         mp3_bitrate_kbps: mp3_bitrate,
         lufs_integrated: sanitize_lufs(delivered_lufs),
@@ -1404,6 +1406,7 @@ pub fn mastering_render_format_with_cancel(
         source_profile_digest,
         confidence_digest,
         compression_digest,
+        smart_match_digest,
     };
     if render_cancelled(options.cancel_flag) {
         return Ok(cancelled_render_job(

@@ -22,6 +22,9 @@ struct NativeRenderedMeasurements: Decodable, Equatable {
     let sourceProfileDigest: String?
     let confidenceDigest: String?
     let compressionDigest: String?
+    /// Smart Match receipt line. Phones never store a reference, so the Rust
+    /// side never writes it there; mirrored so the wire models stay complete.
+    let smartMatchDigest: String?
 
     init(
         lufsIntegrated: Double,
@@ -32,7 +35,8 @@ struct NativeRenderedMeasurements: Decodable, Equatable {
         effectiveAdaptiveStrength: Double? = nil,
         sourceProfileDigest: String? = nil,
         confidenceDigest: String? = nil,
-        compressionDigest: String? = nil
+        compressionDigest: String? = nil,
+        smartMatchDigest: String? = nil
     ) {
         self.lufsIntegrated = lufsIntegrated
         self.truePeakDbtp = truePeakDbtp
@@ -43,6 +47,7 @@ struct NativeRenderedMeasurements: Decodable, Equatable {
         self.sourceProfileDigest = sourceProfileDigest
         self.confidenceDigest = confidenceDigest
         self.compressionDigest = compressionDigest
+        self.smartMatchDigest = smartMatchDigest
     }
 }
 

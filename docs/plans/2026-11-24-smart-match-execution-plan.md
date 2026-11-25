@@ -663,3 +663,119 @@ Lanes run for Slice 4 (office PC):
     the baseline in `test-output/smart-balance/baseline/`.
 19. **The phone bridges.** They build settings with `..Default::default()`, so
     Smart Match is absent and inert there (M18).
+
+### Slice 5: done
+
+- **Reference command.** `smart_match_reference::measure_smart_match_reference(path)`
+  decodes and measures a chosen file with the same `decode_full` and the same
+  meter call the track analysis uses. It returns
+  `{ status: "measured", reference: { name, spectral_6 } }` or
+  `{ status: "refused", reason }`, where the reason is one of `too_short`,
+  `silent`, `unreadable` or `low_sample_rate`. Each reason maps to its locked
+  text. The command runs on a blocking worker, never on the audio thread.
+- **Readout.** `GuardrailReadout.smart_match` carries:
+  - the state (`no_reference`, `track_not_ready`, `applied`,
+    `nothing_to_change`, `switched_off`, `zero_amount` or `album_disabled`);
+  - the amount and the partial flag;
+  - six bands, each with its gap, its applied correction and whether a cap
+    bound it.
+
+  It is built by `smart_match::readout_for_settings` from
+  `decide_for_settings`, the decision the chain uses.
+- **Receipt.** `RenderedMeasurements` and `ExportReport` carry
+  `smart_match_digest`, built by `smart_match::receipt_digest` with the locked
+  wording. The engine fills it from the render's own resolved settings, and
+  the frontend's `buildExportReport` copies it onto the receipt.
+- **Mirrors.**
+  - `src/bindings.ts`: the new types, and `SMART_MATCH_REFUSAL_REASONS`.
+  - `src/lib/api.ts`: `measureSmartMatchReference`.
+  - `src/bindings-drift.test.ts`: compile-time key checks for the readout,
+    its bands, and both measurement variants.
+  - `src-tauri/tests/wire_shape.rs` and `src/wire-samples.json`.
+  - `src/lib/export-receipt.ts`.
+  - Kotlin `WireModels.kt` and Swift `NativeMasteringBridge.swift`: the
+    optional digest.
+- **Tests.** `tests/smart_match_readout.rs` covers:
+  - every state;
+  - that readout numbers equal the decision's;
+  - the receipt wording, including the plan's own example line and all
+    twelve phrases;
+  - a real engine render carrying the line, and a render without Smart Match
+    writing no such key.
+
+  Unit tests in `smart_match_reference.rs` cover the refusals, mono and the
+  display name. The frontend has a receipt-helper test.
+
+Lanes run for Slice 5 (office PC):
+
+| Lane | Result |
+| --- | --- |
+| `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings` | Clean |
+| `cargo test --target-dir target\codex-rc` | 47 suites, 789 passed, 0 failed, 35 ignored |
+| iPhone bridge (`cargo check --all-targets`; `cargo test`) | 46 passed, 0 failed, 1 ignored |
+| Android bridge (`cargo test`; `cargo ndk -t arm64-v8a --platform 29 check`) | 26 passed, 0 failed; the NDK check built |
+| `npm test` | 921 passed |
+| `npm run build` | Succeeded (including the wire-shape type gate) |
+| Try-it engine | Rebuilt; 32 passed |
+
+### Deviation log (Slice 5)
+
+20. **Mono references are accepted (planning session: please confirm).** G9
+    lists mono among the files to refuse. But M10 says a reference is refused
+    only when it cannot be measured, and the locked refusal list has no mono
+    reason. A mono file measures normally, so it is accepted. G9 will check
+    that mono measures without trouble, and that every other refusal carries
+    the right reason.
+21. **A copy-table gap: amount zero (planning session: please decide the
+    line).** The decision has a state the copy table lacks: a reference is
+    stored and switched on, but the amount is 0%. The readout reports it as
+    `zero_amount`. The receipt treats it as `Smart Match: off`. Slice 7 needs
+    a line for it; reusing `Match to "<name>" is off.` would be one option.
+22. **"Listening to your track…" can last forever (flagged for Slice 7).** A
+    track whose analysis finished without a six-band profile reads the same as
+    a track still being analysed: `track_not_ready`. That happens for a silent
+    track, or one under about 1,024 frames. Slice 7 can tell the two apart
+    from the analysis the hook already holds.
+23. **The dead zone moved from 0.25 to 0.3 dB**, inside the plan's 0.1–0.5 dB
+    bounds. It now equals the smallest move the locked result line and receipt
+    name (0.3 dB), and a compile-time assertion keeps the two together.
+    Without the change, a 0.25–0.29 dB move would change the sound while being
+    absent from both texts, which breaks contract rule 11. I made it for
+    design consistency, before any evaluation run, not as tuning on results.
+24. **The receipt line is omitted, not written as null, when no reference is
+    stored.** Phone receipts and receipts that never used Smart Match keep
+    their exact shape. When a reference is stored but inactive, the line is
+    `Smart Match: off`. Slice 7 decides whether the desktop receipt shows
+    `Smart Match: off` when the line is absent.
+25. **The receipt phrase rule.** The locked receipt examples drop "of" from
+    the sentence phrases ("cleared 1.2 dB mud"), so I applied the same rule to
+    all twelve phrases. Selection follows the sentence's rule: 0.3 dB or more,
+    largest first, at most three, with ties in band order.
+26. **The readout is omitted when a song has no Smart Match state**, so phone
+    and browser readouts are unchanged. `album_disabled` is reported only when
+    a Smart Match state exists on an Album surface; the frontend knows which
+    mode it is in either way.
+27. **Contract rule 12 is split.** The command itself is stateless. The rest
+    of rule 12 belongs to whatever stores the result, which is the hook in
+    Slice 7:
+    - a newer pick superseding one still in flight;
+    - keeping the previous reference after a refusal.
+28. **The preview mock's answer for the new command is deferred to Slice 7.**
+    `src/lib/preview-mock.ts` is a landing-capture input, so editing it fails
+    the screenshot gate until a re-capture, which Slice 7 does anyway. The new
+    readout and receipt fields are optional, so the mock already matches the
+    types.
+29. **Wire samples.** As in Slice 4, I inserted the new keys with a script,
+    and the unchanged `wire_shape` test verified them. One frontend test
+    (`App.compressor-mode.test.tsx`) spread the raw JSON sample into a typed
+    readout. JSON imports type enum strings as plain `string`, so that test
+    now uses a typed view of the sample.
+30. **What was not compiled.** The Kotlin and Swift models gained only the
+    optional digest field. The Android and iPhone Rust bridge lanes ran. The
+    Kotlin app's own unit tests did not run, and the Swift app was not built:
+    it needs a Mac.
+31. **A commit I did not make.** While I worked, the planning session
+    committed `d45d5d1` on this branch for the owner. It disables Vercel
+    preview builds for this branch, because the branch was pushed as a backup,
+    and it touches only `vercel.json`. My commits sit on top of it with no
+    conflict, so stop trigger 8 does not apply. I have not pushed anything.

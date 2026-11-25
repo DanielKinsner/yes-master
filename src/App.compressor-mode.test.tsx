@@ -185,11 +185,15 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+// The JSON import types enum fields (such as smart_match.state) as plain
+// strings; the sample is the real Rust shape, so view it as the binding type.
+const SAMPLE_READOUT = samples.guardrail_readout as unknown as GuardrailReadout;
+
 describe("AdvancedPanel compressor mode", () => {
   it("shows guarded backend bands and timings without changing Manual seed values", async () => {
     const onAdvanced = vi.fn();
     const band = { threshold_db: -7.2, ratio: 1.1, attack_ms: 18.25, release_ms: 241.2, makeup_db: 0.4 };
-    const readout: GuardrailReadout = { ...samples.guardrail_readout,
+    const readout: GuardrailReadout = { ...SAMPLE_READOUT,
       compression: { active: true, low: band, mid: { ...band, threshold_db: -8.4 }, high: { ...band, threshold_db: -6.1 } } };
     const { container, root } = await renderAdvancedPanel({
       settings: makeSettings(), adaptiveReadout: readout, onAdvanced,
@@ -214,7 +218,7 @@ describe("AdvancedPanel compressor mode", () => {
     expect(missing.container.querySelector(".compressor-preset-summary")?.textContent).toContain("before Adapt");
     expect(missing.container.querySelector(".gr-meter")?.getAttribute("title")).toContain("resolved values unavailable");
     await act(async () => missing.root.unmount());
-    const readout: GuardrailReadout = { ...samples.guardrail_readout,
+    const readout: GuardrailReadout = { ...SAMPLE_READOUT,
       compression: { ...samples.guardrail_readout.compression, active: false } };
     const inactive = await renderAdvancedPanel({ settings: makeSettings(), adaptiveReadout: readout });
     expect(inactive.container.querySelector(".compressor-preset-summary")?.textContent).toBe("Resolved compression: inactive.");

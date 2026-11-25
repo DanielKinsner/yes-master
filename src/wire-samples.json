@@ -419,6 +419,7 @@
     "measurements_are_rendered": true,
     "output_path": "out/wire-sample.master.wav",
     "sample_rate": 48000,
+    "smart_match_digest": "Smart Match: \"Wire sample\" at 50% · already close",
     "source_format": "wav",
     "source_profile_digest": "bass +1.2 | air -0.4",
     "track_id": "wire-sample"
@@ -487,6 +488,43 @@
       "saturation": 0.054999999701976776,
       "warmth_active": false,
       "width": 1.1100000143051147
+    },
+    "smart_match": {
+      "amount": 0.5,
+      "bands": [
+        {
+          "capped": false,
+          "correction_db": -1.25,
+          "gap_db": -2.5
+        },
+        {
+          "capped": false,
+          "correction_db": -1.25,
+          "gap_db": -2.5
+        },
+        {
+          "capped": false,
+          "correction_db": -1.25,
+          "gap_db": -2.5
+        },
+        {
+          "capped": false,
+          "correction_db": -1.25,
+          "gap_db": -2.5
+        },
+        {
+          "capped": false,
+          "correction_db": -1.25,
+          "gap_db": -2.5
+        },
+        {
+          "capped": false,
+          "correction_db": -1.25,
+          "gap_db": -2.5
+        }
+      ],
+      "partial": true,
+      "state": "applied"
     },
     "stereo_correlation": 0.5,
     "strength": 0.5,
@@ -900,6 +938,7 @@
       "lufs_integrated": -13.5,
       "mp3_bitrate_kbps": null,
       "sample_rate": 48000,
+      "smart_match_digest": "Smart Match: \"Wire sample\" at 50% · already close",
       "source_profile_digest": "bass +1.2 | air -0.4",
       "true_peak_dbtp": -1.25
     },
@@ -924,8 +963,27 @@
     "lufs_integrated": -13.5,
     "mp3_bitrate_kbps": null,
     "sample_rate": 48000,
+    "smart_match_digest": "Smart Match: \"Wire sample\" at 50% · already close",
     "source_profile_digest": "bass +1.2 | air -0.4",
     "true_peak_dbtp": -1.25
+  },
+  "smart_match_reference_measurement": {
+    "reference": {
+      "name": "Wire sample",
+      "spectral_6": {
+        "air": 0.125,
+        "low": 0.25,
+        "low_mid": 0.1875,
+        "mid": 0.1875,
+        "presence": 0.125,
+        "sub": 0.125
+      }
+    },
+    "status": "measured"
+  },
+  "smart_match_refusal": {
+    "reason": "too_short",
+    "status": "refused"
   },
   "user_preset": {
     "created_at_iso": "2026-06-09T00:00:00+00:00",

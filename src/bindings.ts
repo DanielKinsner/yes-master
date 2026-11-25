@@ -410,7 +410,61 @@ export interface GuardrailReadout {
   // preset baseline after the Tier-1 trim (raw baseline when inactive).
   // Drives the Width slider's Auto thumb position + "Auto · 1.11" readout.
   effective_auto_width?: number | null;
+  /// Smart Match: the row's state, the six bands, the amount and the partial
+  /// flag, from the decision the chain uses. Absent when the song has no
+  /// Smart Match state. Mirrors `smart_match::SmartMatchReadout`.
+  smart_match?: SmartMatchReadout | null;
 }
+
+/// Mirrors `smart_match::SmartMatchState`: the copy-table states the backend
+/// knows about. "Measuring the reference" and "Reference refused" are the
+/// frontend's own transient states.
+export type SmartMatchState =
+  | "no_reference"
+  | "track_not_ready"
+  | "applied"
+  | "nothing_to_change"
+  | "switched_off"
+  | "zero_amount"
+  | "album_disabled";
+
+/// Mirrors `smart_match::SmartMatchBandReadout`, one per meter band in order
+/// (sub, bass, low mids, mids, presence, air).
+export interface SmartMatchBandReadout {
+  /// Reference minus track, offset removed; null until both are measured.
+  gap_db: number | null;
+  /// The correction the chain applies, in dB.
+  correction_db: number;
+  capped: boolean;
+}
+
+/// Mirrors `smart_match::SmartMatchReadout`.
+export interface SmartMatchReadout {
+  state: SmartMatchState;
+  amount: number;
+  /// The "match is partial" notice: a cap limited at least one band.
+  partial: boolean;
+  bands: SmartMatchBandReadout[];
+}
+
+/// Mirrors `smart_match_reference::SmartMatchRefusal`.
+export type SmartMatchRefusal = "too_short" | "silent" | "unreadable" | "low_sample_rate";
+
+/// The locked refusal reasons, as they follow
+/// `That file can't be used as a reference: `. Keep in sync with
+/// `SmartMatchRefusal::reason` in `src-tauri/src/smart_match_reference.rs`.
+export const SMART_MATCH_REFUSAL_REASONS: Record<SmartMatchRefusal, string> = {
+  too_short: "it is shorter than 30 seconds",
+  silent: "it is silent",
+  unreadable: "it could not be read",
+  low_sample_rate: "its sample rate is too low",
+};
+
+/// Mirrors `smart_match_reference::SmartMatchReferenceMeasurement`: the
+/// result of measuring a chosen file as a reference.
+export type SmartMatchReferenceMeasurement =
+  | { status: "measured"; reference: SmartMatchReference }
+  | { status: "refused"; reason: SmartMatchRefusal };
 
 /** Actual guarded chain values for display only; never Manual seed values. */
 export interface ResolvedCompressionBand {
@@ -534,6 +588,9 @@ export interface RenderedMeasurements {
   // Adaptive Compressor MVP traceability: backend-resolved guard summary for
   // per-band compression easing, or null while the gate is off/inert.
   compression_digest?: string | null;
+  // Smart Match: the receipt's locked Smart Match line; absent when no
+  // reference was stored.
+  smart_match_digest?: string | null;
 }
 
 export interface RenderJob {
@@ -573,6 +630,7 @@ export interface ExportReport {
   source_profile_digest?: string | null;
   confidence_digest?: string | null;
   compression_digest?: string | null;
+  smart_match_digest?: string | null;
   // True when the measured_* fields describe the rendered output rather than
   // the legacy source-analysis fallback; gates target-comparison checks.
   measurements_are_rendered?: boolean;

@@ -667,6 +667,13 @@ pub struct GuardrailReadout {
     /// tiny increase. `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub effective_auto_width: Option<f32>,
+    /// Smart Match: the row's state, the six bands (gap and applied
+    /// correction), the amount and the partial flag, from the decision the
+    /// chain uses (`smart_match::readout_for_settings`). `None` when the song
+    /// has no Smart Match state; never written then, so readouts that never
+    /// used it keep their exact shape.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smart_match: Option<crate::smart_match::SmartMatchReadout>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
@@ -792,6 +799,13 @@ fn realized_eq_trim(bands: &[f32], preset_scale: f32, trim: impl Fn(f32) -> f32)
 /// floor, computed against the actual preset bands); density/width are floor-free
 /// and exact.
 pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
+    readout_for_surface(settings, false)
+}
+
+/// [`readout_for`] for a given surface: on Album renders the Smart Match
+/// section reports the disabled state (plan M15).
+pub fn readout_for_surface(settings: &MasteringSettings, album: bool) -> GuardrailReadout {
+    let smart_match = crate::smart_match::readout_for_settings(settings, album);
     let coeffs = crate::dsp::ChainCoeffs::from_settings(48_000, settings);
     let signal_chain = Some(SignalChainReadout::from_coeffs(&coeffs));
     let compression = Some(ResolvedCompressionReadout::from_coeffs(&coeffs));
@@ -842,6 +856,7 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
                 // Mirrors the chain's guarded fallback at dsp.rs
                 // (`trim_width(preset.stereo_width)`) exactly.
                 effective_auto_width: Some(g.trim_width(preset.stereo_width)),
+                smart_match,
             }
         }
         None => GuardrailReadout {
@@ -863,6 +878,7 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
             confidence: None,
             // No guard active: Auto resolves to the raw preset baseline.
             effective_auto_width: Some(preset.stereo_width),
+            smart_match,
         },
     }
 }
@@ -894,7 +910,7 @@ pub fn guardrail_readout(
         cached_stand_down,
         album,
     );
-    readout_for(&settings)
+    readout_for_surface(&settings, album)
 }
 
 #[cfg(not(target_arch = "wasm32"))]

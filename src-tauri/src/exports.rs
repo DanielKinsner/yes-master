@@ -365,6 +365,7 @@ mod tests {
             bit_depth: 32,
             effective_adaptive_strength: 0.5,
             source_profile_digest: None,
+            smart_match_digest: None,
             confidence_digest: None,
             compression_digest: None,
             measurements_are_rendered: rendered,

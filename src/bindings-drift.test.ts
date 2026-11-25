@@ -45,7 +45,10 @@ import type {
   QualityCheck,
   RenderJob,
   RenderedMeasurements,
+  SmartMatchBandReadout,
+  SmartMatchReadout,
   SmartMatchReference,
+  SmartMatchReferenceMeasurement,
   SmartMatchSettings,
   SourceProfile,
   SpectralBalance,
@@ -116,6 +119,34 @@ export type Drift_GuardrailReadout_RustOnly = AssertNever<
 >;
 export type Drift_GuardrailReadout_TsOnly = AssertNever<
   TsOnly<typeof samples.guardrail_readout, GuardrailReadout>
+>;
+
+export type Drift_SmartMatchReadout_RustOnly = AssertNever<
+  RustOnly<typeof samples.guardrail_readout.smart_match, SmartMatchReadout>
+>;
+export type Drift_SmartMatchReadout_TsOnly = AssertNever<
+  TsOnly<typeof samples.guardrail_readout.smart_match, SmartMatchReadout>
+>;
+export type Drift_SmartMatchBandReadout_RustOnly = AssertNever<
+  RustOnly<(typeof samples.guardrail_readout.smart_match.bands)[number], SmartMatchBandReadout>
+>;
+export type Drift_SmartMatchBandReadout_TsOnly = AssertNever<
+  TsOnly<(typeof samples.guardrail_readout.smart_match.bands)[number], SmartMatchBandReadout>
+>;
+
+type MeasuredReference = Extract<SmartMatchReferenceMeasurement, { status: "measured" }>;
+type RefusedReference = Extract<SmartMatchReferenceMeasurement, { status: "refused" }>;
+export type Drift_SmartMatchMeasured_RustOnly = AssertNever<
+  RustOnly<typeof samples.smart_match_reference_measurement, MeasuredReference>
+>;
+export type Drift_SmartMatchMeasured_TsOnly = AssertNever<
+  TsOnly<typeof samples.smart_match_reference_measurement, MeasuredReference>
+>;
+export type Drift_SmartMatchRefused_RustOnly = AssertNever<
+  RustOnly<typeof samples.smart_match_refusal, RefusedReference>
+>;
+export type Drift_SmartMatchRefused_TsOnly = AssertNever<
+  TsOnly<typeof samples.smart_match_refusal, RefusedReference>
 >;
 
 export type Drift_SignalChainReadout_RustOnly = AssertNever<
@@ -354,6 +385,8 @@ describe("wire-samples drift gate", () => {
       "project_state",
       "render_job",
       "rendered_measurements",
+      "smart_match_reference_measurement",
+      "smart_match_refusal",
       "user_preset",
       "waveform_peaks",
     ]) {
@@ -379,5 +412,8 @@ describe("wire-samples drift gate", () => {
     expect(samples.guardrail_readout.confidence).not.toBeNull();
     expect(samples.compression_plan.reasons.length).toBeGreaterThan(0);
     expect(samples.album_plan.transitions.length).toBeGreaterThan(0);
+    expect(samples.advanced.smart_match.reference).not.toBeNull();
+    expect(samples.guardrail_readout.smart_match.bands).toHaveLength(6);
+    expect(samples.rendered_measurements.smart_match_digest).toContain("Smart Match");
   });
 });

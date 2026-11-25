@@ -29,6 +29,8 @@ pub mod sample_rate;
 pub mod settings;
 pub mod smart_balance_reference;
 pub mod smart_match;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod smart_match_reference;
 pub mod sources;
 pub mod spectrum;
 #[cfg(test)]
@@ -464,6 +466,7 @@ pub fn run() {
             exports::suggest_export_filename,
             build_info,
             guardrails::guardrail_readout,
+            smart_match_reference::measure_smart_match_reference,
             guardrails::resolve_compression_plan,
             exports::open_output,
             profile_store::evict_source_profile,

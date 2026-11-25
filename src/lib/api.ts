@@ -10,6 +10,7 @@ import type {
   CompressionPlan,
   ExportReport,
   GuardrailReadout,
+  SmartMatchReferenceMeasurement,
   ImportedTrack,
   JobStatus,
   LandingStatus,
@@ -284,6 +285,12 @@ export const api = {
       trackId: trackId ?? null,
       album,
     }),
+
+  /// Measure a chosen file as a Smart Match reference: its display name and
+  /// six band shares, or a refusal with one of the locked reasons. Runs off
+  /// the audio thread; playback continues.
+  measureSmartMatchReference: (path: string) =>
+    invoke<SmartMatchReferenceMeasurement>("measure_smart_match_reference", { path }),
 
   resolveCompressionPlan: (
     settings: MasteringSettings,

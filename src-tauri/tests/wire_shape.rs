@@ -23,6 +23,8 @@ use yes_master_lib::engine::{AlbumRenderReport, AlbumTrackRenderInput, AlbumTrac
 use yes_master_lib::guardrails::{
     CompressionBandPlan, CompressionPlan, CompressionPlanReason, GuardReason, GuardrailReadout,
 };
+use yes_master_lib::smart_match::{SmartMatchBandReadout, SmartMatchReadout, SmartMatchState};
+use yes_master_lib::smart_match_reference::{SmartMatchReferenceMeasurement, SmartMatchRefusal};
 use yes_master_lib::types::{
     AdvancedSettings, AlbumArc, AlbumArcKind, AlbumCharacter, AlbumPlan, AlbumTrackEntry,
     AnalysisProgress, AnalysisResult, CompressionMode, ExportReport, ImportedTrack,
@@ -179,6 +181,7 @@ fn rendered_measurements_sample() -> RenderedMeasurements {
         bit_depth: 24,
         effective_adaptive_strength: 0.75,
         source_profile_digest: Some("bass +1.2 | air -0.4".to_string()),
+        smart_match_digest: Some("Smart Match: \"Wire sample\" at 50% · already close".to_string()),
         confidence_digest: Some("bass 0.9 | tilt 0.6".to_string()),
         compression_digest: Some(
             "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00"
@@ -294,6 +297,25 @@ fn guardrail_readout_sample() -> GuardrailReadout {
         // key set is unchanged vs None (the field is always serialized).
         confidence: Some(Confidence::full()),
         effective_auto_width: Some(1.11),
+        smart_match: Some(SmartMatchReadout {
+            state: SmartMatchState::Applied,
+            amount: 0.5,
+            partial: true,
+            bands: [SmartMatchBandReadout {
+                gap_db: Some(-2.5),
+                correction_db: -1.25,
+                capped: false,
+            }; 6],
+        }),
+    }
+}
+
+fn smart_match_reference_measurement_sample() -> SmartMatchReferenceMeasurement {
+    SmartMatchReferenceMeasurement::Measured {
+        reference: SmartMatchReference {
+            name: "Wire sample".to_string(),
+            spectral_6: spectral6_sample(),
+        },
     }
 }
 
@@ -400,6 +422,7 @@ fn export_report_sample() -> ExportReport {
         bit_depth: 24,
         effective_adaptive_strength: 0.5,
         source_profile_digest: Some("bass +1.2 | air -0.4".to_string()),
+        smart_match_digest: Some("Smart Match: \"Wire sample\" at 50% · already close".to_string()),
         confidence_digest: Some("bass 0.9 | tilt 0.6".to_string()),
         compression_digest: Some("compression eased low 20%".to_string()),
         measurements_are_rendered: true,
@@ -496,6 +519,10 @@ fn wire_samples() -> serde_json::Value {
         "project_state": project_state_sample(),
         "render_job": render_job_sample(),
         "rendered_measurements": rendered_measurements_sample(),
+        "smart_match_reference_measurement": smart_match_reference_measurement_sample(),
+        "smart_match_refusal": SmartMatchReferenceMeasurement::Refused {
+            reason: SmartMatchRefusal::TooShort,
+        },
         "user_preset": user_preset_sample(),
         "waveform_peaks": waveform_peaks_sample(),
     })
