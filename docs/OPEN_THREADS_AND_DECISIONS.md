@@ -1,7 +1,15 @@
 # YES Master — Open Threads & Owner Decisions
 
-> **2026-11-24 — Auto gain staging at Checkpoint A: measured offline; the
-> rule selects S; waiting for the planning session's grade.** On branch
+> **2026-11-24 — Auto gain staging, Checkpoint A graded: build G.** As
+> written the rule selected S. The planning session overrode it, approved on
+> its recommendation: S fails the reference song's tone check and lands on
+> target less often than today. G's two R1 misses were a threshold written
+> too tightly. R1a (a limiter-load condition) was tried and dropped. R1b and
+> R1c are frozen and both hold on the development data. Phase B (Slices 2–4)
+> is under way. History in the plan's "Checkpoint A: graded".
+>
+> **Earlier the same day — Auto gain staging at Checkpoint A: measured
+> offline; the rule selects S; waiting for the planning session's grade.** On branch
 > `claude/auto-gain-staging-bf8b35`, stacked on Smart Match (not merged, not
 > pushed). No product code changed
 > ([plan](plans/2026-11-24-auto-gain-staging-execution-plan.md),
@@ -19,7 +27,7 @@
 >   today, and re-voices the Styles at low targets.
 >
 > Open:
-> - **Planning session:** grade Checkpoint A and say what to build.
+> - **Planning session:** graded on 2026-11-24 (build G; see above).
 > - Only 5 quiet, dynamic development pieces were available; the plan asks
 >   for 6 before the holdout.
 

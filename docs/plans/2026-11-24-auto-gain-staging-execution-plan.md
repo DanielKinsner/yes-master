@@ -244,6 +244,21 @@ open. If neither qualifies, stop.
 
 Report every condition with its number, whether or not it passed.
 
+**Amended at Checkpoint A (planning session, 2026-11-24), frozen before any
+holdout run.** As written, the rule selected S. The planning session overrode
+it and chose G; see "Checkpoint A: graded" in the execution status for the
+history and the reasons. From Slice 4 onward the conditions are:
+
+| # | Condition |
+| --- | --- |
+| R1b | Where T and G both land within tolerance, G's peak-to-loudness ratio is never more than 0.5 dB below T's. |
+| R1c | Over the same cases, compare G with T on section contrast change and on the paired-attack median. On each measure, G may be worse than T by more than 0.5 dB in at most 5% of cases, and by more than 1.0 dB in none. |
+| R2–R7 | Unchanged. R4 must hold on the development material before the freeze; the maximum resolution passes may rise to 6, or the resolver may step better. |
+
+R1 as written and R1a (G's limiter load never more than 0.1 dB above T's)
+are retired. S is dropped and is not built. The clean limit bounds the
+limiter's load, so there is no separate load condition.
+
 ### Checkpoint A
 
 Stop. Report in plain language: which design the rule selects, each condition
@@ -303,8 +318,8 @@ recorded number. Then freeze parameters and run the holdout once.
 | Gate | Pass condition |
 | --- | --- |
 | E1 Off identity | Every preset, switch off or inert: coefficients and bytes equal the baseline. No golden file changes. |
-| E2 Decision rule holds | R1 to R7 hold on the development material through the production path. |
-| E3 Holdout | R1, R2, R4 and R7 hold on the holdout songs, run once. |
+| E2 Decision rule holds | R1b, R1c and R2 to R7 hold on the development material through the production path. |
+| E3 Holdout | R1b, R1c, R2, R4 and R7 hold on the holdout songs, run once. |
 | E4 Clean limit | With priority `Clean` the limiter load never exceeds the clean limit. With `Reach target` the target is reached wherever the ceiling allows it. |
 | E5 Never above target | No delivered loudness exceeds the target by more than the tolerance. |
 | E6 Smart Match unchanged | With a reference active, Smart Match's corrections are identical with the switch on and off. |
@@ -512,6 +527,57 @@ For the planning session:
   than today (surprises 2 and 3);
 - G's cost: about today's time when one limiter pass suffices, plus 1.5–6 s
   for each extra pass; 0.35 extra passes per render across the set.
+
+### Checkpoint A: graded by the planning session
+
+The planning session graded Checkpoint A on 2026-11-24. It checked the
+committed evidence against the report and re-ran the runner's tests. In order:
+
+1. **The rule as written selected S.** G failed R1 (2 of 594 cases, worst
+   −0.21 dB) and R4 (3 of 126 cases). S satisfied R1, R3 and R7.
+2. **The planning session overrode it and chose G.** Its reasons:
+   - The fallback clause was the planning session's own mistake. It let S
+     qualify without asking whether S keeps the reference song's tone or lands
+     on target as often as today. S fails both: R6 at 0.897 dB, and R2 at 573
+     against 594. S also cannot help any quiet song.
+   - G's two R1 misses are 0.125 and 0.21 dB. They come from level in letting
+     the Style act at its designed level on quieter songs, and in both the
+     limiter did less than today's. That is the design working as intended,
+     measured against a threshold written too tightly.
+
+   This is recorded as an override, not as a pass.
+3. **R1a was tried and dropped.** It said G's limiter load is never more than
+   0.1 dB above T's where both land within tolerance. On the development data
+   it failed in 26 of 594 cases (worst +1.37 dB).
+   - All 26 are songs that level in turned down; 19 of them are at −9 LUFS.
+   - With less input, the Style's saturation and compressor make less
+     density, so the limiter carries more (median load 3.21 dB against 2.74).
+   - The result still keeps more dynamics than today on those cases: PLR
+     median +0.34 dB, section contrast +0.15 dB, paired attacks +0.36 dB.
+
+   The planning session dropped R1a as the wrong measure: it asked which stage
+   does the work rather than judging the result.
+4. **R1b and R1c are the frozen conditions** (see "Amended at Checkpoint A"
+   under the decision rule). On the development data:
+   - **R1b holds.** The worst case is −0.21 dB against a −0.5 dB limit.
+   - **R1c holds:**
+
+     | Measure | Worse than T by more than 0.5 dB | By more than 1.0 dB | Worst case |
+     | --- | --- | --- | --- |
+     | Section contrast change | 2 of 594 (0.34%) | 0 | −0.737 dB (Small Colin – A Winters Fairytale, Tape, −14) |
+     | Paired-attack median | 5 of 594 (0.84%) | 0 | −0.602 dB (owner 15b03e81c8, Tape) |
+
+5. **Carried forward:**
+   - R4 must hold on the development material before the freeze.
+   - S is dropped.
+   - The limiter / final-peak-check disagreement is recorded in
+     `docs/OPEN_THREADS_AND_DECISIONS.md` and `docs/IDEAS_BACKLOG.md`. The
+     limiter and the final check stay on the do-not-touch list.
+   - The planning session added `d0554a7` (no preview builds for this branch)
+     and published the branch.
+   - More quiet, dynamic material is being gathered into
+     `private-audio-fixtures\quiet-dynamic-2026-11-24\`, to split 75/25 by
+     content hash at Slice 4.
 
 ### Deviation log (Slices 0–1)
 

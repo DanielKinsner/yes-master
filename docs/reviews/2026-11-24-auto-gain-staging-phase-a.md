@@ -231,3 +231,28 @@ means more punch kept.
   analysis. Live audition timing is Slice 5's.
 - **Distinctness** uses the preset-fingerprint distance adapted to real songs
   (no THD term). See the deviation log.
+
+## Grade (planning session, 2026-11-24)
+
+In order:
+
+1. **The rule as written selected S.**
+2. **The planning session overrode it and chose G.** The fallback clause let
+   S qualify without checking that it keeps the reference song's tone (R6
+   0.897 dB) or lands on target as often as today (R2 573 against 594). S also
+   cannot help quiet songs. G's two R1 misses (0.125 and 0.21 dB) come from
+   level in letting the Style act at its designed level, with the limiter
+   doing less than today's. This is an override, not a pass.
+3. **R1a was tried and dropped.** It said G's limiter load is never more than
+   0.1 dB above T's. It failed in 26 of 594 cases (worst +1.37 dB), all on
+   songs that level in turned down, while those same cases kept more dynamics
+   than today. It judged which stage works, not the result.
+4. **R1b and R1c replace R1, frozen before any holdout run.** Both hold on the
+   development data:
+   - **R1b:** PLR never more than 0.5 dB below T's. Worst −0.21 dB.
+   - **R1c, section contrast:** 2 of 594 cases (0.34%) worse than T by more
+     than 0.5 dB, none by more than 1.0 dB. Worst −0.737 dB.
+   - **R1c, paired-attack median:** 5 of 594 cases (0.84%) worse by more than
+     0.5 dB, none by more than 1.0 dB. Worst −0.602 dB.
+
+   R2–R7 are unchanged, and R4 must hold before the freeze. S is dropped.
