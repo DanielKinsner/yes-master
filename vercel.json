@@ -7,7 +7,8 @@
       "main": false,
       "codex/launch-sept22": false,
       "codex/launch-website-sept22": false,
-      "claude/smart-balance-2e58b2": false
+      "claude/smart-balance-2e58b2": false,
+      "claude/auto-gain-staging-bf8b35": false
     }
   },
   "rewrites": [
