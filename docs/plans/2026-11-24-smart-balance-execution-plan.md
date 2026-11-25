@@ -1,5 +1,12 @@
 # Smart Balance: execution plan
 
+> **Superseded from Slice 3 onward (2026-11-24).** Checkpoint A showed that one
+> healthy range for all music is too blunt to build on. The owner chose to
+> re-aim phase 1 at reference matching. The live plan is
+> [Smart Match](2026-11-24-smart-match-execution-plan.md). This file remains the
+> record of the original decisions and of Slices 0 to 2 ("Execution status").
+> Do not execute its Slices 3 to 8.
+
 Decided with the owner (Dan) on 2026-11-24. Written for an executor that was not
 in the planning conversation. Verified against `main` at `ebee875`.
 
