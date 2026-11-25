@@ -1,0 +1,56 @@
+{
+ "note": "Checkpoint B follow-up: the real Track export (mastering_render_with_progress) of Scott Buckley – Unraveling (7:24, library) with Universal, the switch off and with Reach target, single thread, median of three runs, office PC. The progress trace is the first Reach-target run. Every gap between updates is inside one resolution pass, while its sample-rate conversion and final check run without updates; progress advances on every pass.",
+ "commit": "working tree after 5b63cea (the resolver is unchanged since 5b63cea)",
+ "song": "Scott Buckley – Unraveling",
+ "seconds_of_audio": 444.06,
+ "rows": [
+  {
+   "target": -14.0,
+   "export_switch_off_s": 9.65,
+   "export_reach_target_s": 11.5,
+   "receipt_line": "Auto gain staging: level in −0.8 dB · limiter drive −2.4 dB · limiting 0.0 dB",
+   "progress_updates": 49,
+   "progress_monotonic": true,
+   "progress_ends_at": 1.0,
+   "longest_gap_between_updates_s": 3.16,
+   "longest_gap_from_to_fraction": [
+    0.452,
+    0.475
+   ],
+   "seconds_before_first_update": 0.42,
+   "seconds_after_last_update": 0.01
+  },
+  {
+   "target": -11.0,
+   "export_switch_off_s": 9.81,
+   "export_reach_target_s": 11.68,
+   "receipt_line": "Auto gain staging: level in −0.8 dB · limiter drive +0.6 dB · limiting 2.7 dB",
+   "progress_updates": 49,
+   "progress_monotonic": true,
+   "progress_ends_at": 1.0,
+   "longest_gap_between_updates_s": 3.37,
+   "longest_gap_from_to_fraction": [
+    0.452,
+    0.475
+   ],
+   "seconds_before_first_update": 0.47,
+   "seconds_after_last_update": 0.01
+  },
+  {
+   "target": -9.0,
+   "export_switch_off_s": 9.64,
+   "export_reach_target_s": 21.6,
+   "receipt_line": "Auto gain staging: level in −0.8 dB · limiter drive +3.6 dB · limiting 5.7 dB",
+   "progress_updates": 61,
+   "progress_monotonic": true,
+   "progress_ends_at": 1.0,
+   "longest_gap_between_updates_s": 3.44,
+   "longest_gap_from_to_fraction": [
+    0.452,
+    0.475
+   ],
+   "seconds_before_first_update": 0.51,
+   "seconds_after_last_update": 0.01
+  }
+ ]
+}

@@ -73,6 +73,8 @@ struct Args {
     only: Option<String>,
     excerpt_seconds: Option<f64>,
     timing: bool,
+    /// Checkpoint B follow-up: Reach target export timing and progress.
+    timing_reach: bool,
     /// G resolves on the delivered loudness (contract rule 3; the default)
     /// or, with `--g-resolve chain-output`, on the chain's output before
     /// delivery (the first development run).
@@ -122,6 +124,7 @@ fn parse_args() -> Result<Args, String> {
         only: map.get("only").cloned(),
         excerpt_seconds: map.get("excerpt-seconds").and_then(|s| s.parse().ok()),
         timing: map.get("timing").is_some_and(|v| v == "1"),
+        timing_reach: map.get("timing-reach").is_some_and(|v| v == "1"),
         max_passes: map
             .get("max-passes")
             .and_then(|v| v.parse().ok())
@@ -1236,7 +1239,8 @@ fn run() -> Result<(), String> {
     if let Some(only) = &args.only {
         let wanted: Vec<&str> = only.split('|').collect();
         songs.retain(|s| {
-            wanted.iter().any(|w| s.label.contains(w)) || (s.reference && !args.timing)
+            wanted.iter().any(|w| s.label.contains(w))
+                || (s.reference && !(args.timing || args.timing_reach))
         });
     }
     println!(
@@ -1286,6 +1290,11 @@ fn run() -> Result<(), String> {
             all.extend(r?);
         }
         return write_json(&args.output.join("reach-check.json"), &all);
+    }
+    if args.timing_reach && args.production {
+        let scratch = args.output.join("scratch");
+        std::fs::create_dir_all(&scratch).map_err(|e| e.to_string())?;
+        return production::timing_reach_production(&songs, &scratch, &args.output);
     }
     if args.timing && args.production {
         let scratch = args.output.join("scratch");
