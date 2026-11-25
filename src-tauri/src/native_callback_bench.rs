@@ -112,12 +112,28 @@ fn mastering_quality_auto_gain_staging_live() {
             },
             10,
         );
+        // Slice 8 (F2): the estimate playing, meaning its line is up and the
+        // output has emitted the coefficients that carry it.
+        let estimate = wait(
+            &|s| {
+                matches!(
+                    s.auto_gain_staging,
+                    Some(AutoGainStagingReadout::Estimated { .. })
+                        | Some(AutoGainStagingReadout::Settled { .. })
+                ) && s.requested_output_revision > before.requested_output_revision
+                    && s.applied_output_revision == s.requested_output_revision
+            },
+            600,
+        );
+        let estimate_s = start.elapsed().as_secs_f64();
         let settled = wait(&|s| gain_settled(s) && settled_sound(s), 600);
         let seconds = start.elapsed().as_secs_f64();
         readouts.push(settled.auto_gain_staging);
         rows.push(
             json!({"event":event,"switch":"on","target":target,"priority":format!("{priority:?}"),
             "first_readout":format!("{:?}",first.auto_gain_staging),
+            "estimate_playing_s":estimate_s,
+            "estimate_readout":format!("{:?}",estimate.auto_gain_staging),
             "settled_sound_s":seconds,"readout":format!("{:?}",settled.auto_gain_staging)}),
         );
     }

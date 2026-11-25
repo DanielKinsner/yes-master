@@ -204,6 +204,294 @@ pub(super) fn timing_production(
     std::fs::write(output.join("timing-production.json"), text).map_err(|e| e.to_string())
 }
 
+/// Slice 8, F1: audition's fast estimate against the exact resolution (the
+/// export's own, pinned bit-identical), for every Standard Style and loudness
+/// with Clean, plus Reach target wherever Clean stopped at the clean limit
+/// (the Slice 4 case set). Each estimate is run at every `margins` value.
+pub(super) fn estimate_check_song(
+    song: &Song,
+    variants: &[(yes_master_lib::gain_staging::EstimatePeak, f32)],
+) -> Result<Vec<serde_json::Value>, String> {
+    use yes_master_lib::gain_staging::{estimate_preview_with, resolve_preview};
+    let src = load(song, None)?;
+    let ch = src.channels as u16;
+    let level = yes_master_lib::analysis::measure_source_level(&src.samples, src.rate, ch)
+        .map_err(|e| format!("{}: {e}", song.label))?;
+    let mut rows = Vec::new();
+    for (style, preset) in standard_styles() {
+        for target in STANDARD_TARGETS {
+            let base =
+                standard_export_settings(preset.clone(), target, src.profile, Some(src.lufs));
+            let mut priorities = vec![LoudnessPriority::Clean];
+            let mut i = 0;
+            while i < priorities.len() {
+                let priority = priorities[i];
+                i += 1;
+                let mut s = base.clone();
+                s.advanced.auto_gain_staging = Some(AutoGainStagingSettings {
+                    enabled: true,
+                    priority,
+                });
+                let t0 = Instant::now();
+                let exact = resolve_preview(&src.samples, src.rate, ch, &s, Some(&level), None)
+                    .map_err(|e| format!("{}: exact: {e}", song.label))?;
+                let exact_s = t0.elapsed().as_secs_f64();
+                let Some(exact) = exact else {
+                    continue;
+                };
+                if priority == LoudnessPriority::Clean && exact.gains.stopped_at_clean_limit {
+                    priorities.push(LoudnessPriority::ReachTarget);
+                }
+                let mut estimates = Vec::new();
+                for &(peak, margin) in variants {
+                    let t0 = Instant::now();
+                    let est = estimate_preview_with(
+                        &src.samples,
+                        src.rate,
+                        ch,
+                        &s,
+                        Some(&level),
+                        peak,
+                        margin,
+                        None,
+                    )
+                    .map_err(|e| format!("{}: estimate: {e}", song.label))?;
+                    let seconds = t0.elapsed().as_secs_f64();
+                    if let Some(est) = est {
+                        estimates.push(serde_json::json!({
+                            "peak": format!("{peak:?}"),
+                            "margin_db": margin, "drive_db": est.gains.limiter_drive_db,
+                            "level_in_db": est.gains.level_in_db,
+                            "load_db": est.gains.limiter_load_db,
+                            "delivered_lufs": est.delivered_lufs,
+                            "stopped_at_clean_limit": est.gains.stopped_at_clean_limit,
+                            "stopped_by_peak_check": est.gains.stopped_by_peak_check,
+                            "seconds": seconds,
+                        }));
+                    }
+                }
+                rows.push(serde_json::json!({
+                    "song": song.label, "group": song.group, "style": style, "target": target,
+                    "priority": format!("{priority:?}"),
+                    "exact": {"drive_db": exact.gains.limiter_drive_db,
+                        "level_in_db": exact.gains.level_in_db,
+                        "load_db": exact.gains.limiter_load_db,
+                        "delivered_lufs": exact.delivered_lufs,
+                        "stopped_at_clean_limit": exact.gains.stopped_at_clean_limit,
+                        "stopped_by_peak_check": exact.gains.stopped_by_peak_check,
+                        "seconds": exact_s},
+                    "estimates": estimates,
+                }));
+            }
+        }
+    }
+    Ok(rows)
+}
+
+/// Slice 8, F4: the SHA-256 of every Track export, switch off and on (Clean
+/// and Reach target), for each Standard Style and loudness, so two commits'
+/// exports can be compared byte for byte. Songs run in parallel; each export
+/// is single-threaded as in the app. Files are deleted after hashing.
+pub(super) fn export_hashes(out: &Path, songs: &str) -> Result<(), String> {
+    use sha2::{Digest, Sha256};
+    let scratch = out.with_extension("scratch");
+    std::fs::create_dir_all(&scratch).map_err(|e| e.to_string())?;
+    let entries: Vec<(String, std::path::PathBuf)> = songs
+        .split('|')
+        .filter(|e| !e.trim().is_empty())
+        .map(|e| {
+            let (n, p) = e.split_once('=').unwrap_or((e, e));
+            (n.to_string(), p.into())
+        })
+        .collect();
+    let results = std::thread::scope(|scope| {
+        let handles: Vec<_> = entries
+            .iter()
+            .map(|(name, path)| {
+                let scratch = &scratch;
+                scope.spawn(move || -> Result<Vec<serde_json::Value>, String> {
+                    let song = Song {
+                        label: name.clone(),
+                        group: "owner".into(),
+                        kind: String::new(),
+                        anon: name.clone(),
+                        reference: false,
+                        path: path.clone(),
+                    };
+                    let src = load(&song, None)?;
+                    let mut rows = Vec::new();
+                    for (style, preset) in standard_styles() {
+                        for target in STANDARD_TARGETS {
+                            let off = standard_export_settings(
+                                preset.clone(),
+                                target,
+                                src.profile,
+                                Some(src.lufs),
+                            );
+                            for mode in ["off", "clean", "reach"] {
+                                let mut s = off.clone();
+                                if mode != "off" {
+                                    s.advanced.auto_gain_staging = Some(AutoGainStagingSettings {
+                                        enabled: true,
+                                        priority: if mode == "clean" {
+                                            LoudnessPriority::Clean
+                                        } else {
+                                            LoudnessPriority::ReachTarget
+                                        },
+                                    });
+                                }
+                                let tag = format!("{name}-{style}-{target}-{mode}");
+                                let file = scratch.join(format!("{tag}.wav"));
+                                let _ = std::fs::remove_file(&file);
+                                let job = yes_master_lib::engine::mastering_render_to_path(
+                                    TrackId(tag.clone()),
+                                    &song.path,
+                                    &s,
+                                    scratch,
+                                    RenderKind::Master,
+                                    &file,
+                                )
+                                .map_err(|e| format!("{tag}: {e}"))?;
+                                let bytes = std::fs::read(&file).map_err(|e| e.to_string())?;
+                                let _ = std::fs::remove_file(&file);
+                                let digest = format!("{:x}", Sha256::digest(&bytes));
+                                let line = job
+                                    .measurements
+                                    .and_then(|m| m.auto_gain_staging_digest)
+                                    .unwrap_or_default();
+                                rows.push(serde_json::json!({"song": name, "style": style,
+                                    "target": target, "mode": mode, "sha256": digest,
+                                    "receipt_line": line}));
+                            }
+                        }
+                    }
+                    println!("hashed {name}");
+                    Ok(rows)
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .map(|h| h.join().map_err(|_| "a song panicked".to_string())?)
+            .collect::<Result<Vec<_>, String>>()
+    })?;
+    let rows: Vec<_> = results.into_iter().flatten().collect();
+    let text = serde_json::to_string_pretty(&rows).map_err(|e| e.to_string())?;
+    std::fs::write(out, text).map_err(|e| e.to_string())
+}
+
+/// Checkpoint C: the owner's listening pack. Universal at default Intensity,
+/// Medium (−11) and High (−9), the switch off (A, today) and on at Clean (B),
+/// through the production export, kept in `out` with a plain READ ME. These
+/// are private renders of the owner's songs: never committed.
+pub(super) fn listening_pack(out: &Path, songs: &str) -> Result<(), String> {
+    std::fs::create_dir_all(out).map_err(|e| e.to_string())?;
+    let mut lines = vec![
+        "Auto gain staging: listening pack".to_string(),
+        String::new(),
+        "Universal at default Intensity (50%), Standard's export (WAV, 24-bit,".to_string(),
+        "44.1 kHz, ceiling -1.0 dBTP), through the app's own export.".to_string(),
+        "A = today (switch off). B = auto gain staging on, priority Clean.".to_string(),
+        "PLR = peak-to-loudness ratio (true peak minus loudness): higher means".to_string(),
+        "more punch kept; lower means more limited.".to_string(),
+        String::new(),
+    ];
+    let mut unfair = Vec::new();
+    for entry in songs.split('|').filter(|e| !e.trim().is_empty()) {
+        let (name, path) = entry
+            .split_once('=')
+            .ok_or_else(|| format!("{entry}: expected \"Name=<path>\""))?;
+        let song = Song {
+            label: name.to_string(),
+            group: "owner".into(),
+            kind: String::new(),
+            anon: name.to_string(),
+            reference: false,
+            path: path.into(),
+        };
+        let src = load(&song, None)?;
+        for (level, target) in [("High", -9.0_f32), ("Medium", -11.0)] {
+            let a = standard_export_settings(
+                yes_master_lib::types::Preset::Universal,
+                target,
+                src.profile,
+                Some(src.lufs),
+            );
+            let mut b = a.clone();
+            b.advanced.auto_gain_staging = Some(AutoGainStagingSettings {
+                enabled: true,
+                priority: LoudnessPriority::Clean,
+            });
+            let mut facts = Vec::new();
+            for (tag, settings) in [("A today", &a), ("B gain staging", &b)] {
+                let file = out.join(format!("{name} - {level} - {tag}.wav"));
+                let _ = std::fs::remove_file(&file);
+                let job = yes_master_lib::engine::mastering_render_to_path(
+                    TrackId(format!("pack-{name}-{level}-{tag}")),
+                    &song.path,
+                    settings,
+                    out,
+                    RenderKind::Master,
+                    &file,
+                )
+                .map_err(|e| format!("{name} {level} {tag}: export: {e}"))?;
+                let m = job
+                    .measurements
+                    .ok_or_else(|| format!("{name} {level} {tag}: no measurements"))?;
+                println!(
+                    "{} {level} {tag}: {:.2} LUFS, {:.2} dBTP",
+                    name, m.lufs_integrated, m.true_peak_dbtp
+                );
+                facts.push(m);
+            }
+            let (fa, fb) = (&facts[0], &facts[1]);
+            let plr = |m: &RenderedMeasurements| m.true_peak_dbtp - m.lufs_integrated;
+            lines.push(format!("{name} - {level} (target {target:.0} LUFS)"));
+            lines.push(format!(
+                "  A today:          {:.1} LUFS, true peak {:.1} dBTP, PLR {:.1} dB",
+                fa.lufs_integrated,
+                fa.true_peak_dbtp,
+                plr(fa)
+            ));
+            lines.push(format!(
+                "  B gain staging:   {:.1} LUFS, true peak {:.1} dBTP, PLR {:.1} dB",
+                fb.lufs_integrated,
+                fb.true_peak_dbtp,
+                plr(fb)
+            ));
+            lines.push(format!(
+                "  B's line: {}",
+                fb.auto_gain_staging_digest.clone().unwrap_or_default()
+            ));
+            let gap = fb.lufs_integrated - fa.lufs_integrated;
+            if gap.abs() > 0.2 {
+                let louder = if gap > 0.0 { "B" } else { "A" };
+                lines.push(format!(
+                    "  NOT A FAIR COMPARISON: {louder} is {:.1} dB louder. Turn {louder} down {:.1} dB, or match levels, before judging.",
+                    gap.abs(),
+                    gap.abs()
+                ));
+                unfair.push(format!("{name} - {level}"));
+            } else {
+                lines.push("  Same loudness (within 0.2 dB): a fair comparison.".into());
+            }
+            lines.push(String::new());
+        }
+    }
+    lines.push(if unfair.is_empty() {
+        "Every pair lands at the same loudness, so each A/B is fair.".into()
+    } else {
+        format!(
+            "Pairs that do not land at the same loudness: {}.",
+            unfair.join("; ")
+        )
+    });
+    lines.push(String::new());
+    lines.push("Private renders of your own songs: kept here only, never committed.".to_string());
+    // Windows line endings, so Notepad shows the lines on any version.
+    std::fs::write(out.join("READ ME.txt"), lines.join("\r\n")).map_err(|e| e.to_string())
+}
+
 /// Checkpoint B follow-up: the real export with Reach target, single thread,
 /// against the switch off, with the export's progress trace (timestamped) so
 /// the report can show progress keeps moving across resolution passes.

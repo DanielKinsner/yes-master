@@ -6,6 +6,7 @@
 // formats numbers, it never computes a gain.
 
 import type {
+  AutoGainStagingGains,
   AutoGainStagingReadout,
   AutoGainStagingSettings,
   LoudnessPriority,
@@ -21,6 +22,7 @@ export const AUTO_GAIN_STAGING_COPY = {
   unusable: "Not enough audio to measure this track.",
   album: "Auto gain staging applies to Track Master, not Album renders.",
   priority: "Loudness priority",
+  refining: " · refining…",
   clean: "Clean",
   reachTarget: "Reach target",
 } as const;
@@ -52,6 +54,7 @@ export type AutoGainStagingState =
   | "off"
   | "album_disabled"
   | "measuring"
+  | "refining"
   | "no_target"
   | "unusable"
   | "no_limiting"
@@ -78,7 +81,7 @@ export function autoGainStagingSettings(s: MasteringSettings): AutoGainStagingSe
 
 /// The line for a settled readout (the copy table's last four rows).
 export function settledLine(
-  readout: Extract<AutoGainStagingReadout, { state: "settled" }>,
+  readout: AutoGainStagingGains,
 ): { state: AutoGainStagingState; line: string } {
   if (readout.stopped_at_clean_limit) {
     return {
@@ -141,6 +144,17 @@ export function autoGainStagingView(input: AutoGainStagingViewInput): AutoGainSt
   }
   if (input.measuring || !readout || readout.state === "measuring") {
     return { ...base, state: "measuring", line: AUTO_GAIN_STAGING_COPY.measuring, pending: true };
+  }
+  if (readout.state === "estimated") {
+    // Slice 8: audition plays the fast estimate while the exact result is
+    // pending. Its line, without the closing period, plus "refining…".
+    const line = settledLine(readout).line.replace(/\.$/, "");
+    return {
+      ...base,
+      state: "refining",
+      line: `${line}${AUTO_GAIN_STAGING_COPY.refining}`,
+      pending: true,
+    };
   }
   if (readout.state === "unusable") {
     return { ...base, state: "unusable", line: AUTO_GAIN_STAGING_COPY.unusable };

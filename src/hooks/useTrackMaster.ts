@@ -3368,7 +3368,11 @@ export function useTrackMaster() {
         ? autoGainStagingReadout.readout
         : null),
     album: mode === "album",
-    measuring: autoGainStagingMeasuring || liveGainStaging?.state === "measuring",
+    // While the song plays in Mastered, its live line alone says whether the
+    // sound is still measuring (it shows the estimate as soon as it plays).
+    measuring: liveGainStaging
+      ? liveGainStaging.state === "measuring"
+      : autoGainStagingMeasuring,
   });
 
   return {

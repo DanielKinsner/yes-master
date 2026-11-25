@@ -3,7 +3,7 @@ use super::*;
 use crate::audio::tests::settings_with_intensity;
 use crate::audio::{
     try_spawn_lufs_preview_worker, worker_readout, AudioCommand, DecodedCacheEntry,
-    GainStagingOutcome, PreviewWorkRequest, PreviewWorkerGate,
+    GainStagingOutcome, GainStagingWork, PreviewWorkRequest, PreviewWorkerGate,
 };
 use crate::decode::DecodedPcm;
 use crate::export_format::ExportEncoding;
@@ -28,6 +28,39 @@ fn song() -> PlaybackPcm {
         let tone = 0.05 * (std::f32::consts::TAU * 110.0 * t).sin();
         samples.push(burst * noise + tone);
         samples.push(burst * noise * 0.8 + tone);
+    }
+    DecodedPcm {
+        samples,
+        sample_rate: rate,
+        channels: 2,
+    }
+    .into()
+}
+
+/// Band-limited, music-like content for the estimate: low-passed noise
+/// bursts (a one-pole at about 3 kHz) over two tones. White noise is not
+/// used here: its energy up to Nyquist is exactly where the estimate's
+/// low-pass peak reading is known to read low (see the Slice 8 note).
+fn music_like() -> PlaybackPcm {
+    let rate = 48_000_u32;
+    let frames = rate as usize * 6;
+    let mut seed = 0x1234_5679_u32;
+    let a = (-std::f32::consts::TAU * 3_000.0 / rate as f32).exp();
+    let (mut l, mut r) = (0.0_f32, 0.0_f32);
+    let mut samples = Vec::with_capacity(frames * 2);
+    for i in 0..frames {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        let noise = (seed >> 8) as f32 / (1u32 << 24) as f32 * 2.0 - 1.0;
+        l = a * l + (1.0 - a) * noise;
+        r = a * r + (1.0 - a) * noise * 0.9;
+        let t = i as f32 / rate as f32;
+        let burst = if (i / 6_000) % 4 == 0 { 2.2 } else { 0.3 };
+        let tones = 0.08 * (std::f32::consts::TAU * 110.0 * t).sin()
+            + 0.05 * (std::f32::consts::TAU * 440.0 * t).sin();
+        samples.push(burst * l + tones);
+        samples.push(burst * r + tones);
     }
     DecodedPcm {
         samples,
@@ -170,9 +203,14 @@ fn audition_resolves_exactly_what_the_export_resolves() {
         let settings = switched_on(target, priority);
         let key = Key::new(&path, mtime, &settings).unwrap();
         let cancel = AtomicBool::new(false);
-        let live = resolve_cached(&key, &pcm, &settings, &cancel)
+        let entry = resolve_cached(&key, &pcm, &settings, None, &cancel)
             .unwrap()
             .expect("active");
+        assert_eq!(
+            entry.audition, entry.exact.gains,
+            "no estimate: the exact gains"
+        );
+        let live = entry.exact;
 
         // The export's own path, as `mastering_render_format_with_cancel`
         // calls it for the default WAV encoding.
@@ -205,17 +243,17 @@ fn audition_resolves_exactly_what_the_export_resolves() {
             "{name}: the song needs drive"
         );
         // Reused, not re-resolved, and settled for the live chain.
-        assert_eq!(lookup(&key), Some(live));
+        assert_eq!(lookup(&key), Some(entry));
         let src = Some((path.as_path(), mtime));
         assert_eq!(
             plan(&settings, false, Some(analysis()), src, None),
-            LivePlan::Settled(live)
+            LivePlan::Settled(entry)
         );
         let mut toggled = settings.clone();
         toggled.volume_match = !toggled.volume_match;
         assert_eq!(
             plan(&toggled, false, Some(analysis()), src, None),
-            LivePlan::Settled(live),
+            LivePlan::Settled(entry),
             "Volume Match does not change the resolution"
         );
         let mut louder = settings.clone();
@@ -234,7 +272,7 @@ fn audition_resolves_exactly_what_the_export_resolves() {
 
 /// Wait for a worker's resolution to reach the shared cache (it is stored
 /// before any message is sent).
-fn wait_for_resolution(key: &Key) -> Resolution {
+fn wait_for_resolution(key: &Key) -> LiveEntry {
     let start = std::time::Instant::now();
     loop {
         if let Some(hit) = lookup(key) {
@@ -245,9 +283,9 @@ fn wait_for_resolution(key: &Key) -> Resolution {
     }
 }
 
-/// The worker resolves first; Volume Match and the landing then measure the
-/// chain with the resolved gains, so Volume Match still compares at matched
-/// loudness.
+/// The worker plays a fast estimate first (Slice 8), then resolves exactly;
+/// Volume Match and the landing then measure the chain audition plays, so
+/// Volume Match still compares at matched loudness.
 #[test]
 fn the_worker_resolves_first_and_measures_the_resolved_chain() {
     let pcm = song();
@@ -278,15 +316,42 @@ fn the_worker_resolves_first_and_measures_the_resolved_chain() {
             track_epoch: 3,
             landing_enabled: true,
             device_rate: 48_000,
-            gain_staging: Some(key.clone()),
+            gain_staging: Some(GainStagingWork {
+                key: key.clone(),
+                analysis: None,
+            }),
         },
         &tx,
         &Arc::new(AtomicBool::new(false)),
         Arc::new(AtomicBool::new(false)),
     ));
+    // First, the estimate: played at once, never finished, never measured.
+    let estimate = match rx
+        .recv_timeout(std::time::Duration::from_secs(120))
+        .unwrap()
+    {
+        AudioCommand::PreviewLandingReady {
+            settings: playing,
+            gain,
+            vm_gain,
+            finished,
+            gain_staging: Some(GainStagingOutcome::Estimated(estimate)),
+            ..
+        } => {
+            assert!(!finished && gain.is_none() && vm_gain.is_none());
+            assert_eq!(playing.advanced.gain_staging_resolved, Some(estimate.gains));
+            estimate
+        }
+        _ => panic!("the estimate comes first"),
+    };
     let expected = wait_for_resolution(&key);
+    assert_eq!(
+        expected.audition,
+        audition_gains(&expected.exact, Some(&estimate)),
+        "audition keeps the estimate's drive only within the threshold"
+    );
     let mut resolved = settings.clone();
-    resolved.advanced.gain_staging_resolved = Some(expected.gains);
+    resolved.advanced.gain_staging_resolved = Some(expected.audition);
     let mut vm = None;
     for stage in 0..2 {
         match rx
@@ -307,7 +372,7 @@ fn the_worker_resolves_first_and_measures_the_resolved_chain() {
                 assert_eq!(gain_staging, Some(GainStagingOutcome::Resolved(expected)));
                 assert_eq!(
                     measured.advanced.gain_staging_resolved,
-                    Some(expected.gains)
+                    Some(expected.audition)
                 );
                 assert_eq!(finished, stage == 1);
                 if stage == 0 {
@@ -358,7 +423,10 @@ fn a_superseded_resolution_is_discarded() {
         track_epoch: gate.epoch,
         landing_enabled: true,
         device_rate: 48_000,
-        gain_staging: Some(first_key.clone()),
+        gain_staging: Some(GainStagingWork {
+            key: first_key.clone(),
+            analysis: None,
+        }),
     };
     let mut gate = PreviewWorkerGate::default();
     gate.active = Some(active(&gate));
@@ -382,7 +450,7 @@ fn a_superseded_resolution_is_discarded() {
 
     // A cancelled resolution stores nothing.
     let cancel = AtomicBool::new(true);
-    assert!(resolve_cached(&first_key, &pcm, &first, &cancel).is_err());
+    assert!(resolve_cached(&first_key, &pcm, &first, None, &cancel).is_err());
     assert_eq!(lookup(&first_key), None);
 
     // A result for an older generation never changes the line; the live
@@ -398,15 +466,120 @@ fn a_superseded_resolution_is_discarded() {
         delivered_lufs: -9.1,
         target_lufs: -9.0,
     };
-    let outcome = Some(GainStagingOutcome::Resolved(resolution));
+    let entry = LiveEntry {
+        exact: resolution,
+        audition: resolution.gains,
+    };
+    let outcome = Some(GainStagingOutcome::Resolved(entry));
     assert_eq!(worker_readout(measuring, 4, 5, outcome), measuring);
     assert_eq!(
         worker_readout(measuring, 5, 5, outcome),
         Some(resolution.readout())
+    );
+    // Slice 8: the estimate's line, only for the live generation.
+    let estimated = Some(GainStagingOutcome::Estimated(resolution));
+    assert_eq!(worker_readout(measuring, 4, 5, estimated), measuring);
+    assert_eq!(
+        worker_readout(measuring, 5, 5, estimated),
+        Some(resolution.estimated_readout())
     );
     assert_eq!(
         worker_readout(measuring, 5, 5, Some(GainStagingOutcome::Inert)),
         Some(AutoGainStagingReadout::Unusable)
     );
     assert_eq!(worker_readout(measuring, 5, 5, None), measuring);
+}
+
+/// Slice 8, F3: the exact result replaces the estimate audition plays only
+/// when their drives differ by the threshold or more; below it the chain's
+/// coefficients stay exactly as they are, so nothing changes at all.
+#[test]
+fn refining_changes_nothing_below_the_threshold() {
+    let exact = Resolution {
+        gains: ResolvedGainStaging {
+            level_in_db: 1.5,
+            limiter_drive_db: 2.0,
+            limiter_load_db: 3.0,
+            stopped_at_clean_limit: false,
+            stopped_by_peak_check: false,
+        },
+        delivered_lufs: -9.05,
+        target_lufs: -9.0,
+    };
+    let near = |drive: f32| Resolution {
+        gains: ResolvedGainStaging {
+            limiter_drive_db: drive,
+            limiter_load_db: 2.8,
+            ..exact.gains
+        },
+        delivered_lufs: -9.1,
+        target_lufs: -9.0,
+    };
+    let settings = switched_on(-9.0, LoudnessPriority::Clean);
+    let coeffs = |gains: ResolvedGainStaging| {
+        let mut s = settings.clone();
+        s.advanced.gain_staging_resolved = Some(gains);
+        crate::dsp::ChainCoeffs::from_settings(48_000, &s)
+    };
+    for drive in [1.71, 1.9, 2.0, 2.1, 2.29] {
+        let estimate = near(drive);
+        let audition = audition_gains(&exact, Some(&estimate));
+        assert_eq!(audition.limiter_drive_db, drive, "kept: {drive}");
+        assert_eq!(audition.level_in_db, exact.gains.level_in_db);
+        assert_eq!(
+            coeffs(audition),
+            coeffs(estimate.gains),
+            "the chain does not change: {drive}"
+        );
+    }
+    for drive in [1.69, 1.0, 2.31, 4.0] {
+        let audition = audition_gains(&exact, Some(&near(drive)));
+        assert_eq!(audition, exact.gains, "replaced: {drive}");
+        assert_ne!(coeffs(audition), coeffs(near(drive).gains));
+    }
+    assert_eq!(audition_gains(&exact, None), exact.gains);
+    let other_level = Resolution {
+        gains: ResolvedGainStaging {
+            level_in_db: 1.0,
+            ..near(2.0).gains
+        },
+        ..near(2.0)
+    };
+    assert_eq!(audition_gains(&exact, Some(&other_level)), exact.gains);
+}
+
+/// Slice 8: with Clean on band-limited content, the estimate follows the
+/// export's search to within F1's 0.5 dB, and exports never use it (their
+/// resolution is the exact one, pinned above). Reach target past the clean
+/// limit on bright content is where the estimate's low-pass peak reading can
+/// miss the final check's pull-down; that is measured on real music by gate
+/// F1, not promised here.
+#[test]
+fn the_estimate_lands_near_the_exact_drive() {
+    let pcm = music_like();
+    for (name, target, priority) in [
+        ("estimate-clean-9", -9.0, LoudnessPriority::Clean),
+        ("estimate-clean-11", -11.0, LoudnessPriority::Clean),
+        ("estimate-clean-14", -14.0, LoudnessPriority::Clean),
+    ] {
+        let (path, mtime) = source(name);
+        let settings = switched_on(target, priority);
+        let key = Key::new(&path, mtime, &settings).unwrap();
+        let cancel = AtomicBool::new(false);
+        let est = estimate(&key, &pcm, &settings, None, &cancel)
+            .unwrap()
+            .expect("active");
+        let exact = resolve_cached(&key, &pcm, &settings, Some(&est), &cancel)
+            .unwrap()
+            .expect("active");
+        let gap = est.gains.limiter_drive_db - exact.exact.gains.limiter_drive_db;
+        assert_eq!(
+            est.gains.level_in_db, exact.exact.gains.level_in_db,
+            "{name}"
+        );
+        assert!(gap.abs() <= 0.5, "{name}: estimate {gap:+.3} dB from exact");
+        assert!(gap <= 1.5, "{name}");
+        // A cancelled estimate is an error, never a result.
+        assert!(estimate(&key, &pcm, &settings, None, &AtomicBool::new(true)).is_err());
+    }
 }

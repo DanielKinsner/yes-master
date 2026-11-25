@@ -522,6 +522,19 @@ pub struct Resolution {
 }
 
 impl Resolution {
+    /// The line while this estimate plays and the exact result is pending.
+    pub fn estimated_readout(&self) -> AutoGainStagingReadout {
+        AutoGainStagingReadout::Estimated {
+            level_in_db: self.gains.level_in_db,
+            limiter_drive_db: self.gains.limiter_drive_db,
+            limiter_load_db: self.gains.limiter_load_db.max(0.0),
+            stopped_at_clean_limit: self.gains.stopped_at_clean_limit,
+            stopped_by_peak_check: self.gains.stopped_by_peak_check,
+            delivered_lufs: self.delivered_lufs,
+            target_lufs: self.target_lufs,
+        }
+    }
+
     pub fn readout(&self) -> AutoGainStagingReadout {
         AutoGainStagingReadout::Settled {
             level_in_db: self.gains.level_in_db,
@@ -577,6 +590,387 @@ pub fn resolve_preview(
                 target_lufs,
             })
     }))
+}
+
+// ---------------------------------------------------------------------------
+// Audition's fast estimate (Slice 8)
+// ---------------------------------------------------------------------------
+
+/// Each parallel chunk first runs this much audio before its own range, so
+/// the stages' and the limiter's state (filters, envelopes, lookahead) has
+/// settled. Measured on the reference song: chunked captures then match the
+/// one-thread capture to within 2e-7 per sample.
+const ESTIMATE_WARMUP_SECONDS: f64 = 2.0;
+/// Below this many frames per chunk a thread is not worth starting.
+const ESTIMATE_MIN_FRAMES_PER_WORKER: usize = 1 << 17;
+/// Frames before each chunk the true-peak reading also sees, so the
+/// oversampler's filter has history at the chunk edge.
+const ESTIMATE_PEAK_OVERLAP_FRAMES: usize = 256;
+/// The peak reading the estimate's emulated final check uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EstimatePeak {
+    /// A BS.1770 4x true peak. On a limited master it reads the limiter's
+    /// own ceiling, so it misses every pull-down of the final check.
+    FourX,
+    /// The recorded-lowpass half of the export's qualified peak meter, which
+    /// equals the qualified reading on most music at a fraction of its cost.
+    Lowpass,
+}
+/// The reading audition's estimate uses (Slice 8).
+const ESTIMATE_PEAK: EstimatePeak = EstimatePeak::Lowpass;
+/// Added to the estimate's peak reading before its landing step. Tuned on the
+/// development material only (Slice 8).
+const ESTIMATE_TRUE_PEAK_MARGIN_DB: f32 = 0.0;
+
+fn cancelled_error(cancel: Option<&AtomicBool>) -> CommandResult<()> {
+    if cancelled(cancel) {
+        Err(cancel_error())
+    } else {
+        Ok(())
+    }
+}
+
+/// The stage capture, split across the shared thread budget. Each chunk
+/// builds its own chain and warms it on the audio just before its range.
+fn capture_stages_parallel(
+    settings: &MasteringSettings,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: usize,
+    lookahead: usize,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<Vec<f32>> {
+    let frames = samples.len() / channels;
+    let total = frames + lookahead;
+    let warm = (ESTIMATE_WARMUP_SECONDS * f64::from(sample_rate)) as usize;
+    let zero = vec![0.0_f32; channels];
+    let input = |f: usize| -> &[f32] {
+        if f < frames {
+            &samples[f * channels..(f + 1) * channels]
+        } else {
+            &zero
+        }
+    };
+    let parts = crate::peak_meter::map_ranges_on_budget(
+        total,
+        ESTIMATE_MIN_FRAMES_PER_WORKER,
+        |range| -> Option<Vec<f32>> {
+            let mut chain = MasteringChain::new(sample_rate, channels, settings);
+            let mut frame = vec![0.0_f32; channels];
+            for f in range.start.saturating_sub(warm)..range.start {
+                frame.copy_from_slice(input(f));
+                chain.process_stages_inplace(&mut frame);
+            }
+            let mut out = Vec::with_capacity(range.len() * channels);
+            for (n, f) in range.enumerate() {
+                if n % PROGRESS_CHUNK_FRAMES == 0 && cancelled(cancel) {
+                    return None;
+                }
+                frame.copy_from_slice(input(f));
+                chain.process_stages_inplace(&mut frame);
+                out.extend_from_slice(&frame);
+            }
+            Some(out)
+        },
+    );
+    let mut pre = Vec::with_capacity(total * channels);
+    for part in parts {
+        pre.extend_from_slice(&part.ok_or_else(cancel_error)?);
+    }
+    Ok(pre)
+}
+
+/// One limiter pass, split across the shared thread budget, each chunk with
+/// its own limiter warmed on the driven signal just before its range.
+#[allow(clippy::too_many_arguments)]
+fn limiter_pass_parallel(
+    chain: &MasteringChain,
+    template: &Limiter,
+    pre: &[f32],
+    channels: usize,
+    lookahead: usize,
+    drive_db: f32,
+    sample_rate: u32,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<(Vec<f32>, f32)> {
+    let total = pre.len() / channels;
+    let warm = (ESTIMATE_WARMUP_SECONDS * f64::from(sample_rate)) as usize;
+    let gain = (drive_db != 0.0).then(|| {
+        10.0_f32.powf(drive_db.clamp(-GAIN_STAGING_RANGE_DB, GAIN_STAGING_RANGE_DB) / 20.0)
+    });
+    let parts = crate::peak_meter::map_ranges_on_budget(
+        total,
+        ESTIMATE_MIN_FRAMES_PER_WORKER,
+        |range| -> Option<(Vec<f32>, f32)> {
+            let mut limiter = template.clone();
+            let mut frame = vec![0.0_f32; channels];
+            let drive = |frame: &mut [f32], i: usize| {
+                frame.copy_from_slice(&pre[i * channels..(i + 1) * channels]);
+                if let Some(g) = gain {
+                    for s in frame.iter_mut() {
+                        *s *= g;
+                    }
+                }
+            };
+            for i in range.start.saturating_sub(warm)..range.start {
+                drive(&mut frame, i);
+                limiter.process_frame_inplace(&mut frame);
+            }
+            let mut out = Vec::with_capacity(range.len() * channels);
+            let mut load = 0.0_f32;
+            for (n, i) in range.enumerate() {
+                if n % PROGRESS_CHUNK_FRAMES == 0 && cancelled(cancel) {
+                    return None;
+                }
+                drive(&mut frame, i);
+                limiter.process_frame_inplace(&mut frame);
+                load = load.max(limiter.gain_reduction_db());
+                chain.apply_post_limiter(&mut frame);
+                if i >= lookahead {
+                    out.extend_from_slice(&frame);
+                }
+            }
+            Some((out, load))
+        },
+    );
+    let mut rendered = Vec::with_capacity((total - lookahead.min(total)) * channels);
+    let mut load = 0.0_f32;
+    for part in parts {
+        let (out, part_load) = part.ok_or_else(cancel_error)?;
+        rendered.extend_from_slice(&out);
+        load = load.max(part_load);
+    }
+    Ok((rendered, load))
+}
+
+/// The detector level of the whole signal, split across the thread budget
+/// with an overlap so every frame sees its filter history.
+fn detector_level_parallel(pre: &[f32], channels: usize) -> f32 {
+    let frames = pre.len() / channels;
+    crate::peak_meter::map_ranges_on_budget(frames, ESTIMATE_MIN_FRAMES_PER_WORKER, |range| {
+        let from = range.start.saturating_sub(ESTIMATE_PEAK_OVERLAP_FRAMES);
+        Limiter::detector_level(&pre[from * channels..range.end * channels], channels)
+    })
+    .into_iter()
+    .fold(0.0_f32, f32::max)
+}
+
+/// The loudness of `pcm` and its peak reading, split across the thread budget.
+fn loudness_and_peak(
+    pcm: &[f32],
+    rate: u32,
+    channels: u16,
+    peak: EstimatePeak,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<(f32, f32)> {
+    let (lufs, four_x) = loudness_and_true_peak(pcm, rate, channels)?;
+    match peak {
+        EstimatePeak::FourX => Ok((lufs, four_x)),
+        EstimatePeak::Lowpass => {
+            let upper = crate::peak_meter::lowpass_upper(pcm, usize::from(channels.max(1)), || {
+                cancelled(cancel)
+            })
+            .map_err(|e| CommandError::Render(format!("estimate peak: {e}")))?;
+            Ok((
+                lufs,
+                if upper > 0.0 {
+                    20.0 * upper.log10() as f32
+                } else {
+                    f32::NEG_INFINITY
+                },
+            ))
+        }
+    }
+}
+
+/// The loudness and a 4x true peak of `pcm`, split across the thread budget.
+fn loudness_and_true_peak(pcm: &[f32], rate: u32, channels: u16) -> CommandResult<(f32, f32)> {
+    use ebur128::{EbuR128, Mode};
+    let ch = usize::from(channels.max(1));
+    let frames = pcm.len() / ch;
+    let parts = crate::peak_meter::map_ranges_on_budget(
+        frames,
+        ESTIMATE_MIN_FRAMES_PER_WORKER,
+        |range| -> Result<(EbuR128, f64), ebur128::Error> {
+            let mut loud = EbuR128::new(u32::from(channels), rate, Mode::I)?;
+            loud.add_frames_f32(&pcm[range.start * ch..range.end * ch])?;
+            let from = range.start.saturating_sub(ESTIMATE_PEAK_OVERLAP_FRAMES);
+            let mut peak = EbuR128::new(u32::from(channels), rate, Mode::TRUE_PEAK)?;
+            peak.add_frames_f32(&pcm[from * ch..range.end * ch])?;
+            let mut tp = 0.0_f64;
+            for c in 0..u32::from(channels) {
+                tp = tp.max(peak.true_peak(c)?);
+            }
+            Ok((loud, tp))
+        },
+    );
+    let mut meters = Vec::with_capacity(parts.len());
+    let mut tp = 0.0_f64;
+    for part in parts {
+        let (meter, peak) =
+            part.map_err(|e| CommandError::Render(format!("estimate loudness: {e}")))?;
+        meters.push(meter);
+        tp = tp.max(peak);
+    }
+    let lufs = EbuR128::loudness_global_multiple(meters.iter())
+        .map_err(|e| CommandError::Render(format!("estimate loudness: {e}")))?
+        as f32;
+    let tp_dbtp = if tp > 0.0 {
+        20.0 * tp.log10() as f32
+    } else {
+        f32::NEG_INFINITY
+    };
+    Ok((lufs, tp_dbtp))
+}
+
+/// A fast estimate of the gains [`resolve_preview`] resolves, for audition
+/// only (Slice 8). It runs the same drive search with the same rules, but:
+///
+/// - the stage capture and every limiter pass run in parallel chunks, each
+///   warmed on the audio before it;
+/// - each pass's delivered loudness is the export's landing rule
+///   (`ceiling_bounded_landing_delta_db`) applied to the converted pass's
+///   loudness and a 4x true peak, instead of the qualified finalizer.
+///
+/// Exports never use it: `render_export` is untouched. `level` is the track
+/// analysis's own measurement when audition has it.
+pub fn estimate_preview(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+    level: Option<&SourceLevel>,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<Option<Resolution>> {
+    estimate_preview_with(
+        samples,
+        sample_rate,
+        channels,
+        settings,
+        level,
+        ESTIMATE_PEAK,
+        ESTIMATE_TRUE_PEAK_MARGIN_DB,
+        cancel,
+    )
+}
+
+/// [`estimate_preview`] with its peak reading and margin as parameters, for
+/// the research runner that tunes them on development material.
+#[allow(clippy::too_many_arguments)]
+pub fn estimate_preview_with(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+    level: Option<&SourceLevel>,
+    peak: EstimatePeak,
+    true_peak_margin_db: f32,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<Option<Resolution>> {
+    let mut resolved = settings.clone();
+    resolved.volume_match = false;
+    resolved.advanced.gain_staging_resolved = None;
+    let priority = match resolved.advanced.auto_gain_staging {
+        Some(a) if a.enabled => a.priority,
+        _ => return Ok(None),
+    };
+    let Some(target) = resolved.effective_target_lufs().filter(|t| t.is_finite()) else {
+        return Ok(None);
+    };
+    if resolved.album.is_some() || samples.is_empty() {
+        return Ok(None);
+    }
+    let measured_level;
+    let level = match level {
+        Some(level) => level,
+        None => {
+            measured_level = crate::analysis::measure_source_level(samples, sample_rate, channels)?;
+            &measured_level
+        }
+    };
+    let Some(level_in) = level_in_for(level) else {
+        return Ok(None);
+    };
+    let delivery_rate = resolved.effective_sample_rate(sample_rate);
+    let ceiling_dbtp = resolved.effective_ceiling_dbtp();
+    let ch = usize::from(channels.max(1));
+    resolved.advanced.gain_staging_resolved = Some(ResolvedGainStaging {
+        level_in_db: level_in,
+        ..Default::default()
+    });
+    let chain = MasteringChain::new(sample_rate, ch, &resolved);
+    let template = MasteringChain::fresh_limiter(sample_rate, ch, &resolved);
+    let lookahead = chain.latency_frames();
+    let frames = samples.len() / ch;
+    let pre = capture_stages_parallel(&resolved, samples, sample_rate, ch, lookahead, cancel)?;
+    cancelled_error(cancel)?;
+    let stage_lufs =
+        crate::engine::measure_integrated_lufs(&pre[..frames * ch], sample_rate, channels)
+            .unwrap_or(f32::NEG_INFINITY);
+    let detector = detector_level_parallel(&pre, ch);
+    let ceiling_db = 20.0 * chain.coeffs.ceiling_lin.log10();
+    let cap = match priority {
+        LoudnessPriority::Clean if detector > 0.0 => {
+            ceiling_db + CLEAN_LIMIT_DB - 20.0 * detector.log10()
+        }
+        _ => f32::INFINITY,
+    };
+    let mut search = DriveSearch::new(priority, target, cap);
+    let usable_stage = stage_lufs.is_finite() && stage_lufs > UNUSABLE_LUFS;
+    let mut drive = search.first_drive(stage_lufs);
+    loop {
+        cancelled_error(cancel)?;
+        let (rendered, load) = limiter_pass_parallel(
+            &chain,
+            &template,
+            &pre,
+            ch,
+            lookahead,
+            drive,
+            sample_rate,
+            cancel,
+        )?;
+        let delivered_pcm = if delivery_rate != sample_rate {
+            crate::sample_rate::convert_interleaved(
+                &rendered,
+                sample_rate,
+                delivery_rate,
+                channels,
+            )?
+        } else {
+            rendered
+        };
+        let (raw_lufs, tp_dbtp) =
+            loudness_and_peak(&delivered_pcm, delivery_rate, channels, peak, cancel)?;
+        let delivered = raw_lufs
+            + crate::engine::ceiling_bounded_landing_delta_db(
+                raw_lufs.is_finite().then_some(raw_lufs),
+                tp_dbtp.is_finite().then_some(tp_dbtp + true_peak_margin_db),
+                Some(target),
+                ceiling_dbtp,
+            );
+        let next = if usable_stage {
+            search.after_pass(drive, delivered)
+        } else {
+            Err(DriveStop::Exhausted)
+        };
+        match next {
+            Ok(next_drive) => drive = next_drive,
+            Err(stop) => {
+                return Ok(Some(Resolution {
+                    gains: ResolvedGainStaging {
+                        level_in_db: level_in,
+                        limiter_drive_db: drive,
+                        limiter_load_db: load,
+                        stopped_at_clean_limit: stop == DriveStop::CleanLimit,
+                        stopped_by_peak_check: stop == DriveStop::PeakCheck,
+                    },
+                    delivered_lufs: delivered,
+                    target_lufs: target,
+                }))
+            }
+        }
+    }
 }
 
 /// What the line shows when the feature cannot run for these settings
@@ -717,5 +1111,253 @@ mod tests {
         assert_eq!(db_text(0.0, true), "0.0 dB");
         assert_eq!(db_text(4.5, true), "+4.5 dB");
         assert_eq!(db_text(3.16, false), "3.2 dB");
+    }
+
+    /// Slice 8 research, opt-in: where the exact resolution spends its time
+    /// on one file, and what a chunked, parallel stage capture costs and
+    /// differs by. `YES_MASTER_BENCH_FILE` names the file.
+    #[test]
+    #[ignore = "timing research; YES_MASTER_BENCH_FILE"]
+    fn slice_8_speed_breakdown() {
+        use std::time::Instant;
+        let path = std::env::var("YES_MASTER_BENCH_FILE").expect("YES_MASTER_BENCH_FILE");
+        let t = Instant::now();
+        let pcm = crate::decode::decode_full(std::path::Path::new(&path)).unwrap();
+        println!("decode {:.3}s", t.elapsed().as_secs_f64());
+        let (rate, channels) = (pcm.sample_rate, pcm.channels);
+        let ch = usize::from(channels);
+        let t = Instant::now();
+        let level = crate::analysis::measure_source_level(&pcm.samples, rate, channels).unwrap();
+        println!("source level {:.3}s", t.elapsed().as_secs_f64());
+        let mut settings: MasteringSettings = serde_json::from_value(serde_json::json!({
+            "preset":{"kind":"universal"},"intensity":0.5,"volume_match":false,
+            "eq_low_db":0.,"eq_mid_db":0.,"eq_high_db":0.,"delivery_profile":"custom",
+            "advanced":{"lufs_offset_db":-9.0,"ceiling_dbtp":-1.0,
+              "target_sample_rate":44100,"bit_depth":24,
+              "auto_gain_staging":{"enabled":true,"priority":"clean"}}
+        }))
+        .unwrap();
+        settings.advanced.gain_staging_resolved = Some(ResolvedGainStaging {
+            level_in_db: level_in_for(&level).unwrap(),
+            ..Default::default()
+        });
+        let mut chain = MasteringChain::new(rate, ch, &settings);
+        let t = Instant::now();
+        let stage = capture_stages(&mut chain, &pcm.samples, ch, None, &|_| {}).unwrap();
+        let capture_s = t.elapsed().as_secs_f64();
+        println!("stage capture (1 thread) {capture_s:.3}s");
+        let t = Instant::now();
+        let stage_lufs =
+            crate::engine::measure_integrated_lufs(&stage.pre[..stage.frames * ch], rate, channels)
+                .unwrap();
+        println!(
+            "stage lufs {:.3}s ({stage_lufs:.2})",
+            t.elapsed().as_secs_f64()
+        );
+        let t = Instant::now();
+        let det = Limiter::detector_level(&stage.pre, ch);
+        println!(
+            "detector level {:.3}s ({det:.3})",
+            t.elapsed().as_secs_f64()
+        );
+        let template = MasteringChain::fresh_limiter(rate, ch, &settings);
+        let t = Instant::now();
+        let (rendered, load) = limiter_pass(&chain, &template, &stage, 2.0, &|_| {});
+        println!(
+            "limiter pass {:.3}s (load {load:.2})",
+            t.elapsed().as_secs_f64()
+        );
+        let t = Instant::now();
+        let mut delivered =
+            crate::sample_rate::convert_interleaved(&rendered, rate, 44_100, channels).unwrap();
+        println!("SRC to 44.1k {:.3}s", t.elapsed().as_secs_f64());
+        let t = Instant::now();
+        let m = crate::output_protection::finalize(
+            &mut delivered,
+            44_100,
+            channels,
+            24,
+            Some(-9.0),
+            -1.0,
+            None,
+        )
+        .unwrap();
+        println!(
+            "finalize {:.3}s ({:.2} LUFS)",
+            t.elapsed().as_secs_f64(),
+            m.lufs
+        );
+        let mut again =
+            crate::sample_rate::convert_interleaved(&rendered, rate, 44_100, channels).unwrap();
+        let t = Instant::now();
+        let prepared = crate::output_protection::prepare(&again, 44_100, channels, None).unwrap();
+        println!(
+            "prepare (qualified peak + lufs) {:.3}s",
+            t.elapsed().as_secs_f64()
+        );
+        let t = Instant::now();
+        let _ = crate::output_protection::finalize_prepared(
+            &mut again,
+            &prepared,
+            24,
+            Some(-9.0),
+            -1.0,
+            None,
+        )
+        .unwrap();
+        println!(
+            "finalize_prepared (apply, dither, re-measure) {:.3}s",
+            t.elapsed().as_secs_f64()
+        );
+        let t = Instant::now();
+        let l = crate::engine::measure_integrated_lufs(&rendered, rate, channels).unwrap();
+        println!(
+            "limiter-output lufs {:.3}s ({l:.2})",
+            t.elapsed().as_secs_f64()
+        );
+
+        // Chunked, parallel capture with a warm-up per chunk.
+        for (threads, warm_s) in [(8usize, 2.0f64), (16, 2.0), (16, 4.0)] {
+            let frames = pcm.samples.len() / ch;
+            let warm = (warm_s * f64::from(rate)) as usize;
+            let t = Instant::now();
+            let mut pre = vec![0.0_f32; frames * ch];
+            std::thread::scope(|scope| {
+                let mut rest: &mut [f32] = &mut pre;
+                let mut start = 0;
+                for i in 0..threads {
+                    let end = frames * (i + 1) / threads;
+                    let (mine, tail) = rest.split_at_mut((end - start) * ch);
+                    rest = tail;
+                    let settings = &settings;
+                    let samples = &pcm.samples;
+                    scope.spawn(move || {
+                        let mut c = MasteringChain::new(rate, ch, settings);
+                        let from = start.saturating_sub(warm);
+                        let mut frame = vec![0.0_f32; ch];
+                        for f in from..start {
+                            frame.copy_from_slice(&samples[f * ch..(f + 1) * ch]);
+                            c.process_stages_inplace(&mut frame);
+                        }
+                        for (j, out) in mine.chunks_exact_mut(ch).enumerate() {
+                            let f = start + j;
+                            out.copy_from_slice(&samples[f * ch..(f + 1) * ch]);
+                            c.process_stages_inplace(out);
+                        }
+                    });
+                    start = end;
+                }
+            });
+            let par_s = t.elapsed().as_secs_f64();
+            // Compare against the sequential capture (which is offset by the
+            // chain's latency in the same way, frame for frame).
+            let par_lufs = crate::engine::measure_integrated_lufs(&pre, rate, channels).unwrap();
+            let max_diff = pre
+                .iter()
+                .zip(&stage.pre[..frames * ch])
+                .map(|(a, b)| (a - b).abs())
+                .fold(0.0_f32, f32::max);
+            println!(
+                "parallel capture {threads} threads, {warm_s}s warm-up: {par_s:.3}s, lufs {par_lufs:.3} vs {stage_lufs:.3}, max sample diff {max_diff:.2e}"
+            );
+        }
+    }
+
+    /// Slice 8 research, opt-in: the estimate against the exact resolution
+    /// on one file. `YES_MASTER_BENCH_FILE` names the file.
+    #[test]
+    #[ignore = "timing research; YES_MASTER_BENCH_FILE"]
+    fn slice_8_estimate_vs_exact() {
+        use std::time::Instant;
+        let path = std::env::var("YES_MASTER_BENCH_FILE").expect("YES_MASTER_BENCH_FILE");
+        let pcm = crate::decode::decode_full(std::path::Path::new(&path)).unwrap();
+        let (rate, channels) = (pcm.sample_rate, pcm.channels);
+        let level = crate::analysis::measure_source_level(&pcm.samples, rate, channels).unwrap();
+        for preset in ["universal", "oomph"] {
+            for (target, priority) in [
+                (-14.0, "clean"),
+                (-11.0, "clean"),
+                (-9.0, "clean"),
+                (-9.0, "reach_target"),
+            ] {
+                let settings: MasteringSettings = serde_json::from_value(serde_json::json!({
+                    "preset":{"kind":preset},"intensity":0.5,"volume_match":false,
+                    "eq_low_db":0.,"eq_mid_db":0.,"eq_high_db":0.,"delivery_profile":"custom",
+                    "advanced":{"lufs_offset_db":target,"ceiling_dbtp":-1.0,
+                      "target_sample_rate":44100,"bit_depth":24,
+                      "auto_gain_staging":{"enabled":true,"priority":priority}}
+                }))
+                .unwrap();
+                let t = Instant::now();
+                let est =
+                    estimate_preview(&pcm.samples, rate, channels, &settings, Some(&level), None)
+                        .unwrap()
+                        .unwrap();
+                let est_s = t.elapsed().as_secs_f64();
+                let t = Instant::now();
+                let exact =
+                    resolve_preview(&pcm.samples, rate, channels, &settings, Some(&level), None)
+                        .unwrap()
+                        .unwrap();
+                let exact_s = t.elapsed().as_secs_f64();
+                println!(
+                    "{preset} {target} {priority}: estimate {:+.2} dB in {est_s:.2}s, exact {:+.2} dB in {exact_s:.2}s, diff {:+.3} (delivered {:.2} vs {:.2})",
+                    est.gains.limiter_drive_db,
+                    exact.gains.limiter_drive_db,
+                    est.gains.limiter_drive_db - exact.gains.limiter_drive_db,
+                    est.delivered_lufs,
+                    exact.delivered_lufs
+                );
+            }
+        }
+    }
+
+    /// Slice 8 research, opt-in: the qualified peak's two halves against a
+    /// 4x reading on limited masters. `YES_MASTER_BENCH_FILE` names the file.
+    #[test]
+    #[ignore = "timing research; YES_MASTER_BENCH_FILE"]
+    fn slice_8_peak_readings() {
+        use std::time::Instant;
+        let path = std::env::var("YES_MASTER_BENCH_FILE").expect("YES_MASTER_BENCH_FILE");
+        let pcm = crate::decode::decode_full(std::path::Path::new(&path)).unwrap();
+        let (rate, channels) = (pcm.sample_rate, pcm.channels);
+        let ch = usize::from(channels);
+        let level = crate::analysis::measure_source_level(&pcm.samples, rate, channels).unwrap();
+        let mut settings: MasteringSettings = serde_json::from_value(serde_json::json!({
+            "preset":{"kind":"universal"},"intensity":0.5,"volume_match":false,
+            "eq_low_db":0.,"eq_mid_db":0.,"eq_high_db":0.,"delivery_profile":"custom",
+            "advanced":{"lufs_offset_db":-9.0,"ceiling_dbtp":-1.0,
+              "auto_gain_staging":{"enabled":true,"priority":"clean"}}
+        }))
+        .unwrap();
+        settings.advanced.gain_staging_resolved = Some(ResolvedGainStaging {
+            level_in_db: level_in_for(&level).unwrap(),
+            ..Default::default()
+        });
+        let mut chain = MasteringChain::new(rate, ch, &settings);
+        let stage = capture_stages(&mut chain, &pcm.samples, ch, None, &|_| {}).unwrap();
+        let template = MasteringChain::fresh_limiter(rate, ch, &settings);
+        let db = |v: f64| 20.0 * v.log10();
+        for drive in [0.0_f32, 3.0, 6.0, 10.0] {
+            let (out, load) = limiter_pass(&chain, &template, &stage, drive, &|_| {});
+            let t = Instant::now();
+            let (_, tp4) = loudness_and_true_peak(&out, rate, channels).unwrap();
+            let t4 = t.elapsed().as_secs_f64();
+            let t = Instant::now();
+            let low = crate::peak_meter::lowpass_upper(&out, ch, || false).unwrap();
+            let tl = t.elapsed().as_secs_f64();
+            let t = Instant::now();
+            let full = crate::peak_meter::measure(&out, ch, || false).unwrap();
+            let tf = t.elapsed().as_secs_f64();
+            let finite = full
+                .channels
+                .iter()
+                .map(|c| c.finite.continuous_upper)
+                .fold(0.0_f64, f64::max);
+            println!(
+                "drive {drive:+.0} (load {load:.1}): 4x {tp4:+.2} dBTP in {t4:.2}s | lowpass {:+.2} in {tl:.2}s | finite sinc {:+.2} | qualified {:+.2} in {tf:.2}s",
+                db(low), db(finite), db(full.upper())
+            );
+        }
     }
 }

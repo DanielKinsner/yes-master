@@ -716,16 +716,21 @@ export type AutoGainStagingReadout =
   | { state: "album" }
   | { state: "unusable" }
   | { state: "measuring" }
-  | {
-      state: "settled";
-      level_in_db: number;
-      limiter_drive_db: number;
-      limiter_load_db: number;
-      stopped_at_clean_limit: boolean;
-      stopped_by_peak_check: boolean;
-      delivered_lufs: number;
-      target_lufs: number;
-    };
+  | ({ state: "estimated" } & AutoGainStagingGains)
+  | ({ state: "settled" } & AutoGainStagingGains);
+
+/// The numbers in an estimated or settled auto gain staging readout.
+/// `estimated` (Slice 8) is audition's fast estimate while the exact result
+/// is pending; `settled` is the exact result an export delivers.
+export interface AutoGainStagingGains {
+  level_in_db: number;
+  limiter_drive_db: number;
+  limiter_load_db: number;
+  stopped_at_clean_limit: boolean;
+  stopped_by_peak_check: boolean;
+  delivered_lufs: number;
+  target_lufs: number;
+}
 
 /// Mirrors `types::AutoGainStagingStatus` (`auto-gain-staging:status`).
 export interface AutoGainStagingStatus {

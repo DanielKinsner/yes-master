@@ -63,7 +63,44 @@ impl Key {
     }
 }
 
-type Entries = VecDeque<(Key, Resolution)>;
+/// One song's settings, resolved: the exact resolution (what an export
+/// delivers and the line shows) and the gains audition plays. Audition keeps
+/// a fast estimate's drive when the exact one is within
+/// [`REFINE_THRESHOLD_DB`] of it, so refining changes nothing audible
+/// (Slice 8, F3); otherwise it plays the exact gains.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct LiveEntry {
+    pub(super) exact: Resolution,
+    pub(super) audition: ResolvedGainStaging,
+}
+
+/// Below this difference in limiter drive the exact result does not replace
+/// the estimate audition already plays (Slice 8, F3).
+pub(super) const REFINE_THRESHOLD_DB: f32 = 0.3;
+
+/// What audition plays once the exact resolution is in: the estimate's level
+/// in and drive when they are within the threshold of the exact ones, so the
+/// chain's coefficients do not change; otherwise the exact gains.
+pub(super) fn audition_gains(
+    exact: &Resolution,
+    estimate: Option<&Resolution>,
+) -> ResolvedGainStaging {
+    match estimate {
+        Some(e)
+            if (e.gains.limiter_drive_db - exact.gains.limiter_drive_db).abs()
+                < REFINE_THRESHOLD_DB
+                && e.gains.level_in_db == exact.gains.level_in_db =>
+        {
+            ResolvedGainStaging {
+                limiter_drive_db: e.gains.limiter_drive_db,
+                ..exact.gains
+            }
+        }
+        _ => exact.gains,
+    }
+}
+
+type Entries = VecDeque<(Key, LiveEntry)>;
 
 fn cache() -> &'static Mutex<Entries> {
     static CACHE: OnceLock<Mutex<Entries>> = OnceLock::new();
@@ -76,18 +113,18 @@ fn levels() -> &'static Mutex<VecDeque<(PathBuf, Option<SystemTime>, SourceLevel
     LEVELS.get_or_init(|| Mutex::new(VecDeque::new()))
 }
 
-fn find(entries: &Entries, key: &Key) -> Option<Resolution> {
+fn find(entries: &Entries, key: &Key) -> Option<LiveEntry> {
     entries.iter().find(|(k, _)| k == key).map(|(_, r)| *r)
 }
 
 /// For the audio command thread: never waits. A busy lock reads as a miss,
 /// which only means the song stays pending until the 50 ms retry.
-pub(super) fn try_lookup(key: &Key) -> Option<Resolution> {
+pub(super) fn try_lookup(key: &Key) -> Option<LiveEntry> {
     find(&*cache().try_lock().ok()?, key)
 }
 
 /// For workers and commands.
-pub(super) fn lookup(key: &Key) -> Option<Resolution> {
+pub(super) fn lookup(key: &Key) -> Option<LiveEntry> {
     find(
         &cache()
             .lock()
@@ -96,7 +133,7 @@ pub(super) fn lookup(key: &Key) -> Option<Resolution> {
     )
 }
 
-fn insert(key: Key, resolution: Resolution) {
+fn insert(key: Key, resolution: LiveEntry) {
     let mut entries = cache()
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
@@ -131,15 +168,45 @@ fn source_level(key: &Key, pcm: &PlaybackPcm) -> CommandResult<SourceLevel> {
     Ok(level)
 }
 
-/// Resolve one song's settings, or reuse a resolution already made. Run only
-/// while holding the preview-worker permit. A cancelled resolution is never
-/// stored. `Ok(None)`: the feature is inert for these settings.
+/// Audition's fast estimate for one song's settings (Slice 8): the export's
+/// drive search on parallel chunks with an emulated final check. Level in
+/// comes from the analysis when audition has it. Never stored; exports never
+/// use it.
+pub(super) fn estimate(
+    key: &Key,
+    pcm: &PlaybackPcm,
+    settings: &MasteringSettings,
+    analysis: Option<SourceLevel>,
+    cancel: &AtomicBool,
+) -> CommandResult<Option<Resolution>> {
+    let level = match analysis {
+        Some(level) => level,
+        None => source_level(key, pcm)?,
+    };
+    let mut unresolved = settings.clone();
+    unresolved.advanced.gain_staging_resolved = None;
+    crate::gain_staging::estimate_preview(
+        &pcm.samples,
+        pcm.sample_rate,
+        pcm.channels,
+        &unresolved,
+        Some(&level),
+        Some(cancel),
+    )
+}
+
+/// Resolve one song's settings exactly, or reuse a resolution already made.
+/// Run only while holding the preview-worker permit. A cancelled resolution
+/// is never stored. `estimate` is what audition already plays for these
+/// settings, if anything. `Ok(None)`: the feature is inert for these
+/// settings.
 pub(super) fn resolve_cached(
     key: &Key,
     pcm: &PlaybackPcm,
     settings: &MasteringSettings,
+    estimate: Option<&Resolution>,
     cancel: &AtomicBool,
-) -> CommandResult<Option<Resolution>> {
+) -> CommandResult<Option<LiveEntry>> {
     if let Some(hit) = lookup(key) {
         return Ok(Some(hit));
     }
@@ -154,26 +221,31 @@ pub(super) fn resolve_cached(
         Some(&level),
         Some(cancel),
     )?;
-    if let Some(resolution) = resolution {
+    let entry = resolution.map(|exact| LiveEntry {
+        exact,
+        audition: audition_gains(&exact, estimate),
+    });
+    if let Some(entry) = entry {
         if !cancel.load(std::sync::atomic::Ordering::Relaxed) {
-            insert(key.clone(), resolution);
+            insert(key.clone(), entry);
         }
     }
-    Ok(resolution)
+    Ok(entry)
 }
 
-/// What the live chain does with one song's settings.
 #[cfg(test)]
 #[path = "gain_staging_live_tests.rs"]
 mod tests;
 
+/// What the live chain does with one song's settings.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum LivePlan {
     /// Off, or inert: the chain is exactly today's. The readout is `None`
     /// while the switch is off.
     Inert(Option<AutoGainStagingReadout>),
-    /// A verified resolution: apply it.
-    Settled(Resolution),
+    /// A verified resolution: apply its audition gains; the line shows the
+    /// exact resolution.
+    Settled(LiveEntry),
     /// No verified resolution yet. Apply `pending` (level in from analysis,
     /// the drive held or lowered) and resolve `key` on the worker.
     Pending {
@@ -251,9 +323,9 @@ pub(super) fn apply(
             settings.advanced.gain_staging_resolved = None;
             *readout
         }
-        LivePlan::Settled(resolution) => {
-            settings.advanced.gain_staging_resolved = Some(resolution.gains);
-            Some(resolution.readout())
+        LivePlan::Settled(entry) => {
+            settings.advanced.gain_staging_resolved = Some(entry.audition);
+            Some(entry.exact.readout())
         }
         LivePlan::Pending { pending, .. } => {
             settings.advanced.gain_staging_resolved = Some(*pending);

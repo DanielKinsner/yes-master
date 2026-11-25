@@ -11,6 +11,7 @@ import {
 } from "vitest";
 
 import type {
+  AutoGainStagingGains,
   AutoGainStagingReadout,
   AutoGainStagingStatus,
   AnalysisResult,
@@ -5226,6 +5227,27 @@ describe("Auto gain staging (plan Slices 5 and 6)", () => {
     await act(async () => { statusHandler?.({ track_id: track.id, readout: { state: "measuring" } }); });
     expect(harness.current().autoGainStaging.state).toBe("measuring");
     expect(harness.current().autoGainStaging.pending).toBe(true);
+
+    // Slice 8: the estimate plays first, with its numbers and refining…,
+    // even while the readout command is still in flight.
+    const slow = deferred<AutoGainStagingReadout | null>();
+    mocks.api.autoGainStagingReadout.mockReturnValueOnce(slow.promise);
+    const callsBefore = mocks.api.autoGainStagingReadout.mock.calls.length;
+    await act(async () => harness.current().setLoudnessPriority("reach_target"));
+    await waitFor(() =>
+      expect(mocks.api.autoGainStagingReadout.mock.calls.length).toBe(callsBefore + 1),
+    );
+    await act(async () => {
+      statusHandler?.({
+        track_id: track.id,
+        readout: ({ ...(settled({ level_in_db: -3.3, limiter_drive_db: 1.4, limiter_load_db: 2.0 }) as AutoGainStagingGains), state: "estimated" } as AutoGainStagingReadout),
+      });
+    });
+    expect(harness.current().autoGainStaging.state).toBe("refining");
+    expect(harness.current().autoGainStaging.line).toBe(
+      "Level in −3.3 dB · limiter drive +1.4 dB · limiting up to 2.0 dB · refining…",
+    );
+    await act(async () => { slow.resolve(settled()); });
 
     await act(async () => {
       statusHandler?.({ track_id: track.id, readout: settled({ limiter_drive_db: 0, limiter_load_db: 0, level_in_db: -3.3 }) });

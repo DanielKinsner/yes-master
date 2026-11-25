@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AutoGainStagingReadout, MasteringSettings } from "../bindings";
+import type { AutoGainStagingGains, AutoGainStagingReadout, MasteringSettings } from "../bindings";
 import { ADAPTIVE_STRENGTH_DEFAULT, EQ_BAND_DEFAULTS } from "../bindings";
 import {
   AUTO_GAIN_STAGING_COPY,
@@ -140,6 +140,21 @@ describe("auto gain staging copy (plan locked copy table)", () => {
       "Reached −11.3 LUFS of −9.0. This song's peaks stop it going louder under your ceiling.",
     );
     expect(view.priority).toBe("reach_target");
+  });
+
+  it("Slice 8: the estimate plays with its numbers and refining…", () => {
+    const view = line(ON, ({ ...(settled({ level_in_db: -3.3, limiter_drive_db: 1.4, limiter_load_db: 2.0 }) as AutoGainStagingGains), state: "estimated" } as AutoGainStagingReadout));
+    expect(view.state).toBe("refining");
+    expect(view.line).toBe(
+      "Level in −3.3 dB · limiter drive +1.4 dB · limiting up to 2.0 dB · refining…",
+    );
+    expect(view.pending).toBe(true);
+    const stopped = line(ON, ({ ...(settled({ limiter_load_db: 6, stopped_at_clean_limit: true, delivered_lufs: -11.2, target_lufs: -9 }) as AutoGainStagingGains), state: "estimated" } as AutoGainStagingReadout));
+    expect(stopped.line).toBe(
+      "Reached −11.2 LUFS of −9.0. Going louder needs more than 6 dB of limiting · refining…",
+    );
+    // Measuring only until the estimate arrives.
+    expect(line(ON, { state: "measuring" }).line).toBe("Measuring this song…");
   });
 
   it("On, no loudness target", () => {

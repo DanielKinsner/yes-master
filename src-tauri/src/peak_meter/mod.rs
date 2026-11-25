@@ -222,6 +222,71 @@ where
     })
 }
 
+/// The recorded-lowpass half of [`measure`] alone: its grid bound over all
+/// channels, without the finite-sinc pass. Auto gain staging's audition
+/// estimate reads it as a cheaper, close reading of the qualified peak. It is
+/// not itself qualified: the finite-sinc half can be higher.
+pub(crate) fn lowpass_upper(
+    samples: &[f32],
+    channels: usize,
+    cancelled: impl Fn() -> bool + Sync,
+) -> Result<f64, &'static str> {
+    let source = InterleavedPcm::new(samples, channels)?;
+    let grid = lowpass_filter().measure(&source, Workers::Budget, &cancelled)?;
+    let sample_peak = samples
+        .iter()
+        .fold(0_f64, |m, &v| m.max(f64::from(v.abs())));
+    Ok(grid
+        .into_iter()
+        .map(|g| (g + FIR_NUMERICAL_GAIN * sample_peak) / GRID_DENOMINATOR)
+        .fold(0_f64, f64::max))
+}
+
+/// Run `work` over consecutive ranges of `items`, on the calling thread plus
+/// extra threads leased from the same process-wide budget as the peak passes
+/// (so a concurrent measurement shares it, and the reserved cores stay with
+/// realtime playback). Results come back in range order. Auto gain staging's
+/// audition estimate uses it; it is not a measurement and makes no
+/// thread-count-independence promise beyond what each caller documents.
+pub(crate) fn map_ranges_on_budget<T: Send>(
+    items: usize,
+    min_items_per_worker: usize,
+    work: impl Fn(Range<usize>) -> T + Sync,
+) -> Vec<T> {
+    let budget = worker_budget();
+    let wanted = budget.min(items / min_items_per_worker.max(1)).max(1);
+    let lease = WorkerLease::acquire_from(&EXTRA_WORKERS_IN_USE, wanted - 1, budget);
+    let count = 1 + lease.extra;
+    let ranges: Vec<Range<usize>> = (0..count)
+        .map(|i| items * i / count..items * (i + 1) / count)
+        .collect();
+    if count == 1 {
+        return vec![work(0..items)];
+    }
+    let work = &work;
+    std::thread::scope(|scope| {
+        let mut pending = Vec::with_capacity(count - 1);
+        for range in ranges[1..].iter().cloned() {
+            let fallback = range.clone();
+            let spawned = std::thread::Builder::new()
+                .name("gain-staging-estimate".into())
+                .spawn_scoped(scope, move || work(range));
+            pending.push(spawned.map_err(|_| fallback));
+        }
+        let mut results = Vec::with_capacity(count);
+        results.push(work(ranges[0].clone()));
+        for job in pending {
+            results.push(match job {
+                Ok(handle) => handle
+                    .join()
+                    .unwrap_or_else(|panic| std::panic::resume_unwind(panic)),
+                Err(range) => work(range),
+            });
+        }
+        results
+    })
+}
+
 pub fn measure(
     samples: &[f32],
     channels: usize,

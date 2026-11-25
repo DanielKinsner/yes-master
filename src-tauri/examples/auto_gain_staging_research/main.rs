@@ -75,6 +75,9 @@ struct Args {
     timing: bool,
     /// Checkpoint B follow-up: Reach target export timing and progress.
     timing_reach: bool,
+    /// Slice 8 (F1): the audition estimate against the exact resolution, at
+    /// each comma-separated true-peak margin.
+    estimate_check: Option<String>,
     /// G resolves on the delivered loudness (contract rule 3; the default)
     /// or, with `--g-resolve chain-output`, on the chain's output before
     /// delivery (the first development run).
@@ -125,6 +128,7 @@ fn parse_args() -> Result<Args, String> {
         excerpt_seconds: map.get("excerpt-seconds").and_then(|s| s.parse().ok()),
         timing: map.get("timing").is_some_and(|v| v == "1"),
         timing_reach: map.get("timing-reach").is_some_and(|v| v == "1"),
+        estimate_check: map.get("estimate-check").cloned(),
         max_passes: map
             .get("max-passes")
             .and_then(|v| v.parse().ok())
@@ -1207,6 +1211,27 @@ fn main() {
 }
 
 fn run() -> Result<(), String> {
+    // The owner's listening pack needs only its songs and a folder.
+    let raw: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(i) = raw.iter().position(|a| a == "--listening-pack") {
+        let out = raw.get(i + 1).ok_or("--listening-pack needs a folder")?;
+        let songs = raw
+            .iter()
+            .position(|a| a == "--pack")
+            .and_then(|j| raw.get(j + 1))
+            .ok_or("--pack \"1 Name=<path>|2 Name=<path>\" is required")?;
+        return production::listening_pack(Path::new(out), songs);
+    }
+    // Slice 8, F4: hashes of switch-on (and off) exports, to compare commits.
+    if let Some(i) = raw.iter().position(|a| a == "--export-hashes") {
+        let out = raw.get(i + 1).ok_or("--export-hashes needs a JSON path")?;
+        let songs = raw
+            .iter()
+            .position(|a| a == "--pack")
+            .and_then(|j| raw.get(j + 1))
+            .ok_or("--pack is required")?;
+        return production::export_hashes(Path::new(out), songs);
+    }
     let args = parse_args()?;
     // A15: the gated systems stay off.
     let gates_off = !yes_master_lib::guardrails::is_adaptive_compression_enabled()
@@ -1290,6 +1315,37 @@ fn run() -> Result<(), String> {
             all.extend(r?);
         }
         return write_json(&args.output.join("reach-check.json"), &all);
+    }
+    if let Some(margins) = &args.estimate_check {
+        use yes_master_lib::gain_staging::EstimatePeak;
+        // "4x:0,lp:0.1": the peak reading and its margin in dB.
+        let margins: Vec<(EstimatePeak, f32)> = margins
+            .split(',')
+            .map(|v| {
+                let (peak, m) = v
+                    .trim()
+                    .split_once(':')
+                    .ok_or(format!("variant {v}: expected peak:margin"))?;
+                let peak = match peak {
+                    "4x" => EstimatePeak::FourX,
+                    "lp" => EstimatePeak::Lowpass,
+                    other => return Err(format!("unknown peak reading {other}")),
+                };
+                let margin = m.parse::<f32>().map_err(|e| format!("margin {m}: {e}"))?;
+                Ok((peak, margin))
+            })
+            .collect::<Result<_, String>>()?;
+        println!("estimate check: {} songs, margins {margins:?}", songs.len());
+        let rows = parallel_map(&songs, args.workers, |song| {
+            let r = production::estimate_check_song(song, &margins);
+            println!("done {}", song.label);
+            r
+        });
+        let mut all = Vec::new();
+        for r in rows {
+            all.extend(r?);
+        }
+        return write_json(&args.output.join("estimate-check.json"), &all);
     }
     if args.timing_reach && args.production {
         let scratch = args.output.join("scratch");

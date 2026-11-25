@@ -918,6 +918,17 @@ pub enum AutoGainStagingReadout {
     Unusable,
     /// A resolution is in flight. Nothing shown is settled (rule 8).
     Measuring,
+    /// Audition plays the fast estimate while the exact resolution is still
+    /// in flight (Slice 8); the line shows these numbers with "refining…".
+    Estimated {
+        level_in_db: f32,
+        limiter_drive_db: f32,
+        limiter_load_db: f32,
+        stopped_at_clean_limit: bool,
+        stopped_by_peak_check: bool,
+        delivered_lufs: f32,
+        target_lufs: f32,
+    },
     /// The gains the chain applies, and the loudness they deliver.
     Settled {
         level_in_db: f32,

@@ -341,9 +341,9 @@ pub async fn prepare_preview_level(
             && crate::gain_staging::inert_readout(&settings, album).is_none()
         {
             if let Some(key) = gain_staging_live::Key::new(&canonical, mtime, &settings) {
-                match gain_staging_live::resolve_cached(&key, &pcm, &settings, &cancelled) {
-                    Ok(resolution) => {
-                        settings.advanced.gain_staging_resolved = resolution.map(|r| r.gains);
+                match gain_staging_live::resolve_cached(&key, &pcm, &settings, None, &cancelled) {
+                    Ok(entry) => {
+                        settings.advanced.gain_staging_resolved = entry.map(|e| e.audition);
                     }
                     Err(_) if cancelled.load(Ordering::Relaxed) => return Ok(()),
                     Err(error) => return Err(error),
@@ -481,7 +481,7 @@ pub async fn auto_gain_staging_readout(
         let Some(key) = gain_staging_live::Key::new(&canonical, mtime, &settings) else {
             return Ok(Some(AutoGainStagingReadout::Unusable));
         };
-        match gain_staging_live::resolve_cached(&key, &pcm, &settings, &cancelled) {
+        match gain_staging_live::resolve_cached(&key, &pcm, &settings, None, &cancelled) {
             Ok(resolution) => {
                 crate::diagnostics::info(format!(
                     "auto gain staging resolved {} in {:.3}s",
@@ -489,7 +489,7 @@ pub async fn auto_gain_staging_readout(
                     started.elapsed().as_secs_f64()
                 ));
                 Ok(Some(
-                    resolution.map_or(AutoGainStagingReadout::Unusable, |r| r.readout()),
+                    resolution.map_or(AutoGainStagingReadout::Unusable, |e| e.exact.readout()),
                 ))
             }
             Err(_) if cancelled.load(Ordering::Relaxed) => Ok(None),
@@ -2119,7 +2119,16 @@ struct PreviewWorkRequest {
     device_rate: u32,
     /// Auto gain staging: resolve these settings first (Slice 5). `settings`
     /// then carry the pending gains the chain plays meanwhile (rule 8).
-    gain_staging: Option<gain_staging_live::Key>,
+    gain_staging: Option<GainStagingWork>,
+}
+
+/// Auto gain staging work for the preview worker: the settings to resolve,
+/// and the track analysis's level when audition has it (the fast estimate
+/// uses it rather than measuring the song again).
+#[derive(Clone, Debug, PartialEq)]
+struct GainStagingWork {
+    key: gain_staging_live::Key,
+    analysis: Option<crate::analysis::SourceLevel>,
 }
 
 /// The line after a worker result: only the live generation's resolution
@@ -2134,7 +2143,8 @@ fn worker_readout(
         return current;
     }
     match outcome {
-        Some(GainStagingOutcome::Resolved(resolution)) => Some(resolution.readout()),
+        Some(GainStagingOutcome::Estimated(estimate)) => Some(estimate.estimated_readout()),
+        Some(GainStagingOutcome::Resolved(entry)) => Some(entry.exact.readout()),
         Some(GainStagingOutcome::Inert) => Some(AutoGainStagingReadout::Unusable),
         None => current,
     }
@@ -2143,7 +2153,9 @@ fn worker_readout(
 /// What the worker learned about auto gain staging for its settings.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum GainStagingOutcome {
-    Resolved(crate::gain_staging::Resolution),
+    /// Slice 8: the fast estimate audition plays until the exact result.
+    Estimated(crate::gain_staging::Resolution),
+    Resolved(gain_staging_live::LiveEntry),
     /// No usable measurement: the feature is inert for this song.
     Inert,
 }
@@ -2218,7 +2230,7 @@ impl PreviewWorkerGate {
             .active
             .as_ref()
             .and_then(|active| active.gain_staging.as_ref())
-            .is_some_and(|active| Some(active) != requested)
+            .is_some_and(|active| Some(&active.key) != requested)
         {
             self.cancelled.store(true, Ordering::Relaxed);
         }
@@ -2306,11 +2318,46 @@ fn try_spawn_lufs_preview_worker(
             // Volume Match and landing measurements, which then measure the
             // chain with the resolved gains.
             let mut gain_staging = None;
-            if let Some(key) = gain_staging_key {
-                match gain_staging_live::resolve_cached(&key, &pcm, &settings, &cancelled) {
-                    Ok(Some(resolution)) => {
-                        settings.advanced.gain_staging_resolved = Some(resolution.gains);
-                        gain_staging = Some(GainStagingOutcome::Resolved(resolution));
+            if let Some(GainStagingWork { key, analysis }) = gain_staging_key {
+                // Slice 8: a fast estimate first, played at once (it may raise
+                // the drive: it is for these very settings and passed F1),
+                // then the exact resolution, which replaces it only when the
+                // two differ by the refine threshold or more.
+                let mut estimate = None;
+                if gain_staging_live::lookup(&key).is_none() {
+                    match gain_staging_live::estimate(&key, &pcm, &settings, analysis, &cancelled) {
+                        Ok(Some(found)) if !cancelled.load(Ordering::Relaxed) => {
+                            let mut playing = settings.clone();
+                            playing.advanced.gain_staging_resolved = Some(found.gains);
+                            let _ = command_tx.send(AudioCommand::PreviewLandingReady {
+                                track_epoch,
+                                generation,
+                                settings: playing,
+                                gain: None,
+                                device_gain: None,
+                                error: None,
+                                vm_gain: None,
+                                finished: false,
+                                gain_staging: Some(GainStagingOutcome::Estimated(found)),
+                            });
+                            estimate = Some(found);
+                        }
+                        Ok(_) => {}
+                        // A failed estimate only means audition waits for the
+                        // exact result, as before Slice 8.
+                        Err(_) => {}
+                    }
+                }
+                match gain_staging_live::resolve_cached(
+                    &key,
+                    &pcm,
+                    &settings,
+                    estimate.as_ref(),
+                    &cancelled,
+                ) {
+                    Ok(Some(entry)) => {
+                        settings.advanced.gain_staging_resolved = Some(entry.audition);
+                        gain_staging = Some(GainStagingOutcome::Resolved(entry));
                     }
                     Ok(None) => {
                         settings.advanced.gain_staging_resolved = None;
@@ -2489,19 +2536,19 @@ fn queue_preview_work(
         if let Some(hit) = request
             .gain_staging
             .as_ref()
-            .and_then(gain_staging_live::try_lookup)
+            .and_then(|work| gain_staging_live::try_lookup(&work.key))
         {
-            request.settings.advanced.gain_staging_resolved = Some(hit.gains);
+            request.settings.advanced.gain_staging_resolved = Some(hit.audition);
             request.gain_staging = None;
             if request.generation == s.live_coeff_generation {
-                s.live_gain_staging_readout = Some(hit.readout());
+                s.live_gain_staging_readout = Some(hit.exact.readout());
                 publish_preview_coeffs(s, &request.settings, request.generation);
             }
         }
     }
     seed_prepared_preview(s, &request.settings);
     s.preview_work
-        .cancel_superseded_gain_staging(request.gain_staging.as_ref());
+        .cancel_superseded_gain_staging(request.gain_staging.as_ref().map(|work| &work.key));
     s.preview_work
         .cancel_obsolete_response(s.live_sample_rate, &request.settings);
     if !(request.gain_staging.is_some()
@@ -2905,7 +2952,7 @@ fn process_audio_command(
                         track_epoch: s.preview_work.epoch,
                         landing_enabled: preview_lufs_landing,
                         device_rate: s._output_config.sample_rate().0,
-                        gain_staging: gain_plan.key(),
+                        gain_staging: gain_plan.key().map(|key| GainStagingWork { key, analysis }),
                     };
                     queue_preview_work(s, request, command_tx);
                 }
@@ -3696,10 +3743,11 @@ fn handle_play_master(
     }
     // Auto gain staging (Slice 5): a verified resolution, or level in now
     // with the drive held while the worker resolves (rule 8).
+    let analysis = profile_store.get_level(&track_id);
     let gain_plan = gain_staging_live::plan(
         &settings,
         album,
-        profile_store.get_level(&track_id),
+        analysis,
         Some((canonical.as_path(), mtime)),
         state.as_ref().and_then(|s| s.live_gain_staging_applied),
     );
@@ -3807,7 +3855,7 @@ fn handle_play_master(
             track_epoch,
             landing_enabled: preview_lufs_landing,
             device_rate,
-            gain_staging: gain_plan.key(),
+            gain_staging: gain_plan.key().map(|key| GainStagingWork { key, analysis }),
         },
         command_tx,
     );
