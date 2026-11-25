@@ -1,0 +1,162 @@
+{
+ "chain_bench": {
+  "owner fixture (48 kHz, 3:30)": {
+   "baseline_a8231b5_x": 91.35,
+   "off_998b6bc_x": 90.84,
+   "on_998b6bc_x": 93.17,
+   "off_vs_baseline_pct": -0.5583,
+   "on_pct_of_off": 102.5649,
+   "runs": 7,
+   "all_runs": {
+    "base": [
+     90.72,
+     90.09,
+     91.48,
+     91.72,
+     91.19,
+     91.72,
+     91.35
+    ],
+    "off": [
+     90.97,
+     91.26,
+     90.91,
+     90.66,
+     90.84,
+     89.81,
+     90.57
+    ],
+    "on": [
+     92.73,
+     93.78,
+     93.66,
+     93.46,
+     92.64,
+     93.17,
+     92.45
+    ]
+   }
+  },
+  "reference song": {
+   "baseline_a8231b5_x": 83.43,
+   "off_998b6bc_x": 83.1,
+   "on_998b6bc_x": 80.65,
+   "off_vs_baseline_pct": -0.3955,
+   "on_pct_of_off": 97.0517,
+   "runs": 7,
+   "all_runs": {
+    "base": [
+     83.43,
+     83.79,
+     83.47,
+     83.54,
+     83.14,
+     81.46,
+     83.23
+    ],
+    "off": [
+     83.1,
+     83.13,
+     82.64,
+     82.87,
+     82.28,
+     83.18,
+     83.22
+    ],
+    "on": [
+     81.83,
+     80.83,
+     80.43,
+     81.5,
+     80.65,
+     80.62,
+     80.57
+    ]
+   }
+  }
+ },
+ "export_time": [
+  {
+   "export_off_s": 5.607,
+   "export_on_s": 6.5334,
+   "receipt_line": "Auto gain staging: level in 0.0 dB · limiter drive −6.7 dB · limiting 0.0 dB",
+   "runs": 3,
+   "seconds_of_audio": 244.56,
+   "song": "owner c24e08dd52 (reference song)",
+   "target": -14.0
+  },
+  {
+   "export_off_s": 5.5334,
+   "export_on_s": 6.2576,
+   "receipt_line": "Auto gain staging: level in 0.0 dB · limiter drive −3.7 dB · limiting 0.0 dB",
+   "runs": 3,
+   "seconds_of_audio": 244.56,
+   "song": "owner c24e08dd52 (reference song)",
+   "target": -11.0
+  },
+  {
+   "export_off_s": 5.4526,
+   "export_on_s": 6.2146,
+   "receipt_line": "Auto gain staging: level in 0.0 dB · limiter drive −1.7 dB · limiting 0.8 dB",
+   "runs": 3,
+   "seconds_of_audio": 244.56,
+   "song": "owner c24e08dd52 (reference song)",
+   "target": -9.0
+  },
+  {
+   "export_off_s": 9.636,
+   "export_on_s": 11.1464,
+   "receipt_line": "Auto gain staging: level in −0.8 dB · limiter drive −2.4 dB · limiting 0.0 dB",
+   "runs": 3,
+   "seconds_of_audio": 444.0555,
+   "song": "Scott Buckley – Unraveling",
+   "target": -14.0
+  },
+  {
+   "export_off_s": 9.4826,
+   "export_on_s": 11.3356,
+   "receipt_line": "Auto gain staging: level in −0.8 dB · limiter drive +0.6 dB · limiting 2.7 dB",
+   "runs": 3,
+   "seconds_of_audio": 444.0555,
+   "song": "Scott Buckley – Unraveling",
+   "target": -11.0
+  },
+  {
+   "export_off_s": 9.8582,
+   "export_on_s": 23.2119,
+   "receipt_line": "Auto gain staging: level in −0.8 dB · limiter drive +3.5 dB · limiting 5.7 dB",
+   "runs": 3,
+   "seconds_of_audio": 444.0555,
+   "song": "Scott Buckley – Unraveling",
+   "target": -9.0
+  },
+  {
+   "export_off_s": 3.3898,
+   "export_on_s": 3.5902,
+   "receipt_line": "Auto gain staging: level in −1.1 dB · limiter drive −5.2 dB · limiting 0.0 dB",
+   "runs": 3,
+   "seconds_of_audio": 133.4857,
+   "song": "Zane Little – Sideways City",
+   "target": -14.0
+  },
+  {
+   "export_off_s": 3.4074,
+   "export_on_s": 3.846,
+   "receipt_line": "Auto gain staging: level in −1.1 dB · limiter drive −2.2 dB · limiting 0.2 dB",
+   "runs": 3,
+   "seconds_of_audio": 133.4857,
+   "song": "Zane Little – Sideways City",
+   "target": -11.0
+  },
+  {
+   "export_off_s": 3.3844,
+   "export_on_s": 5.5184,
+   "receipt_line": "Auto gain staging: level in −1.1 dB · limiter drive +0.2 dB · limiting 2.7 dB",
+   "runs": 3,
+   "seconds_of_audio": 133.4857,
+   "song": "Zane Little – Sideways City",
+   "target": -9.0
+  }
+ ],
+ "note": "Single thread on the office PC (i9-12900K), runs interleaved; export time includes decoding, medians of 3."
+}

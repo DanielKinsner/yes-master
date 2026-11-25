@@ -1,0 +1,303 @@
+{
+ "cases": [
+  {
+   "song": "Kevin MacLeod – Blue Feather",
+   "style": "Universal",
+   "target": -9.0,
+   "six_passes_lufs": -9.21,
+   "six_passes_load_db": 13.9,
+   "twelve_passes_lufs": -9.15,
+   "twelve_passes_load_db": 14.11,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Kevin MacLeod – Blue Feather",
+   "style": "Clarity",
+   "target": -9.0,
+   "six_passes_lufs": -9.23,
+   "six_passes_load_db": 15.0,
+   "twelve_passes_lufs": -9.15,
+   "twelve_passes_load_db": 15.27,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Mario Andrea Valori – Schubert Piano Sonata No. 17 (Op. 53) – Valori",
+   "style": "Universal",
+   "target": -9.0,
+   "six_passes_lufs": -9.36,
+   "six_passes_load_db": 11.4,
+   "twelve_passes_lufs": -9.15,
+   "twelve_passes_load_db": 12.25,
+   "twelve_passes_used": 9,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Mario Andrea Valori – Schubert Piano Sonata No. 17 (Op. 53) – Valori",
+   "style": "Clarity",
+   "target": -9.0,
+   "six_passes_lufs": -9.4,
+   "six_passes_load_db": 12.5,
+   "twelve_passes_lufs": -9.17,
+   "twelve_passes_load_db": 13.4,
+   "twelve_passes_used": 9,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Mario Andrea Valori – Schubert Piano Sonata No. 17 (Op. 53) – Valori",
+   "style": "Tape",
+   "target": -9.0,
+   "six_passes_lufs": -9.23,
+   "six_passes_load_db": 9.2,
+   "twelve_passes_lufs": -9.17,
+   "twelve_passes_load_db": 9.4,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Mario Andrea Valori – Schubert Piano Sonata No. 17 (Op. 53) – Valori",
+   "style": "Oomph",
+   "target": -9.0,
+   "six_passes_lufs": -9.34,
+   "six_passes_load_db": 10.5,
+   "twelve_passes_lufs": -9.16,
+   "twelve_passes_load_db": 11.32,
+   "twelve_passes_used": 9,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Musopen – Beethoven Symphony No. 3 – III. Scherzo",
+   "style": "Universal",
+   "target": -11.0,
+   "six_passes_lufs": -11.21,
+   "six_passes_load_db": 8.6,
+   "twelve_passes_lufs": -11.16,
+   "twelve_passes_load_db": 8.77,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Musopen – Beethoven Symphony No. 3 – III. Scherzo",
+   "style": "Universal",
+   "target": -9.0,
+   "six_passes_lufs": -9.56,
+   "six_passes_load_db": 15.0,
+   "twelve_passes_lufs": -9.16,
+   "twelve_passes_load_db": 16.48,
+   "twelve_passes_used": 10,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Musopen – Beethoven Symphony No. 3 – III. Scherzo",
+   "style": "Clarity",
+   "target": -11.0,
+   "six_passes_lufs": -11.24,
+   "six_passes_load_db": 9.7,
+   "twelve_passes_lufs": -11.18,
+   "twelve_passes_load_db": 9.9,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Musopen – Beethoven Symphony No. 3 – III. Scherzo",
+   "style": "Clarity",
+   "target": -9.0,
+   "six_passes_lufs": -9.58,
+   "six_passes_load_db": 16.1,
+   "twelve_passes_lufs": -9.17,
+   "twelve_passes_load_db": 17.66,
+   "twelve_passes_used": 10,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Musopen – Beethoven Symphony No. 3 – III. Scherzo",
+   "style": "Tape",
+   "target": -9.0,
+   "six_passes_lufs": -9.49,
+   "six_passes_load_db": 13.3,
+   "twelve_passes_lufs": -9.2,
+   "twelve_passes_load_db": 14.44,
+   "twelve_passes_used": 9,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Musopen – Beethoven Symphony No. 3 – III. Scherzo",
+   "style": "Oomph",
+   "target": -9.0,
+   "six_passes_lufs": -9.62,
+   "six_passes_load_db": 14.8,
+   "twelve_passes_lufs": -9.16,
+   "twelve_passes_load_db": 16.4,
+   "twelve_passes_used": 10,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "St Matthews Concert Choir – Cherubini Requiem in C minor – Pie Jesu",
+   "style": "Universal",
+   "target": -9.0,
+   "six_passes_lufs": -9.29,
+   "six_passes_load_db": 11.2,
+   "twelve_passes_lufs": -9.17,
+   "twelve_passes_load_db": 11.74,
+   "twelve_passes_used": 8,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "St Matthews Concert Choir – Cherubini Requiem in C minor – Pie Jesu",
+   "style": "Clarity",
+   "target": -9.0,
+   "six_passes_lufs": -9.34,
+   "six_passes_load_db": 12.2,
+   "twelve_passes_lufs": -9.19,
+   "twelve_passes_load_db": 12.82,
+   "twelve_passes_used": 8,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Funkorama",
+   "style": "Universal",
+   "target": -11.0,
+   "six_passes_lufs": -11.68,
+   "six_passes_load_db": 9.3,
+   "twelve_passes_lufs": -11.56,
+   "twelve_passes_load_db": 12.79,
+   "twelve_passes_used": 12,
+   "twelve_passes_reached": false
+  },
+  {
+   "song": "Funkorama",
+   "style": "Universal",
+   "target": -9.0,
+   "six_passes_lufs": -11.85,
+   "six_passes_load_db": 19.1,
+   "twelve_passes_lufs": -11.31,
+   "twelve_passes_load_db": 34.6,
+   "twelve_passes_used": 12,
+   "twelve_passes_reached": false
+  },
+  {
+   "song": "Funkorama",
+   "style": "Clarity",
+   "target": -11.0,
+   "six_passes_lufs": -11.91,
+   "six_passes_load_db": 10.8,
+   "twelve_passes_lufs": -12.03,
+   "twelve_passes_load_db": 16.18,
+   "twelve_passes_used": 12,
+   "twelve_passes_reached": false
+  },
+  {
+   "song": "Funkorama",
+   "style": "Clarity",
+   "target": -9.0,
+   "six_passes_lufs": -11.81,
+   "six_passes_load_db": 20.9,
+   "twelve_passes_lufs": -11.27,
+   "twelve_passes_load_db": 36.26,
+   "twelve_passes_used": 12,
+   "twelve_passes_reached": false
+  },
+  {
+   "song": "Funkorama",
+   "style": "Tape",
+   "target": -11.0,
+   "six_passes_lufs": -11.56,
+   "six_passes_load_db": 7.4,
+   "twelve_passes_lufs": -11.4,
+   "twelve_passes_load_db": 10.21,
+   "twelve_passes_used": 12,
+   "twelve_passes_reached": false
+  },
+  {
+   "song": "Funkorama",
+   "style": "Tape",
+   "target": -9.0,
+   "six_passes_lufs": -11.81,
+   "six_passes_load_db": 16.9,
+   "twelve_passes_lufs": -11.29,
+   "twelve_passes_load_db": 32.29,
+   "twelve_passes_used": 12,
+   "twelve_passes_reached": false
+  },
+  {
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -9.0,
+   "six_passes_lufs": -10.79,
+   "six_passes_load_db": 13.9,
+   "twelve_passes_lufs": -10.1,
+   "twelve_passes_load_db": 22.64,
+   "twelve_passes_used": 12,
+   "twelve_passes_reached": false
+  },
+  {
+   "song": "C. Scott – Determinate",
+   "style": "Universal",
+   "target": -9.0,
+   "six_passes_lufs": -9.22,
+   "six_passes_load_db": 6.4,
+   "twelve_passes_lufs": -9.17,
+   "twelve_passes_load_db": 6.58,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "C. Scott – Determinate",
+   "style": "Clarity",
+   "target": -9.0,
+   "six_passes_lufs": -9.25,
+   "six_passes_load_db": 7.3,
+   "twelve_passes_lufs": -9.2,
+   "twelve_passes_load_db": 7.51,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Kevin MacLeod – Funky Chunk",
+   "style": "Universal",
+   "target": -9.0,
+   "six_passes_lufs": -9.23,
+   "six_passes_load_db": 9.6,
+   "twelve_passes_lufs": -9.17,
+   "twelve_passes_load_db": 9.81,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Kevin MacLeod – Funky Chunk",
+   "style": "Clarity",
+   "target": -9.0,
+   "six_passes_lufs": -9.23,
+   "six_passes_load_db": 10.4,
+   "twelve_passes_lufs": -9.17,
+   "twelve_passes_load_db": 10.61,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Small Colin – All On Me",
+   "style": "Universal",
+   "target": -9.0,
+   "six_passes_lufs": -9.26,
+   "six_passes_load_db": 9.8,
+   "twelve_passes_lufs": -9.2,
+   "twelve_passes_load_db": 10.07,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  },
+  {
+   "song": "Small Colin – All On Me",
+   "style": "Clarity",
+   "target": -9.0,
+   "six_passes_lufs": -9.23,
+   "six_passes_load_db": 10.9,
+   "twelve_passes_lufs": -9.17,
+   "twelve_passes_load_db": 11.15,
+   "twelve_passes_used": 7,
+   "twelve_passes_reached": true
+  }
+ ],
+ "reached_with_up_to_12_passes": 20,
+ "note": "Diagnostic only, not part of any gate: the 27 development renders where production Reach target (6 passes, frozen) missed the target, re-resolved by the research path with up to 12 passes."
+}

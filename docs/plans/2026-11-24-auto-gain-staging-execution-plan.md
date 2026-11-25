@@ -695,3 +695,224 @@ committed evidence against the report and re-ran the runner's tests. In order:
     with floats rounded to four decimals and written compactly (1.5 MB instead
     of 3.6 MB). It records the SHA-256 of the full-precision file, which stays
     in the private ledger folder.
+
+### R4 before the freeze: the pass limit is 6
+
+The planning session allowed the maximum resolution passes to rise to 6, or
+the resolver to step better, as long as R4 holds on the development material
+before the freeze.
+
+- The limit is now 6, inside the plan's 2–6 bound. The step itself is
+  unchanged: it adds the delivered shortfall, which can never overshoot the
+  target or add limiting that is not needed (A1). A larger step could.
+- Only two development songs had renders that ran out of passes at 4
+  (Funkorama and C. Scott – Determinate). Re-run at 6:
+  - all five such renders now reach the target (3) or stop at the clean
+    limit (2), so R4 holds;
+  - the other 31 G rows on those two songs are unchanged.
+
+  Every other development render resolved in 4 passes or fewer, so the change
+  cannot touch it.
+
+### Slices 2 and 3: done (`6901451`)
+
+**Setting (`types.rs`).**
+
+- `AdvancedSettings.auto_gain_staging: Option<{ enabled, priority: clean |
+  reach_target }>`. It is omitted when absent, so a project that never used it
+  is written exactly as before, and the public 0.9.2 build reads it (the
+  Smart Match finding).
+- The resolved gains are `AdvancedSettings.gain_staging_resolved`,
+  `serde(skip)`, like `source_confidence` and `compression_guards`. The
+  frontend can never set them.
+- `MasteringSettings::active_gain_staging()` returns them only with the
+  switch on, a loudness target, Track Master and finite values (contract rule
+  6).
+
+**Chain (`dsp.rs`).**
+
+- Level in is added to the Style push and the user's input gain, in dB, before
+  the existing `powf`.
+- A limiter-drive multiply sits immediately before the limiter and is skipped
+  entirely when idle (rule 7).
+- Inert adds nothing, not even `+0.0`, so coefficients and audio are
+  bit-identical.
+- `process_frame_inplace` is now four inlined calls: the stages, the drive,
+  the limiter and the post-limiter stages. This is a pure refactor; the golden
+  byte-identity references are untouched.
+
+**Resolution (`gain_staging.rs`, `engine.rs`).**
+
+- Level in reads `analysis::measure_source_level`. The track analysis now
+  calls the same function, so the reference song gives exactly 0.0 dB; the
+  slow fixture lane pins it on the real file.
+- An export with the feature active works like this:
+  - the Style stages run once;
+  - each pass runs a fresh limiter (built as the chain builds it), the
+    post-limiter stages, the export's sample-rate conversion and its qualified
+    finalizer;
+  - the drive is chosen on the delivered loudness (rule 3), capped at the clean
+    limit for Clean, within ±24 dB, and in at most 6 passes;
+  - the last pass is the delivered audio, so no extra render.
+- A test pins that the delivered audio equals a chain built from the resolved
+  gains, bit for bit (rule 9).
+- The landing and the final peak protection run unchanged (rule 10).
+
+**Receipt.**
+
+- `RenderedMeasurements` and `ExportReport` gain `auto_gain_staging_digest`
+  (the locked line) and `auto_gain_staging_target_lufs` (present only when the
+  clean limit stopped the drive).
+- Both are omitted when absent. They are mirrored in `bindings.ts`, the wire
+  samples, `export-receipt.ts`, Kotlin `WireModels.kt` and Swift
+  `NativeMasteringBridge.swift`.
+
+**Cache invariant.**
+
+- `settings_landing_hash` serializes the settings, so it covers the switch and
+  the priority. The resolved gains are added explicitly, together with a
+  finiteness guard and a regression test.
+- The preparation cache keys on coefficient equality, which already includes
+  level in and the drive.
+- The live audition never resolves gains yet (that is Slice 5). The switch
+  without resolved gains is inert there, so audition sounds as today.
+
+**Tests:** `src-tauri/tests/auto_gain_staging.rs` (15) and module tests (3).
+
+Lanes for Slices 2–3 (office PC, on the committed code):
+
+| Lane | Result |
+| --- | --- |
+| `cargo fmt --check`; `cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings` | Clean |
+| Rust suite with the slow fixture lane (`AMS_REAL_FIXTURE_PATH` = `It’s a coat-original-test.wav`) | 50 suites, 851 passed, 0 failed, 35 ignored. The four real-fixture tests and the reference-song level-in test ran; `preset_byte_identity` and `preset_fingerprint` passed with their goldens untouched |
+| iPhone bridge (`cargo check --all-targets`; `cargo test`) | 46 passed, 0 failed, 1 ignored |
+| Android bridge (`cargo test`; `cargo ndk -t arm64-v8a --platform 29 check`) | 26 passed, 0 failed; the NDK check built |
+| Try-it engine (`npm run build:tryit-wasm`; `npx vitest run src/tryit`) | Rebuilt (stamp `66493ff2aeb7`); 32 passed |
+| `npm test`; `npm run build` | 92 files, 983 passed; the build (with the type gate) succeeded |
+
+### Slice 4: done (`4a0fd0c`, `998b6bc`)
+
+- **Production path.** The runner's `--path production` renders T and G
+  through `engine::mastering_render_to_path` and reads the WAV back.
+- **Agreement with Phase A.** Within 0.1 dB on every recorded number over
+  1,464 rows:
+  - audio measures: worst 0.000005 dB;
+  - level in: identical;
+  - drive and load: within 0.05 dB, read from the receipt's one decimal.
+- **Development run (E2).** Through production, 75 songs and 900 cases,
+  binary built at `4a0fd0c`. All of R1b, R1c and R2–R7 hold.
+- **Freeze.** Parameters frozen at `998b6bc`: clean limit 6.0 dB, tolerance
+  0.2 LU, 6 passes, reference level as in A6. Its measurement code is
+  identical to `4a0fd0c`; the diff only adds timing tools and docs.
+- **Holdout (E3).** Run once at `998b6bc`, through production, on 19 songs
+  (228 cases). R1b, R1c, R2, R4 and R7 hold.
+- **Write-up.**
+  [The evaluation note](../reviews/2026-11-25-auto-gain-staging-evaluation.md),
+  with numbers-only evidence in
+  `docs/reviews/evidence/2026-11-25-auto-gain-staging-evaluation/`.
+
+### Checkpoint B
+
+Stopped here for the planning session's grade. Slices 5–7 have not started.
+
+| Gate | Result |
+| --- | --- |
+| E1 Off identity | Pass |
+| E2 Decision rule, development, production path | Pass (R1b, R1c, R2–R7) |
+| E3 Holdout, run once | Pass (R1b, R1c, R2, R4, R7) |
+| E4 Clean limit | Clean: pass (largest load 6.0 dB). **Reach target: fail as written.** 109 of 136 development and 48 of 50 holdout cases reach the target. Of the 27 development misses, 7 (Funkorama) are blocked by the final peak check; the other 20 reach the target with 7–10 passes in a 12-pass diagnostic, against the frozen 6. |
+| E5 Never above target | Pass (0 of 1,314 renders) |
+| E6 Smart Match unchanged | Pass (test and 94 songs) |
+| E7 Performance | Pass. Off −0.40% and −0.56% against the baseline; on 97.1% and 102.6% of off |
+| E8 Safety | Pass |
+
+For the planning session:
+
+- **E4's Reach-target half.** Allowing more passes would go outside the plan's
+  2–6. A bigger step for Reach target only would be a resolver change. Either
+  is the planning session's call; Clean is unaffected.
+- **Funkorama** shows today's limiter / final-check disagreement; it is
+  already recorded as its own item.
+- **Saved user presets** carry the switch and priority (deviation 21).
+- **Mac:** the Swift receipt model change is uncompiled.
+
+Lanes for Slice 4 (on the committed code). The Rust suite, both bridges, the
+try-it engine, `npm test` and `npm run build` are the Slices 2–3 runs above;
+no product code changed since `6901451`.
+
+| Lane | Result |
+| --- | --- |
+| `cargo fmt --check`; `cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings` | Clean |
+| Runner tests (`tests/auto_gain_staging_research.rs`) | 15 passed (26 with the resampler's included tests) |
+
+### Deviation log (Phase B, Slices 2–4)
+
+20. **Where the resolved gains live.** They sit in a `serde(skip)` field of
+    `AdvancedSettings`, the pattern the backend-resolved confidence and
+    compressor guards already use. They are applied only through
+    `active_gain_staging()`, so a stale value cannot act while the switch is
+    off, in Album, or without a target.
+21. **Saved user presets carry the switch and the priority.** They are
+    ordinary Advanced values like input gain. Smart Match's rule of stripping
+    its state from presets (its M12) was specific to Smart Match. The resolved
+    gains are never saved. The planning session may want a different rule;
+    nothing depends on it yet.
+22. **The chain's per-frame function was split** into the stages, the drive,
+    the limiter and the post-limiter stages. The plan's starting hypothesis
+    was only "a gain immediately before the limiter"; the split lets the export
+    run the stages once and the limiter several times without duplicating
+    code.
+    - It is a refactor with `#[inline(always)]`.
+    - The byte-identity goldens pass untouched; E7 measures the cost.
+23. **The export renders no extra pass.** The resolver's last pass is the
+    delivered audio, so a song that needs one pass costs about what today's
+    export costs. A test pins that this audio equals what a chain built from
+    the resolved gains produces, bit for bit, through the same conversion and
+    finalizer.
+24. **Level in is measured from the decoded file at export.** Measuring it
+    there, rather than reading the analysis cache, keeps
+    `mastering_render_*` usable without the app's profile store (tests,
+    runners). It reads the same `ebur128` measurement the analysis reports,
+    from the same samples, and costs one extra true-peak pass per export.
+    The analysis was refactored to call that one function.
+25. **Both gains are bounded to ±24 dB,** level in by contract rule 2 and the
+    drive by the same range (E8, "a bounded gain"). This also bounds
+    Reach target.
+26. **The receipt has two fields.** One is the locked line. The other is the
+    target, present only when the clean limit stopped the drive ("the delivered
+    loudness against the target"); the delivered loudness is the receipt's
+    existing measured loudness.
+    - `Auto gain staging: off` appears when the setting exists but is off or
+      inert.
+    - Nothing appears when the song never used the feature, so receipts and
+      the `export_report` golden keep their shape (as Smart Match did).
+27. **Wire samples** were refreshed from the `wire_shape` test's own
+    generated JSON, after checking that only the new keys differ. The sample
+    switches the feature on without resolved gains, so nothing downstream
+    changes. `YES_MASTER_UPDATE_GOLDEN` was never set.
+28. **Live audition is unchanged until Slice 5.** With the switch on but no
+    resolved gains, the live chain is inert.
+29. **How Slice 4 renders through production.**
+    - T and G go through `engine::mastering_render_to_path` to a scratch WAV
+      and are decoded back.
+    - T is checked against the research render at the level of 24-bit sample
+      codes, with the writer's deterministic dither replayed by
+      `DeliveryPcm`.
+    - G's drive and load are read from the receipt line, so they come in
+      0.1 dB steps. Level in is recomputed exactly with the export's own
+      function.
+    - T's landing amount, which a receipt does not carry, comes from the
+      research render that was just proven identical.
+30. **The pass limit is 6** (see "R4 before the freeze").
+31. **`chain_bench --auto-gain-staging`** times the chain with level in
+    (−2 dB) and an active drive (+1.5 dB) for E7.
+32. **The quiet folder's split.** It held 19 pieces with a 19-entry
+    `_sources.json` at Slice 4. The 75/25 content-hash split gave 14 to
+    development and 5 to the holdout. The pieces are open-licensed, so they
+    are named in the evidence, like the library.
+33. **`--priority reach`** is a diagnostic-only runner option: the research
+    path with priority Reach target, used once with `--max-passes 12` on the
+    E4 misses. It is part of no gate and changed no frozen parameter.
+34. **R6 in the holdout summary reads "fail (0 cases)"** only because the
+    reference song is development material. E3 does not include R6.
+

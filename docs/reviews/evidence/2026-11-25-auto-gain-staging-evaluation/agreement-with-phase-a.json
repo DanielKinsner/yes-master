@@ -1,0 +1,349 @@
+{
+ "rows_compared": 1464,
+ "missing": 336,
+ "max_abs_diff": {
+  "T lufs": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T true_peak_dbtp": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T plr_db": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T lra": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T landing_db": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T limiter_load_db": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T section_contrast_delta_db": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T attack_median_delta_db": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T attack_p10_delta_db": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T side_mid_delta_db": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T correlation_delta (unitless)": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T tone band 0": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T tone band 1": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T tone band 2": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T tone band 3": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T tone band 4": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T tone band 5": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T tone band 6": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T tone band 7": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T tone band 8": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T fingerprint tilt 0": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T fingerprint tilt 1": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T fingerprint tilt 2": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T fingerprint tilt 3": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T fingerprint tilt 4": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T fingerprint tilt 5": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T fingerprint crest": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "T fingerprint width": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "G lufs": {
+   "max_abs_diff": 0.0,
+   "song": "In This Moment",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G true_peak_dbtp": {
+   "max_abs_diff": 0.0,
+   "song": "Chris Zabriskie – I Want to Fall in Love on Snapchat",
+   "style": "Clarity",
+   "target": -14.0
+  },
+  "G plr_db": {
+   "max_abs_diff": 0.0,
+   "song": "owner a9c00e31d7",
+   "style": "Clarity",
+   "target": -14.0
+  },
+  "G lra": {
+   "max_abs_diff": 0.0,
+   "song": "Loyalty Freak Music – Sensual Melancholia",
+   "style": "Clarity",
+   "target": -9.0
+  },
+  "G drive_db (receipt, 0.1 dB steps)": {
+   "max_abs_diff": 0.05,
+   "song": "Loyalty Freak Music – Slow Pogo",
+   "style": "Clarity",
+   "target": -14.0
+  },
+  "G limiter_load_db (receipt, 0.1 dB steps)": {
+   "max_abs_diff": 0.0499,
+   "song": "Juanitos – Welcome in the House of F.U.N.",
+   "style": "Clarity",
+   "target": -11.0
+  },
+  "G level_in_db": {
+   "max_abs_diff": 0.0,
+   "song": "owner 1d1719d909",
+   "style": "Universal",
+   "target": -14.0
+  },
+  "G section_contrast_delta_db": {
+   "max_abs_diff": 0.0,
+   "song": "Loyalty Freak Music – Sensual Melancholia",
+   "style": "Clarity",
+   "target": -9.0
+  },
+  "G attack_median_delta_db": {
+   "max_abs_diff": 0.0,
+   "song": "Fonkdongo – TamosReady",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G attack_p10_delta_db": {
+   "max_abs_diff": 0.0,
+   "song": "owner 85acc06674",
+   "style": "Oomph",
+   "target": -14.0
+  },
+  "G side_mid_delta_db": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G correlation_delta (unitless)": {
+   "max_abs_diff": 0.0,
+   "song": "Kevin MacLeod – Jazz Brunch",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G tone band 0": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G tone band 1": {
+   "max_abs_diff": 0.0,
+   "song": "Loyalty Freak Music – Sensual Melancholia",
+   "style": "Clarity",
+   "target": -9.0
+  },
+  "G tone band 2": {
+   "max_abs_diff": 0.0,
+   "song": "Loyalty Freak Music – Sensual Melancholia",
+   "style": "Clarity",
+   "target": -9.0
+  },
+  "G tone band 3": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G tone band 4": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G tone band 5": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G tone band 6": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G tone band 7": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G tone band 8": {
+   "max_abs_diff": 0.0,
+   "song": "Kimiko Ishizaka – Art of the Fugue - Contrapunctus 3",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G fingerprint tilt 0": {
+   "max_abs_diff": 0.0,
+   "song": "Chubby Mosh – Planning on the Line",
+   "style": "Clarity",
+   "target": -14.0
+  },
+  "G fingerprint tilt 1": {
+   "max_abs_diff": 0.0,
+   "song": "Chubby Mosh – Planning on the Line",
+   "style": "Clarity",
+   "target": -14.0
+  },
+  "G fingerprint tilt 2": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G fingerprint tilt 3": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G fingerprint tilt 4": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G fingerprint tilt 5": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  },
+  "G fingerprint crest": {
+   "max_abs_diff": 0.0,
+   "song": "Imagining Imaginal",
+   "style": "Oomph",
+   "target": -14.0
+  },
+  "G fingerprint width": {
+   "max_abs_diff": 0.0,
+   "song": "Funkorama",
+   "style": "Oomph",
+   "target": -11.0
+  }
+ },
+ "note": "Slice 4 production path against Phase A (development run 2, with the six-pass re-run of Funkorama and C. Scott - Determinate merged), maximum absolute difference per recorded number over every T and G row of the 61 Phase A songs. Drive and load are read from the receipt line, in 0.1 dB steps."
+}

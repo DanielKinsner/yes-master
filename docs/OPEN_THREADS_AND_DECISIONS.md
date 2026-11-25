@@ -1,5 +1,26 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-25 — Auto gain staging at Checkpoint B: built into the engine
+> and export, off by default; waiting for the planning session's grade.** On
+> branch `claude/auto-gain-staging-bf8b35` (not merged; nothing pushed by the
+> executor). The interface and live audition (Slices 5–6) are not built
+> ([evaluation](reviews/2026-11-25-auto-gain-staging-evaluation.md)).
+>
+> - **Seven of the eight gates pass,** including the holdout, run once.
+>   - Switched off, the app renders exactly as today, and exports are as fast
+>     as before.
+>   - With the switch on, the frozen rule holds through the real export. G
+>     hits the target in 764 of 900 development cases against today's 605.
+> - **E4 fails as written in its Reach-target half.** Reach target reached
+>   the target in 109 of 136 development cases.
+>   - 20 of the misses need 7–10 resolution passes; the frozen limit is 6.
+>   - 7 are one song that today's final peak check holds down.
+>
+> Open:
+> - **Planning session:** grade Checkpoint B and decide E4's Reach-target
+>   half: more passes, or a bigger step for Reach target only.
+> - **Mac:** the Swift receipt model change is uncompiled.
+
 > **2026-11-24 — Auto gain staging, Checkpoint A graded: build G.** As
 > written the rule selected S. The planning session overrode it, approved on
 > its recommendation: S fails the reference song's tone check and lands on
