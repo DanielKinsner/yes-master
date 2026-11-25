@@ -459,7 +459,7 @@ Paused by the planning session in Slice 8. Nothing pushed or merged.
 - **Finished:**
   - The Checkpoint C rulings are recorded (below and in the Phase C note).
   - The owner's listening pack: 16 files and `READ ME.txt` in
-    `test-outpututo-gain-staging\listening-pack\` (private). Doors Open
+    `test-output/auto-gain-staging/listening-pack/` (private). Doors Open
     at High is not a fair pair (A 0.4 dB quieter).
 - **Half-done, Slice 8 (committed as work in progress):**
   - Built: the fast estimate (`gain_staging::estimate_preview`: parallel
@@ -488,7 +488,7 @@ Paused by the planning session in Slice 8. Nothing pushed or merged.
   - On normal songs the estimate matched the exact drive to within 0.3 dB
     in 0.5–2.9 s, against 3.5–24 s for the exact resolution.
 - **Partial results** (private, under
-  `test-outpututo-gain-staging\slice8\`): `export-hashes-08509ab.json`
+  `test-output/auto-gain-staging/slice8/`): `export-hashes-08509ab.json`
   (360 exports made with product code equal to `08509ab`, for F4),
   `research-08509ab.exe`, `f1_analysis.py`, `f4_compare.py`.
 - **Next step to resume:** rebuild the runner and run F1 on development:
