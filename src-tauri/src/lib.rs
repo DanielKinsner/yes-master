@@ -344,6 +344,10 @@ pub fn run() {
                 // still-measuring landing gain, false when the corrective
                 // gain crossfades in. Emitted only on change.
                 let mut last_landing_status: Option<LandingStatus> = None;
+                // Auto gain staging's line for the loaded song, same edge
+                // discipline as the landing status.
+                let mut last_gain_staging_status: Option<crate::types::AutoGainStagingStatus> =
+                    None;
                 let mut device_loss_detector = audio::PlaybackDeviceLossDetector::new();
                 // Mirrors AudioThreadState::device_loss_skips: the audio
                 // thread only bumps the counter; THIS thread does the log
@@ -390,6 +394,14 @@ pub fn run() {
                     if last_landing_status.as_ref() != Some(&landing_status) {
                         last_landing_status = Some(landing_status.clone());
                         let _ = app_handle.emit("landing:status", landing_status);
+                    }
+                    let gain_staging_status = crate::types::AutoGainStagingStatus {
+                        track_id: snap.track_id.clone(),
+                        readout: snap.auto_gain_staging.filter(|_| snap.is_loaded),
+                    };
+                    if last_gain_staging_status.as_ref() != Some(&gain_staging_status) {
+                        last_gain_staging_status = Some(gain_staging_status.clone());
+                        let _ = app_handle.emit(audio::AUTO_GAIN_STAGING_STATUS_EVENT, gain_staging_status);
                     }
                     match device_loss_detector.observe(&snap) {
                         audio::PlaybackDeviceLossDecision::Healthy => {}
@@ -459,6 +471,8 @@ pub fn run() {
             audio::prewarm_decode,
             audio::prepare_preview_level,
             audio::cancel_preview_preparation,
+            audio::auto_gain_staging_readout,
+            audio::cancel_auto_gain_staging_readout,
             audio::pause_playback,
             audio::resume_playback,
             audio::clear_device_lost,

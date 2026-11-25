@@ -27,8 +27,8 @@ use crate::analysis::SourceLevel;
 use crate::dsp::{Limiter, MasteringChain};
 use crate::output_protection::ProtectedPcm;
 use crate::types::{
-    CommandError, CommandResult, LoudnessPriority, MasteringSettings, ResolvedGainStaging,
-    GAIN_STAGING_RANGE_DB,
+    AutoGainStagingReadout, CommandError, CommandResult, LoudnessPriority, MasteringSettings,
+    ResolvedGainStaging, GAIN_STAGING_RANGE_DB,
 };
 
 /// The reference level (decision A6): the app's own analysis of the owner's
@@ -367,6 +367,34 @@ pub fn render_export(
     cancel: Option<&AtomicBool>,
     progress: &dyn Fn(f32),
 ) -> CommandResult<Option<ExportOutcome>> {
+    render_with_level(
+        samples,
+        sample_rate,
+        channels,
+        settings,
+        None,
+        delivery_rate,
+        bits,
+        cancel,
+        progress,
+    )
+}
+
+/// [`render_export`] with the source's level supplied. Audition passes the
+/// track analysis's own measurement, which is the same function over the
+/// same decoded samples, so the result is identical; `None` measures here.
+#[allow(clippy::too_many_arguments)]
+pub fn render_with_level(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &mut MasteringSettings,
+    level: Option<&SourceLevel>,
+    delivery_rate: u32,
+    bits: u16,
+    cancel: Option<&AtomicBool>,
+    progress: &dyn Fn(f32),
+) -> CommandResult<Option<ExportOutcome>> {
     settings.advanced.gain_staging_resolved = None;
     let priority = match settings.advanced.auto_gain_staging {
         Some(a) if a.enabled => a.priority,
@@ -378,8 +406,15 @@ pub fn render_export(
     if settings.album.is_some() || samples.is_empty() {
         return Ok(None);
     }
-    let level = crate::analysis::measure_source_level(samples, sample_rate, channels)?;
-    let Some(level_in) = level_in_for(&level) else {
+    let measured_level;
+    let level = match level {
+        Some(level) => level,
+        None => {
+            measured_level = crate::analysis::measure_source_level(samples, sample_rate, channels)?;
+            &measured_level
+        }
+    };
+    let Some(level_in) = level_in_for(level) else {
         return Ok(None);
     };
     let ch = usize::from(channels.max(1));
@@ -469,6 +504,97 @@ pub fn render_export(
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Audition (Slice 5)
+// ---------------------------------------------------------------------------
+
+/// One song's resolution, as audition uses and shows it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Resolution {
+    /// The gains the chain applies.
+    pub gains: ResolvedGainStaging,
+    /// The delivered loudness of the resolution's last pass: what an export
+    /// with these settings delivers.
+    pub delivered_lufs: f32,
+    pub target_lufs: f32,
+}
+
+impl Resolution {
+    pub fn readout(&self) -> AutoGainStagingReadout {
+        AutoGainStagingReadout::Settled {
+            level_in_db: self.gains.level_in_db,
+            limiter_drive_db: self.gains.limiter_drive_db,
+            limiter_load_db: self.gains.limiter_load_db.max(0.0),
+            stopped_at_clean_limit: self.gains.stopped_at_clean_limit,
+            stopped_by_peak_check: self.gains.stopped_by_peak_check,
+            delivered_lufs: self.delivered_lufs,
+            target_lufs: self.target_lufs,
+        }
+    }
+}
+
+/// Resolve the gains for audition by running the export's own resolution
+/// ([`render_with_level`]) for the delivery these settings describe. The
+/// preview's settings already carry the export format
+/// (`audio::output_route::preview_settings`), so the delivery rate and bit
+/// depth are the export's, and the result equals what that export resolves.
+/// `None` when the feature is inert. Never called on the audio thread.
+pub fn resolve_preview(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+    level: Option<&SourceLevel>,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<Option<Resolution>> {
+    let mut resolved = settings.clone();
+    resolved.volume_match = false;
+    let delivery_rate = resolved.effective_sample_rate(sample_rate);
+    let bits = resolved.effective_bit_depth();
+    let Some(target_lufs) = resolved.effective_target_lufs() else {
+        return Ok(None);
+    };
+    let outcome = render_with_level(
+        samples,
+        sample_rate,
+        channels,
+        &mut resolved,
+        level,
+        delivery_rate,
+        bits,
+        cancel,
+        &|_| {},
+    )?;
+    Ok(outcome.and_then(|outcome| {
+        resolved
+            .advanced
+            .gain_staging_resolved
+            .map(|gains| Resolution {
+                gains,
+                delivered_lufs: outcome.measured.lufs,
+                target_lufs,
+            })
+    }))
+}
+
+/// What the line shows when the feature cannot run for these settings
+/// (decision A7), or `None` when it is off.
+pub fn inert_readout(settings: &MasteringSettings, album: bool) -> Option<AutoGainStagingReadout> {
+    if !settings.auto_gain_staging_enabled() {
+        return None;
+    }
+    if album || settings.album.is_some() {
+        return Some(AutoGainStagingReadout::Album);
+    }
+    if settings
+        .effective_target_lufs()
+        .is_none_or(|t| !t.is_finite())
+    {
+        return Some(AutoGainStagingReadout::NoTarget);
+    }
+    None
 }
 
 #[cfg(test)]

@@ -9,6 +9,7 @@ use std::time::Duration;
 #[cfg(test)]
 mod delivery_rate_probe;
 mod gain_stage;
+mod gain_staging_live;
 #[cfg(test)]
 mod gain_transition_probe;
 mod output_route;
@@ -17,6 +18,8 @@ mod preparation_cache;
 /// Sentinel dBFS value reported when the peak window saw no signal. JSON can't
 /// round-trip -inf, so we use a finite "well below audible" floor instead.
 pub const SILENCE_DBFS: f32 = -120.0;
+/// Edge-triggered auto gain staging line for the loaded song.
+pub const AUTO_GAIN_STAGING_STATUS_EVENT: &str = "auto-gain-staging:status";
 const INTERNAL_STATE_POISONED: &str = "internal state poisoned; restart the app";
 
 /// Convert a non-negative linear sample magnitude to dBFS, with a silence
@@ -331,7 +334,22 @@ pub async fn prepare_preview_level(
         if cancelled.load(Ordering::Relaxed) {
             return Ok(());
         }
-        let settings = output_route::preview_settings(&settings, pcm.sample_rate, encoding);
+        let mut settings = output_route::preview_settings(&settings, pcm.sample_rate, encoding);
+        // Auto gain staging: prepare the level of the chain audition will
+        // play, with the resolved gains (shared cache with the live worker).
+        if settings.auto_gain_staging_enabled()
+            && crate::gain_staging::inert_readout(&settings, album).is_none()
+        {
+            if let Some(key) = gain_staging_live::Key::new(&canonical, mtime, &settings) {
+                match gain_staging_live::resolve_cached(&key, &pcm, &settings, &cancelled) {
+                    Ok(resolution) => {
+                        settings.advanced.gain_staging_resolved = resolution.map(|r| r.gains);
+                    }
+                    Err(_) if cancelled.load(Ordering::Relaxed) => return Ok(()),
+                    Err(error) => return Err(error),
+                }
+            }
+        }
         let measured = preparation_cache::measure(&pcm, &settings, &cancelled);
         if cancelled.load(Ordering::Relaxed) {
             return Ok(());
@@ -352,6 +370,134 @@ pub async fn prepare_preview_level(
     })
     .await
     .map_err(|e| CommandError::Other(format!("preview preparation: {e}")))?
+}
+
+/// The latest auto gain staging readout request; a newer one cancels it.
+fn readout_request() -> &'static Mutex<(String, Arc<AtomicBool>)> {
+    static REQUEST: std::sync::OnceLock<Mutex<(String, Arc<AtomicBool>)>> =
+        std::sync::OnceLock::new();
+    REQUEST.get_or_init(|| Mutex::new((String::new(), Arc::new(AtomicBool::new(false)))))
+}
+
+#[tauri::command]
+pub fn cancel_auto_gain_staging_readout(request_id: String) {
+    if let Ok(request) = readout_request().lock() {
+        if request.0 == request_id {
+            request.1.store(true, Ordering::Relaxed);
+        }
+    }
+}
+
+/// Auto gain staging (Slice 5/6): the Advanced line for the selected song,
+/// whether or not it is playing. Resolves on the shared preview-worker
+/// permit with the same function and cache the live chain uses, so the line
+/// shows exactly the gains audition applies and an export resolves (A9).
+/// `None` while the switch is off, or when the request was superseded.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)] // Includes injected Tauri state and optional encoding.
+pub async fn auto_gain_staging_readout(
+    request_id: String,
+    track_id: TrackId,
+    track_path: String,
+    mut settings: MasteringSettings,
+    album: bool,
+    encoding: Option<ExportEncoding>,
+    player: tauri::State<'_, Arc<AudioPlayer>>,
+    profile_store: tauri::State<'_, Arc<crate::profile_store::SourceProfileStore>>,
+) -> CommandResult<Option<AutoGainStagingReadout>> {
+    if !settings.auto_gain_staging_enabled() {
+        return Ok(None);
+    }
+    if let Some(readout) = crate::gain_staging::inert_readout(&settings, album) {
+        return Ok(Some(readout));
+    }
+    if profile_store
+        .get_level(&track_id)
+        .is_some_and(|level| crate::gain_staging::level_in_for(&level).is_none())
+    {
+        return Ok(Some(AutoGainStagingReadout::Unusable));
+    }
+    let encoding = encoding.unwrap_or_default();
+    encoding.validate()?;
+    let path = std::path::PathBuf::from(&track_path);
+    if track_path.is_empty() || crate::files::has_parent_dir_component(&path) {
+        return Err(CommandError::InvalidPath(track_path));
+    }
+    let canonical = path
+        .canonicalize()
+        .map_err(|e| CommandError::Io(e.to_string()))?;
+    let mtime = std::fs::metadata(&canonical)
+        .ok()
+        .and_then(|m| m.modified().ok());
+    let deep = profile_store.get_deep(&track_id);
+    crate::profile_store::apply_resolved_profile(
+        &mut settings,
+        profile_store.get(&track_id),
+        album,
+    );
+    crate::profile_store::apply_resolved_confidence(&mut settings, deep.clone(), album);
+    crate::profile_store::apply_resolved_compression_guards(
+        &mut settings,
+        deep,
+        profile_store.get_stand_down(&track_id),
+        album,
+    );
+    settings.advanced.gain_staging_resolved = None;
+    let cancelled = Arc::new(AtomicBool::new(false));
+    {
+        let mut request = readout_request()
+            .lock()
+            .map_err(|e| CommandError::Other(e.to_string()))?;
+        request.1.store(true, Ordering::Relaxed);
+        *request = (request_id, cancelled.clone());
+    }
+    let prewarm = player.prewarm_cache.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let budget = preview_worker_budget();
+        let _permit = loop {
+            if cancelled.load(Ordering::Relaxed) {
+                return Ok(None);
+            }
+            if let Some(permit) = PreviewWorkerPermit::acquire(&budget) {
+                break permit;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        };
+        let started = std::time::Instant::now();
+        let cached = prewarm.lock().ok().and_then(|cache| {
+            cache
+                .as_ref()
+                .filter(|entry| entry.canonical_path == canonical && entry.mtime == mtime)
+                .map(|entry| entry.pcm.clone())
+        });
+        let pcm = match cached {
+            Some(pcm) => pcm,
+            None => decode_full(&canonical)?.into(),
+        };
+        if cancelled.load(Ordering::Relaxed) {
+            return Ok(None);
+        }
+        let settings = output_route::preview_settings(&settings, pcm.sample_rate, encoding);
+        let Some(key) = gain_staging_live::Key::new(&canonical, mtime, &settings) else {
+            return Ok(Some(AutoGainStagingReadout::Unusable));
+        };
+        match gain_staging_live::resolve_cached(&key, &pcm, &settings, &cancelled) {
+            Ok(resolution) => {
+                crate::diagnostics::info(format!(
+                    "auto gain staging resolved {} in {:.3}s",
+                    track_id.as_str(),
+                    started.elapsed().as_secs_f64()
+                ));
+                Ok(Some(
+                    resolution.map_or(AutoGainStagingReadout::Unusable, |r| r.readout()),
+                ))
+            }
+            Err(_) if cancelled.load(Ordering::Relaxed) => Ok(None),
+            Err(error) => Err(error),
+        }
+    })
+    .await
+    .map_err(|e| CommandError::Other(format!("auto gain staging readout: {e}")))?
 }
 
 fn matching_landing_settings(a: &MasteringSettings, b: &MasteringSettings) -> bool {
@@ -563,6 +709,8 @@ enum AudioCommand {
         error: Option<String>,
         vm_gain: Option<f32>,
         finished: bool,
+        /// Auto gain staging: this worker's resolution, when it made one.
+        gain_staging: Option<GainStagingOutcome>,
     },
     SetOutputDevice {
         device_name: Option<String>,
@@ -629,6 +777,9 @@ pub struct PlaybackSnapshot {
     /// Cached correction fades into the live chain when ready. Also valid while
     /// paused; drives the UI's "Measuring preview level…" status.
     pub landing_pending: bool,
+    /// Auto gain staging's line for the loaded Mastered song: `None` while the
+    /// switch is off, for Original, or with nothing loaded.
+    pub auto_gain_staging: Option<AutoGainStagingReadout>,
     /// Diagnostic publication tokens, independent of worker/settings generations.
     /// Applied changes only after the DSP crossfade, converter overlap/buffers
     /// and swap fade have emitted the revision. This is application output,
@@ -674,6 +825,7 @@ impl Default for PlaybackSnapshot {
             lufs_integrated: SILENCE_DBFS,
             spectrum_db: SpectrumAnalyzer::silent(),
             landing_pending: false,
+            auto_gain_staging: None,
             requested_output_revision: 0,
             applied_output_revision: 0,
             device_lost: false,
@@ -1421,6 +1573,10 @@ struct AudioThreadState {
     vm_gain_cache: PreviewLandingCache,
     /// Last applied same-source VM gain, independent of stale worker results.
     live_vm_gain_lin: f32,
+    /// Auto gain staging: the gains the live chain applies for the current
+    /// source, and the line for them (`Measuring` while pending, rule 8).
+    live_gain_staging_applied: Option<ResolvedGainStaging>,
+    live_gain_staging_readout: Option<AutoGainStagingReadout>,
     /// Shared post-output-gain peak slot. `MasteringSource` writes via
     /// `fetch_max` per frame; the audio thread `swap`s to 0 each snapshot
     /// cycle to compute "peak since last tick." Bits are an f32 magnitude;
@@ -1549,6 +1705,8 @@ impl AudioThreadState {
             device_gain_cache: PreviewLandingCache::new(),
             vm_gain_cache: PreviewLandingCache::new(),
             live_vm_gain_lin: 1.0,
+            live_gain_staging_applied: None,
+            live_gain_staging_readout: None,
             peak_linear: Arc::new(AtomicU32::new(0)),
             peak_left_linear: Arc::new(AtomicU32::new(0)),
             peak_right_linear: Arc::new(AtomicU32::new(0)),
@@ -1959,6 +2117,35 @@ struct PreviewWorkRequest {
     track_epoch: u64,
     landing_enabled: bool,
     device_rate: u32,
+    /// Auto gain staging: resolve these settings first (Slice 5). `settings`
+    /// then carry the pending gains the chain plays meanwhile (rule 8).
+    gain_staging: Option<gain_staging_live::Key>,
+}
+
+/// The line after a worker result: only the live generation's resolution
+/// changes it; a superseded one is discarded (Slice 5).
+fn worker_readout(
+    current: Option<AutoGainStagingReadout>,
+    generation: u64,
+    live_generation: u64,
+    outcome: Option<GainStagingOutcome>,
+) -> Option<AutoGainStagingReadout> {
+    if generation != live_generation {
+        return current;
+    }
+    match outcome {
+        Some(GainStagingOutcome::Resolved(resolution)) => Some(resolution.readout()),
+        Some(GainStagingOutcome::Inert) => Some(AutoGainStagingReadout::Unusable),
+        None => current,
+    }
+}
+
+/// What the worker learned about auto gain staging for its settings.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum GainStagingOutcome {
+    Resolved(crate::gain_staging::Resolution),
+    /// No usable measurement: the feature is inert for this song.
+    Inert,
 }
 
 /// Source lifetime is independent of Original/Mastered playback generations.
@@ -2024,6 +2211,19 @@ impl PreviewWorkerGate {
 }
 
 impl PreviewWorkerGate {
+    /// Auto gain staging: an in-flight resolution for other settings is
+    /// superseded. Cancel it, so its result is discarded (Slice 5).
+    fn cancel_superseded_gain_staging(&self, requested: Option<&gain_staging_live::Key>) {
+        if self
+            .active
+            .as_ref()
+            .and_then(|active| active.gain_staging.as_ref())
+            .is_some_and(|active| Some(active) != requested)
+        {
+            self.cancelled.store(true, Ordering::Relaxed);
+        }
+    }
+
     fn cancel_obsolete_response(&self, rate: u32, requested: &MasteringSettings) {
         if self.active.as_ref().is_some_and(|active| {
             !preparation_cache::same_response(rate, &active.settings, requested)
@@ -2081,11 +2281,12 @@ fn try_spawn_lufs_preview_worker(
         .spawn(move || {
             let _permit = permit;
             let PreviewWorkRequest {
-                settings,
+                mut settings,
                 generation,
                 track_epoch,
                 landing_enabled,
                 device_rate,
+                gain_staging: gain_staging_key,
             } = request;
             if cancelled.load(Ordering::Relaxed) {
                 let _ = command_tx.send(AudioCommand::PreviewLandingReady {
@@ -2097,9 +2298,44 @@ fn try_spawn_lufs_preview_worker(
                     error: None,
                     vm_gain: None,
                     finished: true,
+                    gain_staging: None,
                 });
                 return;
             }
+            // Auto gain staging (Slice 5): resolve on this worker before the
+            // Volume Match and landing measurements, which then measure the
+            // chain with the resolved gains.
+            let mut gain_staging = None;
+            if let Some(key) = gain_staging_key {
+                match gain_staging_live::resolve_cached(&key, &pcm, &settings, &cancelled) {
+                    Ok(Some(resolution)) => {
+                        settings.advanced.gain_staging_resolved = Some(resolution.gains);
+                        gain_staging = Some(GainStagingOutcome::Resolved(resolution));
+                    }
+                    Ok(None) => {
+                        settings.advanced.gain_staging_resolved = None;
+                        gain_staging = Some(GainStagingOutcome::Inert);
+                    }
+                    Err(error) => {
+                        // A superseded resolution is discarded: nothing
+                        // reaches the caches or the chain.
+                        let cancelled_now = cancelled.load(Ordering::Relaxed);
+                        let _ = command_tx.send(AudioCommand::PreviewLandingReady {
+                            track_epoch,
+                            generation,
+                            settings,
+                            gain: None,
+                            device_gain: None,
+                            error: (!cancelled_now).then(|| format!("auto gain staging: {error}")),
+                            vm_gain: None,
+                            finished: true,
+                            gain_staging: None,
+                        });
+                        return;
+                    }
+                }
+            }
+            let gain_staging = gain_staging.filter(|_| !cancelled.load(Ordering::Relaxed));
             let vm_gain = crate::engine::preview_volume_match_gain(
                 &pcm.samples,
                 pcm.sample_rate,
@@ -2116,6 +2352,7 @@ fn try_spawn_lufs_preview_worker(
                 error: None,
                 vm_gain: (!cancelled.load(Ordering::Relaxed)).then_some(vm_gain),
                 finished: !landing_enabled,
+                gain_staging,
             });
             if !landing_enabled {
                 return;
@@ -2154,6 +2391,7 @@ fn try_spawn_lufs_preview_worker(
                     error,
                     vm_gain: None,
                     finished: true,
+                    gain_staging,
                 });
             } else {
                 // Cancellation can arrive immediately after the early VM
@@ -2167,6 +2405,7 @@ fn try_spawn_lufs_preview_worker(
                     error: None,
                     vm_gain: None,
                     finished: true,
+                    gain_staging: None,
                 });
             }
         })
@@ -2177,6 +2416,11 @@ fn publish_preview_coeffs(s: &mut AudioThreadState, settings: &MasteringSettings
     if s.playback_error.is_some() {
         s.landing_pending = false;
         return;
+    }
+    if s.live_coeffs_tx.is_some() {
+        // What the chain applies from now on; a later pending value holds or
+        // falls from here (rule 8).
+        s.live_gain_staging_applied = settings.active_gain_staging();
     }
     let mut coeffs = crate::dsp::ChainCoeffs::from_settings(s.live_sample_rate, settings);
     apply_preview_volume_match_gain_cached(
@@ -2235,18 +2479,39 @@ fn publish_preview_coeffs(s: &mut AudioThreadState, settings: &MasteringSettings
 
 fn queue_preview_work(
     s: &mut AudioThreadState,
-    request: PreviewWorkRequest,
+    mut request: PreviewWorkRequest,
     tx: &Sender<AudioCommand>,
 ) {
+    // Auto gain staging: a resolution made meanwhile (by an earlier worker or
+    // the readout command) applies at once. Only once the source owns its
+    // coefficient channel; during a play the worker reuses it instead.
+    if s.live_coeffs_tx.is_some() {
+        if let Some(hit) = request
+            .gain_staging
+            .as_ref()
+            .and_then(gain_staging_live::try_lookup)
+        {
+            request.settings.advanced.gain_staging_resolved = Some(hit.gains);
+            request.gain_staging = None;
+            if request.generation == s.live_coeff_generation {
+                s.live_gain_staging_readout = Some(hit.readout());
+                publish_preview_coeffs(s, &request.settings, request.generation);
+            }
+        }
+    }
     seed_prepared_preview(s, &request.settings);
     s.preview_work
+        .cancel_superseded_gain_staging(request.gain_staging.as_ref());
+    s.preview_work
         .cancel_obsolete_response(s.live_sample_rate, &request.settings);
-    if !(preview_measurement_needed(
-        &s.device_gain_cache,
-        &s.vm_gain_cache,
-        &request.settings,
-        request.landing_enabled,
-    ) || (request.landing_enabled && s.landing_gain_cache.get(&request.settings).is_none()))
+    if !(request.gain_staging.is_some()
+        || preview_measurement_needed(
+            &s.device_gain_cache,
+            &s.vm_gain_cache,
+            &request.settings,
+            request.landing_enabled,
+        )
+        || (request.landing_enabled && s.landing_gain_cache.get(&request.settings).is_none()))
     {
         s.preview_work.pending = None;
         publish_preview_coeffs(s, &request.settings, request.generation);
@@ -2613,6 +2878,22 @@ fn process_audio_command(
                     cached_stand_down,
                     s.live_album,
                 );
+                // Auto gain staging (Slice 5): a verified resolution, or level
+                // in now with the drive held while the worker resolves.
+                let analysis = s
+                    .current_track
+                    .as_ref()
+                    .and_then(|t| profile_store.get_level(t));
+                let gain_plan = gain_staging_live::plan(
+                    &settings,
+                    s.live_album,
+                    analysis,
+                    s.decoded_cache
+                        .as_ref()
+                        .map(|e| (e.canonical_path.as_path(), e.mtime)),
+                    s.live_gain_staging_applied,
+                );
+                s.live_gain_staging_readout = gain_staging_live::apply(&gain_plan, &mut settings);
                 let generation = s.live_coeff_generation.wrapping_add(1);
                 s.live_coeff_generation = generation;
                 s.live_preview_lufs_landing = preview_lufs_landing;
@@ -2624,6 +2905,7 @@ fn process_audio_command(
                         track_epoch: s.preview_work.epoch,
                         landing_enabled: preview_lufs_landing,
                         device_rate: s._output_config.sample_rate().0,
+                        gain_staging: gain_plan.key(),
                     };
                     queue_preview_work(s, request, command_tx);
                 }
@@ -2638,11 +2920,20 @@ fn process_audio_command(
             error,
             vm_gain,
             finished,
+            gain_staging,
         } => {
             if let Some(s) = state.as_mut() {
                 // A stale-track result must neither poison caches nor release
                 // the slot held by a worker for the current track.
                 if track_epoch == s.preview_work.epoch {
+                    // Auto gain staging: only the live generation's resolution
+                    // changes what plays; a superseded one is discarded.
+                    s.live_gain_staging_readout = worker_readout(
+                        s.live_gain_staging_readout,
+                        generation,
+                        s.live_coeff_generation,
+                        gain_staging,
+                    );
                     if let Some(error) = error {
                         if generation == s.live_coeff_generation
                             || s.preview_work.pending.as_ref().is_some_and(|pending| {
@@ -2979,6 +3270,11 @@ fn audio_thread(
                     lufs_integrated,
                     spectrum_db,
                     landing_pending: s.landing_pending,
+                    auto_gain_staging: if s.current_track.is_some() && s.live_coeffs_tx.is_some() {
+                        s.live_gain_staging_readout
+                    } else {
+                        None
+                    },
                     requested_output_revision: if s.live_coeffs_tx.is_some() {
                         s.live_coeff_revision
                     } else {
@@ -3374,8 +3670,7 @@ fn handle_play_master(
     let pcm = resolve_pcm_with_caches(state.as_ref(), prewarm_cache, path, &canonical, mtime)?;
     ensure_play_request_current(play_request_epoch, request_epoch)?;
 
-    let settings = output_route::preview_settings(settings, pcm.sample_rate, encoding);
-    let settings = &settings;
+    let mut settings = output_route::preview_settings(settings, pcm.sample_rate, encoding);
 
     // Cache invalidation: clear the landing-gain cache when canonical
     // path OR mtime differs from the prior decoded cache entry. Same-
@@ -3395,8 +3690,21 @@ fn handle_play_master(
             s.device_gain_cache.clear();
             s.vm_gain_cache.clear();
             s.live_vm_gain_lin = 1.0;
+            // Gains resolved for another song never carry over.
+            s.live_gain_staging_applied = None;
         }
     }
+    // Auto gain staging (Slice 5): a verified resolution, or level in now
+    // with the drive held while the worker resolves (rule 8).
+    let gain_plan = gain_staging_live::plan(
+        &settings,
+        album,
+        profile_store.get_level(&track_id),
+        Some((canonical.as_path(), mtime)),
+        state.as_ref().and_then(|s| s.live_gain_staging_applied),
+    );
+    let gain_readout = gain_staging_live::apply(&gain_plan, &mut settings);
+    let settings = &settings;
 
     if state.is_none() {
         let selected = read_selected_output_device_name(selected_output_device_name)?;
@@ -3408,6 +3716,8 @@ fn handle_play_master(
     let s = state.as_mut().expect("state just inserted");
     s.playback_error = None;
     s.source_failure = None;
+    s.live_gain_staging_readout = gain_readout;
+    s.live_gain_staging_applied = settings.active_gain_staging();
     // A loop armed before the first-ever play was buffered by SetLoop (the
     // thread state didn't exist yet); install it so Play honors the armed UI.
     install_pending_loop_region(&mut s.loop_region, pending_loop_region);
@@ -3497,6 +3807,7 @@ fn handle_play_master(
             track_epoch,
             landing_enabled: preview_lufs_landing,
             device_rate,
+            gain_staging: gain_plan.key(),
         },
         command_tx,
     );
@@ -3662,6 +3973,7 @@ mod tests {
             track_epoch: gate.epoch,
             landing_enabled: true,
             device_rate: 48000,
+            gain_staging: None,
         });
         let mut next = settings.clone();
         next.advanced.lufs_offset_db = Some(-23.);
@@ -4901,6 +5213,7 @@ mod tests {
             track_epoch: 4,
             landing_enabled: true,
             device_rate: 48000,
+            gain_staging: None,
         };
         pending.settings.volume_match = true;
         assert!(pending_can_use_preview_result(&pending, &measured, 12));
@@ -5170,6 +5483,7 @@ mod tests {
                 track_epoch: 7,
                 landing_enabled: true,
                 device_rate: 48000,
+                gain_staging: None,
             },
             &tx,
             &Arc::new(AtomicBool::new(false)),
@@ -5217,6 +5531,7 @@ mod tests {
                     track_epoch: 17,
                     landing_enabled,
                     device_rate: 48000,
+                    gain_staging: None,
                 },
                 &tx,
                 &Arc::new(AtomicBool::new(false)),

@@ -7,6 +7,214 @@ use rodio::cpal::{self, traits::StreamTrait};
 use serde_json::json;
 use std::time::Instant;
 
+/// Auto gain staging (plan Slice 5): time from a settings change to a settled
+/// sound, against today's time to a settled loudness, on the production
+/// AudioPlayer; Original/Mastered switching keeps the playhead; the line is
+/// `Measuring` until the resolution applies, then exactly the cached
+/// resolution; Volume Match still measures with the switch on. Muted.
+#[test]
+#[ignore = "muted production Mastered audition with auto gain staging; YES_MASTER_BENCH_MUTE, YES_MASTER_BENCH_FILE, YES_MASTER_GAIN_STAGING_REPORT"]
+fn mastering_quality_auto_gain_staging_live() {
+    assert!(std::env::var_os("YES_MASTER_BENCH_MUTE").is_some());
+    let source = PathBuf::from(std::env::var("YES_MASTER_BENCH_FILE").unwrap());
+    let output = PathBuf::from(std::env::var("YES_MASTER_GAIN_STAGING_REPORT").unwrap());
+    assert!(!output.exists());
+    let player = AudioPlayer::new();
+    let track = TrackId("native-auto-gain-staging".into());
+    // The app analyses a song before it can be mastered; the analysis
+    // populates the profile store, which supplies level in at once (rule 8).
+    let analysis = crate::analysis::analyze_one(track.clone(), &source, false).unwrap();
+    crate::engine::populate_profile_store(&player.profile_store(), std::slice::from_ref(&analysis));
+    let wait = |check: &dyn Fn(&PlaybackSnapshot) -> bool, seconds| {
+        let start = Instant::now();
+        loop {
+            let snapshot = player.snapshot().unwrap();
+            assert!(
+                snapshot.playback_error.is_none() && !snapshot.device_lost,
+                "{snapshot:?}"
+            );
+            if check(&snapshot) {
+                return snapshot;
+            }
+            assert!(
+                start.elapsed() < Duration::from_secs(seconds),
+                "{snapshot:?}"
+            );
+            std::thread::sleep(Duration::from_millis(2));
+        }
+    };
+    let settled_sound = |s: &PlaybackSnapshot| {
+        !s.landing_pending
+            && s.is_playing
+            && s.requested_output_revision != 0
+            && s.applied_output_revision == s.requested_output_revision
+    };
+    let gain_settled = |s: &PlaybackSnapshot| {
+        matches!(
+            s.auto_gain_staging,
+            Some(AutoGainStagingReadout::Settled { .. })
+        )
+    };
+    let mut settings = tests::settings_with_intensity(0.75);
+    settings.advanced.compression_density = None;
+    settings.preset = Preset::Universal;
+    settings.delivery_profile = DeliveryProfile::Custom;
+    settings.advanced.lufs_offset_db = Some(-11.0);
+    settings.advanced.ceiling_dbtp = Some(-1.0);
+    let mut rows = Vec::new();
+
+    // Today: a cold Mastered start, then a target edit with the switch off.
+    let start = Instant::now();
+    player
+        .play_master(track.clone(), &source, settings.clone(), 30., true, false)
+        .unwrap();
+    wait(&settled_sound, 300);
+    rows.push(json!({"event":"cold_start_switch_off","settled_s":start.elapsed().as_secs_f64()}));
+    for target in [-9.0, -14.0] {
+        settings.advanced.lufs_offset_db = Some(target);
+        let start = Instant::now();
+        let before = player.snapshot().unwrap();
+        player.update_chain(settings.clone(), true, false).unwrap();
+        wait(
+            &|s| settled_sound(s) && s.requested_output_revision > before.requested_output_revision,
+            300,
+        );
+        rows.push(
+            json!({"event":"today_target_edit","switch":"off","target":target,
+            "settled_sound_s":start.elapsed().as_secs_f64()}),
+        );
+    }
+
+    // The switch turns on: Measuring at once, then the resolution.
+    settings.advanced.lufs_offset_db = Some(-9.0);
+    settings.advanced.auto_gain_staging = Some(AutoGainStagingSettings {
+        enabled: true,
+        priority: LoudnessPriority::Clean,
+    });
+    let mut readouts = Vec::new();
+    for (event, target, priority) in [
+        ("switch_on", -9.0, LoudnessPriority::Clean),
+        ("target_edit", -14.0, LoudnessPriority::Clean),
+        ("target_edit", -11.0, LoudnessPriority::Clean),
+        ("priority_edit", -11.0, LoudnessPriority::ReachTarget),
+    ] {
+        settings.advanced.lufs_offset_db = Some(target);
+        settings.advanced.auto_gain_staging = Some(AutoGainStagingSettings {
+            enabled: true,
+            priority,
+        });
+        let start = Instant::now();
+        let before = player.snapshot().unwrap();
+        player.update_chain(settings.clone(), true, false).unwrap();
+        let first = wait(
+            &|s| {
+                s.requested_output_revision > before.requested_output_revision || s.landing_pending
+            },
+            10,
+        );
+        let settled = wait(&|s| gain_settled(s) && settled_sound(s), 600);
+        let seconds = start.elapsed().as_secs_f64();
+        readouts.push(settled.auto_gain_staging);
+        rows.push(
+            json!({"event":event,"switch":"on","target":target,"priority":format!("{priority:?}"),
+            "first_readout":format!("{:?}",first.auto_gain_staging),
+            "settled_sound_s":seconds,"readout":format!("{:?}",settled.auto_gain_staging)}),
+        );
+    }
+
+    // Back to a resolution made before: the cache settles it at once.
+    settings.advanced.lufs_offset_db = Some(-9.0);
+    settings.advanced.auto_gain_staging = Some(AutoGainStagingSettings {
+        enabled: true,
+        priority: LoudnessPriority::Clean,
+    });
+    let start = Instant::now();
+    let before = player.snapshot().unwrap();
+    player.update_chain(settings.clone(), true, false).unwrap();
+    let settled = wait(
+        &|s| {
+            gain_settled(s)
+                && settled_sound(s)
+                && s.requested_output_revision > before.requested_output_revision
+        },
+        600,
+    );
+    assert_eq!(
+        settled.auto_gain_staging, readouts[0],
+        "the same settings, the same line"
+    );
+    rows.push(json!({"event":"revisit_cached","settled_sound_s":start.elapsed().as_secs_f64()}));
+
+    // Original/Mastered keeps the playhead, and Mastered returns settled.
+    for mastered in [false, true, false, true] {
+        let before = player.snapshot().unwrap();
+        let start = Instant::now();
+        if mastered {
+            player
+                .play_master(
+                    track.clone(),
+                    &source,
+                    settings.clone(),
+                    before.position_sec,
+                    true,
+                    false,
+                )
+                .unwrap();
+        } else {
+            player
+                .play_track(track.clone(), &source, before.position_sec)
+                .unwrap();
+        }
+        let after = wait(
+            &|s| s.play_generation > before.play_generation && s.is_playing,
+            10,
+        );
+        assert!(
+            after.position_sec >= before.position_sec - 0.01,
+            "{before:?} {after:?}"
+        );
+        if mastered {
+            let settled = wait(&|s| gain_settled(s) && settled_sound(s), 600);
+            assert_eq!(settled.auto_gain_staging, readouts[0]);
+        } else {
+            assert_eq!(after.auto_gain_staging, None, "Original has no line");
+        }
+        rows.push(
+            json!({"event":"ab","mastered":mastered,"observed_s":start.elapsed().as_secs_f64(),
+            "before":before.position_sec,"after":after.position_sec}),
+        );
+    }
+
+    // Volume Match with the switch on (Volume Match and the export-loudness
+    // preview are exclusive in the app).
+    settings.volume_match = true;
+    settings.source_lufs_integrated = Some(analysis.lufs_integrated);
+    let start = Instant::now();
+    let before = player.snapshot().unwrap();
+    player.update_chain(settings.clone(), false, false).unwrap();
+    let settled = wait(
+        &|s| {
+            gain_settled(s)
+                && settled_sound(s)
+                && s.requested_output_revision > before.requested_output_revision
+        },
+        600,
+    );
+    assert_eq!(settled.auto_gain_staging, readouts[0]);
+    rows.push(json!({"event":"volume_match_on","settled_sound_s":start.elapsed().as_secs_f64()}));
+
+    player.stop();
+    wait(&|s| !s.is_loaded || s.track_id.is_none(), 10);
+    std::fs::write(
+        &output,
+        serde_json::to_vec_pretty(&json!({"status":"complete",
+            "scope":"muted production AudioPlayer on this PC's default output; settled = no landing pending and the emitted output revision equals the requested one; not DAC/speaker latency or listening",
+            "source":source.file_name().map(|n| n.to_string_lossy().to_string()),"rows":rows}))
+        .unwrap(),
+    )
+    .unwrap();
+}
+
 #[test]
 #[ignore = "diagnose native default/fallback configuration without changing device preferences; YES_MASTER_DEVICE_OPEN_REPORT"]
 fn mastering_quality_device_open_matrix() {
@@ -544,6 +752,22 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
             .unwrap_or(48_000),
     );
     settings.advanced.ceiling_dbtp = Some(-1.0);
+    // Auto gain staging (plan Slice 5): the switch on, with resolved gains in
+    // the chain; the concurrent worker runs the resolution itself, and every
+    // coefficient edit moves the limiter drive through the crossfade.
+    let gain_staging =
+        std::env::var("YES_MASTER_CALLBACK_AUTO_GAIN_STAGING").is_ok_and(|value| value == "1");
+    if gain_staging {
+        settings.advanced.auto_gain_staging = Some(AutoGainStagingSettings {
+            enabled: true,
+            priority: LoudnessPriority::Clean,
+        });
+        settings.advanced.gain_staging_resolved = Some(ResolvedGainStaging {
+            level_in_db: -1.5,
+            limiter_drive_db: 3.0,
+            ..Default::default()
+        });
+    }
     let initial_settings = settings.clone();
     let peak = Arc::new(AtomicU32::new(0));
     let lufs = Arc::new(AtomicI32::new(i32::MIN));
@@ -650,13 +874,35 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
         for target in [-14.0, -9.0, -12.0] {
             worker_settings.advanced.lufs_offset_db = Some(target);
             let start = Instant::now();
-            let result = crate::engine::preview_landing_with_cancel(
-                &worker_pcm.samples,
-                worker_pcm.sample_rate,
-                worker_pcm.channels,
-                &worker_settings,
-                Some(&worker_cancel),
-            );
+            let result = if gain_staging {
+                crate::gain_staging::resolve_preview(
+                    &worker_pcm.samples,
+                    worker_pcm.sample_rate,
+                    worker_pcm.channels,
+                    &worker_settings,
+                    None,
+                    Some(&worker_cancel),
+                )
+                .and_then(|resolution| {
+                    let mut resolved = worker_settings.clone();
+                    resolved.advanced.gain_staging_resolved = resolution.map(|r| r.gains);
+                    crate::engine::preview_landing_with_cancel(
+                        &worker_pcm.samples,
+                        worker_pcm.sample_rate,
+                        worker_pcm.channels,
+                        &resolved,
+                        Some(&worker_cancel),
+                    )
+                })
+            } else {
+                crate::engine::preview_landing_with_cancel(
+                    &worker_pcm.samples,
+                    worker_pcm.sample_rate,
+                    worker_pcm.channels,
+                    &worker_settings,
+                    Some(&worker_cancel),
+                )
+            };
             rows.push(json!({"target":target,"file_rate":worker_settings.effective_sample_rate(worker_pcm.sample_rate),
                 "seconds":start.elapsed().as_secs_f64(),"ok":result.is_ok(),
                 "error":result.err().map(|e|e.to_string()),"cancel_requested":worker_cancel.load(Ordering::Relaxed)}));
@@ -674,6 +920,13 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
     let edits = if gain_edits { 1200 } else { 120 };
     for generation in 1..=edits {
         settings.eq_high_db = if generation % 2 == 0 { 1.0 } else { -1.0 };
+        if gain_staging {
+            settings.advanced.gain_staging_resolved = Some(ResolvedGainStaging {
+                level_in_db: -1.5,
+                limiter_drive_db: if generation % 2 == 0 { 3.0 } else { 5.5 },
+                ..Default::default()
+            });
+        }
         gains.publish(gain_stage::GainPlan {
             revision: generation + 1,
             raw_revision: if gain_edits { 1 } else { generation + 1 },
@@ -722,6 +975,7 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
         .count();
     let report = json!({"scope":"muted MasteringSource on CPAL callback, concurrent preview landing and coefficient edits; production file/device streaming SRC when enabled; not installed UI/lifecycle proof",
         "streaming_src_candidate":streaming_src,"source_rate":pcm.sample_rate,"chain_rate":chain_rate,
+        "auto_gain_staging":gain_staging,
         "file_rate_override":std::env::var("YES_MASTER_CALLBACK_FILE_RATE").ok(),
         "streaming_construction_s":streaming_construction_s,"streaming_error_code":stream_error.as_ref().map(|slot|slot.load(Ordering::Acquire)),
         "initial_settings":initial_settings,"coefficient_edits":if gain_edits { 0 } else { edits },

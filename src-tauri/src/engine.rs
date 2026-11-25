@@ -239,6 +239,14 @@ pub fn populate_profile_store(
             .deep_analysis
             .as_deref()
             .and_then(crate::deep_analysis::band_psr_p10_db);
+        profile_store.set_level(
+            result.track_id.clone(),
+            Some(crate::analysis::SourceLevel {
+                lufs_integrated: result.lufs_integrated,
+                lra: result.dynamic_range_lu,
+                true_peak_dbtp: result.true_peak_dbtp,
+            }),
+        );
         profile_store.set_stand_down(
             result.track_id.clone(),
             Some(crate::guardrails::classify_already_mastered_stand_down(

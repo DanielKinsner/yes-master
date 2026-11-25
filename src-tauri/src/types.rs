@@ -903,6 +903,42 @@ pub struct ResolvedGainStaging {
     pub stopped_by_peak_check: bool,
 }
 
+/// What the Advanced line shows for auto gain staging while the switch is
+/// on: the state of the loaded song's resolution, taken from the
+/// computation the audio uses (decision A9). The frontend formats it and
+/// never recomputes a gain.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+#[serde(tag = "state", rename_all = "snake_case")]
+pub enum AutoGainStagingReadout {
+    /// No loudness target, so the feature is inert.
+    NoTarget,
+    /// Album renders: the feature applies to Track Master only.
+    Album,
+    /// No usable loudness measurement of the source.
+    Unusable,
+    /// A resolution is in flight. Nothing shown is settled (rule 8).
+    Measuring,
+    /// The gains the chain applies, and the loudness they deliver.
+    Settled {
+        level_in_db: f32,
+        limiter_drive_db: f32,
+        limiter_load_db: f32,
+        stopped_at_clean_limit: bool,
+        stopped_by_peak_check: bool,
+        delivered_lufs: f32,
+        target_lufs: f32,
+    },
+}
+
+/// Edge-triggered auto gain staging status for the loaded song, emitted on
+/// `auto-gain-staging:status`. `readout` is `None` while the switch is off or
+/// nothing is loaded.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct AutoGainStagingStatus {
+    pub track_id: Option<TrackId>,
+    pub readout: Option<AutoGainStagingReadout>,
+}
+
 /// Smart Match state saved with a song (plan M9): the reference's measured
 /// numbers and its display name, never its audio or its path, so a project
 /// reopens with the same match on any machine without the reference file.

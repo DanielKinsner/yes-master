@@ -37,6 +37,10 @@ pub struct SourceProfileStore {
     /// time from loudness, true peak, LRA, and per-band PSR. Stored separately so
     /// chain entry points never need to keep whole `AnalysisResult`s alive.
     by_track_stand_down: Mutex<HashMap<TrackId, crate::guardrails::AlreadyMasteredStandDown>>,
+    /// Auto gain staging (Beta): the analysis's own loudness and true peak,
+    /// so audition can apply level in at once when the switch turns on
+    /// (contract rule 8) without measuring the song again.
+    by_track_level: Mutex<HashMap<TrackId, crate::analysis::SourceLevel>>,
 }
 
 impl SourceProfileStore {
@@ -128,6 +132,30 @@ impl SourceProfileStore {
             .copied()
     }
 
+    pub fn set_level(&self, track_id: TrackId, level: Option<crate::analysis::SourceLevel>) {
+        let mut guard = self
+            .by_track_level
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        match level {
+            Some(value) => {
+                guard.insert(track_id, value);
+            }
+            None => {
+                guard.remove(&track_id);
+            }
+        }
+    }
+
+    /// The analysed source level for a track, if its analysis has arrived.
+    pub fn get_level(&self, track_id: &TrackId) -> Option<crate::analysis::SourceLevel> {
+        self.by_track_level
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get(track_id)
+            .copied()
+    }
+
     /// Remove both adaptive cache entries for a track. Used when the frontend
     /// removes a track from the session so backend-only DeepAnalysis data does
     /// not linger for the life of the app process.
@@ -135,6 +163,7 @@ impl SourceProfileStore {
         self.set(track_id.clone(), None);
         self.insert_deep(track_id.clone(), None);
         self.set_stand_down(track_id.clone(), None);
+        self.set_level(track_id.clone(), None);
     }
 }
 
@@ -253,6 +282,7 @@ pub fn prune_failed_profiles(
             store.set(id.clone(), None);
             store.insert_deep(id.clone(), None);
             store.set_stand_down(id.clone(), None);
+            store.set_level(id.clone(), None);
         }
     }
 }

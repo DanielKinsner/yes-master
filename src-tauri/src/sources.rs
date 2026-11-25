@@ -887,6 +887,71 @@ mod render_alignment_tests {
         .with_render_alignment()
     }
 
+    /// Auto gain staging (plan Slice 5): turning the switch on and every new
+    /// limiter drive reach the playing chain through the existing coefficient
+    /// crossfade, without an allocation in the callback.
+    #[test]
+    fn auto_gain_staging_drive_updates_crossfade_without_allocating() {
+        use crate::types::{AutoGainStagingSettings, LoudnessPriority, ResolvedGainStaging};
+        let rate = 48_000;
+        let input: Vec<f32> = (0..rate as usize * 2 * 3)
+            .map(|n| 0.45 * (n as f32 * 0.031).sin())
+            .collect();
+        let (send, receive) = mpsc::channel();
+        let mut source = source(input, 2, rate);
+        source.coeffs_rx = receive;
+        let mut on = settings();
+        on.advanced.lufs_offset_db = Some(-9.0);
+        on.advanced.auto_gain_staging = Some(AutoGainStagingSettings {
+            enabled: true,
+            priority: LoudnessPriority::Clean,
+        });
+        let mut updates = Vec::new();
+        for (generation, (level_in, drive)) in [
+            (-1.5, 0.0),
+            (-1.5, 4.0),
+            (-1.5, 2.5),
+            (-1.5, 6.0),
+            (0.0, 0.0),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            on.advanced.gain_staging_resolved = Some(ResolvedGainStaging {
+                level_in_db: level_in,
+                limiter_drive_db: drive,
+                ..Default::default()
+            });
+            let coeffs = crate::dsp::ChainCoeffs::from_settings(rate, &on);
+            assert_eq!(coeffs.limiter_drive_active, drive != 0.0);
+            updates.push(LiveCoeffUpdate {
+                generation: generation as u64 + 2,
+                coeffs,
+            });
+        }
+        // Prime outside the count, then send each update from "another
+        // thread" (here, before counting) and drain it in the callback.
+        for _ in 0..4096 {
+            source.next().unwrap();
+        }
+        let mut applied: u64 = 0;
+        for update in updates {
+            send.send(update).unwrap();
+            let (allocations, finite) = crate::test_allocations::count(|| {
+                let mut finite = true;
+                for _ in 0..(COEFFS_CHECK_INTERVAL_FRAMES + COEFFS_CROSSFADE_FRAMES + 64) * 2 {
+                    finite &= source.next().is_some_and(f32::is_finite);
+                }
+                finite
+            });
+            assert_eq!(allocations, 0, "update {applied} allocated in the callback");
+            assert!(finite);
+            assert!(!source.pending_chain_active, "the crossfade completed");
+            applied += 1;
+            assert_eq!(source.coeffs_generation, applied + 1);
+        }
+    }
+
     #[test]
     fn complete_streaming_dsp_and_device_meter_seek_allocate_nothing() {
         use crate::{dsp, quality_source, sources, spectrum, types};
