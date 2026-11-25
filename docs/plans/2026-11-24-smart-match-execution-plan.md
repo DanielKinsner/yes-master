@@ -1088,3 +1088,36 @@ state, and the readout's keys did not change. The try-it engine was rebuilt.
     amount without an owner decision", it says that a song without a
     reference must render bit-identically, and it points to the G6 limitation
     in `docs/PRODUCT.md`.
+
+### Checkpoint C
+
+Stopped here. Slices 7 and 8 are built (`e79bfde`, `a267ffb`) on top of the
+Checkpoint B fix (`f3698c8`). Nothing is pushed or merged.
+
+Lanes run for Checkpoint C (office PC), on the committed code:
+
+| Lane | Result |
+| --- | --- |
+| `cargo fmt --check` | Clean |
+| `cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings` | Clean |
+| Rust suite with the slow fixture lane (`AMS_RUN_REAL_FIXTURE=1`, `AMS_REAL_FIXTURE_PATH` = `It’s a coat-original-test.wav`) | 48 suites, 796 passed, 0 failed, 35 ignored. The four real-fixture contract tests ran. `preset_byte_identity` and `preset_fingerprint` passed with their goldens untouched |
+| iPhone bridge (`cargo check --all-targets`; `cargo test`) | 46 passed, 0 failed, 1 ignored |
+| Android bridge (`cargo test`; `cargo ndk -t arm64-v8a --platform 29 check`) | 26 passed, 0 failed; the NDK check built |
+| `npm test` | 92 files, 982 passed, 0 failed (includes the try-it engine stamp test) |
+| `npm run build` | Succeeded (typecheck included) |
+| `npm run verify:headless` | Passed: 50 scenario/viewport checks, including the five Smart Match scenarios at both sizes. Captures inspected (Standard at 1360×740 and 1440×900, Advanced partial) |
+| `npm run verify:landing-assets` | Passed after `npm run capture:landing`: 3 scripted captures bound to the new digest; owner plates untouched |
+| Try-it engine | No Rust changed since `f3698c8`, where it was rebuilt; its stamp test passes inside `npm test` |
+
+The gate table is unchanged from Checkpoint B: G1–G5 and G7–G10 pass; G6
+failed as written and is accepted with a documented limitation (see the
+evaluation note).
+
+Open at Checkpoint C:
+
+- **O1 (owner):** the hand test above, then the merge and push decision.
+- **Mac:** the Swift model change from Slice 5 (the optional receipt digest
+  in `NativeMasteringBridge.swift`) has not been compiled. It needs a Mac
+  build before a Mac release.
+- **O2 at release time:** the owner's real-session landing plates predate
+  Smart Match (deviation 55).
