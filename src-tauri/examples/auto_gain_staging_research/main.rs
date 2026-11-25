@@ -78,6 +78,9 @@ struct Args {
     /// delivery (the first development run).
     g_on_delivered: bool,
     max_passes: usize,
+    /// Diagnostic: G with priority Reach target instead of Clean
+    /// (`--priority reach`). Never part of the decision.
+    reach_target: bool,
     /// Slice 4: render through the production export path.
     production: bool,
     /// Slice 4: the held-out songs instead of the development songs.
@@ -130,6 +133,7 @@ fn parse_args() -> Result<Args, String> {
             Some("holdout") => true,
             Some(other) => return Err(format!("--phase {other}: use development or holdout")),
         },
+        reach_target: map.get("priority").is_some_and(|v| v == "reach"),
         frozen_commit: map.get("frozen-commit").cloned(),
         quiet: map.get("quiet").map(PathBuf::from),
         g_on_delivered: match map.get("g-resolve").map(String::as_str) {
@@ -658,6 +662,7 @@ fn process_song(
     excerpt: Option<f64>,
     g_on_delivered: bool,
     max_passes: usize,
+    clean_limit: Option<f32>,
 ) -> SongResult {
     let start = Instant::now();
     let mut errors = Vec::new();
@@ -837,7 +842,7 @@ fn process_song(
                 resolve_drive_delivered(
                     stage_for_g,
                     target,
-                    Some(CLEAN_LIMIT_DB),
+                    clean_limit,
                     TARGET_TOLERANCE_LU,
                     max_passes,
                 )
@@ -850,7 +855,7 @@ fn process_song(
                     stage_for_g,
                     target,
                     STANDARD_CEILING_DBTP,
-                    Some(CLEAN_LIMIT_DB),
+                    clean_limit,
                     TARGET_TOLERANCE_LU,
                     max_passes,
                 );
@@ -1266,6 +1271,7 @@ fn run() -> Result<(), String> {
                 args.excerpt_seconds,
                 args.g_on_delivered,
                 args.max_passes,
+                (!args.reach_target).then_some(CLEAN_LIMIT_DB),
             )
         };
         println!(
