@@ -20,12 +20,20 @@
 //!   cargo run --release --example smart_balance_reference -- \
 //!     --stats <smart-balance-reference-stats.json> --place <dir> [--place <dir>]... \
 //!     --output ../test-output/smart-balance/placement
+//!
+//! **Emit Smart Match's typical shape.** With `--emit-typical-shape`, writes
+//! the Rust table Smart Match's missing-band rule reads
+//! (`src/smart_match_typical_shape.rs` unless `--rust-out` says otherwise), so
+//! the numbers are never copied by hand:
+//!   cargo run --release --example smart_balance_reference -- \
+//!     --emit-typical-shape <smart-balance-reference-stats.json>
 
 use std::env;
 use std::path::PathBuf;
 
 use yes_master_lib::smart_balance_reference::{
-    read_stats, run_placement, run_reference_measurement, ReferenceRunConfig, MIN_LIBRARY_SONGS,
+    read_stats, run_placement, run_reference_measurement, typical_shape_rust_source,
+    ReferenceRunConfig, MIN_LIBRARY_SONGS, TYPICAL_SHAPE_RUST_FILE,
 };
 
 fn main() {
@@ -40,6 +48,8 @@ fn run() -> Result<(), String> {
     let mut output_dir: Option<PathBuf> = None;
     let mut stats_path: Option<PathBuf> = None;
     let mut place_dirs: Vec<PathBuf> = Vec::new();
+    let mut emit_typical_shape: Option<PathBuf> = None;
+    let mut rust_out: Option<PathBuf> = None;
     let mut config = ReferenceRunConfig::default();
     let mut args = env::args().skip(1);
 
@@ -63,12 +73,25 @@ fn run() -> Result<(), String> {
                 let dir = args.next().ok_or_else(usage)?;
                 place_dirs.push(PathBuf::from(dir));
             }
+            "--emit-typical-shape" => emit_typical_shape = args.next().map(PathBuf::from),
+            "--rust-out" => rust_out = args.next().map(PathBuf::from),
             "--help" | "-h" => {
                 println!("{}", usage());
                 return Ok(());
             }
             other => return Err(format!("unknown argument: {other}\n\n{}", usage())),
         }
+    }
+
+    if let Some(stats_path) = emit_typical_shape {
+        if reference_dir.is_some() || !place_dirs.is_empty() {
+            return Err(format!(
+                "--emit-typical-shape runs on its own\n\n{}",
+                usage()
+            ));
+        }
+        let out = rust_out.unwrap_or_else(|| PathBuf::from(TYPICAL_SHAPE_RUST_FILE));
+        return emit(&stats_path, &out);
     }
 
     match (reference_dir, stats_path) {
@@ -162,10 +185,28 @@ fn place(
     Ok(())
 }
 
+fn emit(stats_path: &std::path::Path, out: &std::path::Path) -> Result<(), String> {
+    let stats = read_stats(stats_path).map_err(|err| format!("cannot read statistics: {err}"))?;
+    let source = typical_shape_rust_source(&stats).map_err(|err| err.to_string())?;
+    std::fs::write(out, source).map_err(|e| format!("write {}: {e}", out.display()))?;
+    println!(
+        "Wrote Smart Match's typical shape ({} build songs{}) to {}",
+        stats.counts.build,
+        if stats.provisional {
+            ", PROVISIONAL"
+        } else {
+            ""
+        },
+        out.display()
+    );
+    Ok(())
+}
+
 fn usage() -> String {
     "Usage:\n  smart_balance_reference --references <dir> [--output <dir>] [--seed <u64>] \
      [--provisional] [--exclude-matching <dir>]...\n  \
      smart_balance_reference --stats <stats.json> --place <dir> [--place <dir>]... \
-     [--output <dir>]"
+     [--output <dir>]\n  \
+     smart_balance_reference --emit-typical-shape <stats.json> [--rust-out <file>]"
         .to_string()
 }

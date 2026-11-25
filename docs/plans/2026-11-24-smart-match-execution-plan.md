@@ -467,3 +467,73 @@ Not in this plan.
 - Smart Match in Album mode, on mobile, or in the browser try-it.
 - A DAW plugin. Only the M3 seam and the M22 measurement belong here.
 - Landing page, marketing, pricing or release work.
+
+## Execution status
+
+Executor: the Smart Balance session, on `claude/smart-balance-2e58b2`.
+Started 2026-11-24 from `762daf9`. `main` had not moved since the branch was
+cut (`5a18eaf`). Nothing pushed or merged.
+
+### Slice 3: done
+
+The decision function is `src-tauri/src/smart_match.rs`, pure and
+allocation-free, with no gated static and no I/O. `decide` takes the track's
+six shares, the reference's six shares, the on/off state and the amount, and
+returns the gap, the six corrections, which bands a cap changed and the
+partial flag. Fifteen unit tests in the module pin rules 1 to 7 and 10,
+including every case the plan lists. Two integration tests in
+`tests/smart_match.rs` pin the typical shape against the committed statistics
+and the product's median against the runner's.
+
+### Deviation log
+
+1. **The order the rules apply in.** The contract lists caps (4), the dead
+   zone (5) and missing bands (6) in that order. The function applies, per
+   band: `amount × gap`, then the missing-band fade (boosts only), then the
+   caps, then the dead zone. The fade goes before the caps so that a cap
+   bounds the value that would otherwise be applied. That makes the partial
+   flag (rule 10) mean "a cap limited the match", not "this track has no
+   content in this band". Otherwise every track with an empty band would show
+   the partial notice. The dead zone goes last, so nothing smaller than it
+   survives any step; this also covers rule 5's "intended corrections". The
+   partial flag is set exactly when a cap changed a band's value, and a test
+   checks that over 2,000 random cases.
+2. **The gap is reported even when the match is off.** When both profiles can
+   be used, the decision returns the gap even if the match is off or the
+   amount is zero, so a display can show how far apart the songs are. The
+   corrections are still all zero in that case, so this changes no sound.
+3. **Shares are normalized before they become dB.** The meter's shares already
+   sum to about 1. Normalizing only matters for a hand-edited project that
+   stores a reference at another scale. The gap and the fade remove the overall
+   offset anyway, so scale cannot change a result; a test pins that.
+4. **The shared math moved into the product module.** That is the band names,
+   the band edges, the share floor, the shares-to-dB step and the offset
+   removal. The measuring tool now re-exports them and uses `remove_offset`
+   for its deviation step (plan Slice 3: "product logic must not depend on the
+   evidence runner"). The product's median of six is allocation-free; a test
+   checks it against the tool's general median.
+5. **How the typical shape gets into the code.** The tool gained
+   `--emit-typical-shape <stats.json>`. It writes
+   `src-tauri/src/smart_match_typical_shape.rs`, which `smart_match.rs` pulls
+   in with `include!`. A test checks two things: the numbers equal the
+   committed statistics, and the file is exactly what the tool emits. So the
+   table cannot be typed by hand.
+
+   Bootstrapping: the tool lives in the same crate, so to compile it the first
+   time I created that file with all-zero values, then ran the tool, which
+   overwrote it. The committed file is the tool's output.
+6. **The order of reasons for doing nothing.** When the match is inactive, the
+   decision reports the first reason that applies, in this order:
+   1. no reference;
+   2. an unusable reference;
+   3. switched off;
+   4. zero amount;
+   5. no track profile;
+   6. an unusable track.
+
+   Slice 5 maps these onto the copy-table states. Album resolves to "no track
+   profile" (rule 7).
+7. **Parameters are a struct.** `SmartMatchParams::DEFAULT` holds the plan's
+   starting values. `within_plan_bounds` encodes the "You may move it" column,
+   so the evaluation runner can try other values and prove each one is
+   allowed. No parameter has moved.

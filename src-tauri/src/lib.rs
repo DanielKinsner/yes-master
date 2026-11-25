@@ -28,6 +28,7 @@ pub mod reference_tuning;
 pub mod sample_rate;
 pub mod settings;
 pub mod smart_balance_reference;
+pub mod smart_match;
 pub mod sources;
 pub mod spectrum;
 #[cfg(test)]
