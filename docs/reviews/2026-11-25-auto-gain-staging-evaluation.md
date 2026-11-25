@@ -9,7 +9,9 @@ the Checkpoint A grade.
 
 **Since then:** the planning session graded Checkpoint B, and its three items
 and Slices 5–7 are in the [Phase C note](2026-11-25-auto-gain-staging-phase-c.md).
-This note keeps the Checkpoint B state as it was.
+With the planning session's faster step, E4's Reach-target half failed one
+case by 0.09 dB under the amended acceptance; the planning session accepted
+it at Checkpoint C. This note keeps the Checkpoint B state as it was.
 
 ## Bottom line
 

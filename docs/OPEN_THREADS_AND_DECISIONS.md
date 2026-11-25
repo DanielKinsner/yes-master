@@ -1,5 +1,11 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-25 — Auto gain staging, Checkpoint C graded: build accepted;
+> a listening pack and Slice 8 (fast settling in audition) come before the
+> owner's hand test.** Approved on the planning session's recommendation:
+> E4's one case (0.09 dB over the amended load condition) is accepted, and
+> audition must settle faster before the owner tunes by ear in the app.
+
 > **2026-11-25 — Auto gain staging at Checkpoint C: built end to end, off
 > by default; waiting for the owner's hand test.** On branch
 > `claude/auto-gain-staging-bf8b35` (not merged; nothing pushed by the

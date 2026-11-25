@@ -452,6 +452,52 @@ Not in this plan.
 
 ## Execution status
 
+### Paused 2026-11-25 (owner out of usage until Friday)
+
+Paused by the planning session in Slice 8. Nothing pushed or merged.
+
+- **Finished:**
+  - The Checkpoint C rulings are recorded (below and in the Phase C note).
+  - The owner's listening pack: 16 files and `READ ME.txt` in
+    `test-outpututo-gain-staging\listening-pack\` (private). Doors Open
+    at High is not a fair pair (A 0.4 dB quieter).
+- **Half-done, Slice 8 (committed as work in progress):**
+  - Built: the fast estimate (`gain_staging::estimate_preview`: parallel
+    chunked stage capture and limiter passes, emulated final check), the
+    worker sending the estimate then the exact result, the 0.3 dB refine
+    rule (`gain_staging_live::audition_gains`), the `estimated` readout and
+    the ` · refining…` line, and the probe's F2 timing.
+  - Verified at the WIP commit: `cargo clippy --all-targets` clean;
+    `gain_staging_live` tests 7 of 7; `tsc` clean; the affected frontend
+    tests (146) pass. **Not run:** the full Rust suite, full `npm test`,
+    headless, landing gate, bridges, native probes.
+  - **No gate is measured yet.** F1's development run was stopped before a
+    song finished. F2–F5 are not measured. The estimate now plays in
+    audition when the switch is on, before passing F1.
+- **Findings worth keeping:**
+  - A 4x true-peak reading is useless on a limited master: it reads the
+    limiter's own ceiling (−1.10 dBTP) at any drive.
+  - The recorded-lowpass half of the qualified peak meter equals the full
+    qualified reading on normal music at a fraction of the cost; the
+    estimate uses it (`EstimatePeak::Lowpass`).
+  - Funkorama and bright noise are dominated by the sinc half (1.4–1.9 dB
+    higher on Funkorama), so the estimate misses the final check's
+    pull-down there. On a synthetic bright signal with Reach target it came
+    out 10 dB *above* the exact drive. F1 must show how often this happens
+    on real songs.
+  - On normal songs the estimate matched the exact drive to within 0.3 dB
+    in 0.5–2.9 s, against 3.5–24 s for the exact resolution.
+- **Partial results** (private, under
+  `test-outpututo-gain-staging\slice8\`): `export-hashes-08509ab.json`
+  (360 exports made with product code equal to `08509ab`, for F4),
+  `research-08509ab.exe`, `f1_analysis.py`, `f4_compare.py`.
+- **Next step to resume:** rebuild the runner and run F1 on development:
+  `--path production --estimate-check "4x:0,lp:0,lp:0.1,lp:0.25"` (with the
+  usual discovery arguments and `--quiet`), then
+  `python f1_analysis.py estimate-check.json`. If no variant passes F1,
+  try one qualified check on the estimate's last pass and weigh it against
+  F2, then report the trade-off as the ruling asks.
+
 Executor: the auto gain staging session, on `claude/auto-gain-staging-bf8b35`,
 started 2026-11-24 from `a8231b5`. Nothing pushed or merged by the executor.
 Phase A changed no product code; Phases B and C did (see each slice).
@@ -1052,6 +1098,29 @@ Open:
 - **Mac:** the Swift receipt model's two optional fields are uncompiled.
 - **The quiet material** is classical and piano heavy; nothing establishes
   how G treats a typical unmastered band mix.
+
+### Checkpoint C: graded by the planning session
+
+Graded 2026-11-25: the build is accepted, with two more pieces of work before
+the owner's hand test. Approved on the planning session's recommendation:
+
+- **E4's one case** (Small Colin – All On Me, Universal, −9, 0.59 dB more
+  limiting than the 12-pass reference) is **failed as written by 0.09 dB and
+  accepted by the planning session**: it landed 0.14 LU closer to the target
+  than the reference did, and that cost the extra limiting.
+- **Audition settling time** needs work before the owner listens in the app,
+  because a sound that shifts 15 seconds after each tweak makes tuning by ear
+  confusing. That is Slice 8.
+- **First, a listening pack**: Universal at default Intensity, the reference
+  song and three of the owner's songs, Medium and High, switch off and on
+  (Clean), through the production export, kept private.
+- **Slice 8, fast settling:** a fast estimate of the limiter drive first, then
+  the exact resolution, on the existing preview worker. Rule 8 is amended for
+  this slice only: an estimate that has passed gate F1 may raise the drive in
+  audition; a value left over from different settings still may not. Exports
+  never use the estimate. Gates F1–F5; F1 is checked once on the holdout (its
+  second use, for a different measure). If F1 and F2 cannot both be met, stop
+  and report the best trade-off.
 
 ### Deviation log (Checkpoint B items and Phase C)
 

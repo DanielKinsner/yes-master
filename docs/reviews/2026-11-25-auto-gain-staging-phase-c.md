@@ -77,7 +77,8 @@ unchanged, and let Reach target alone use a faster step and up to 8 passes.
 The failing case landed at −9.06 LUFS where the reference stopped at −9.20.
 The secant aims closer to the target than the old step stopped, and the
 last 0.14 LU cost 0.59 dB of limiting on this song. Nothing was tuned to make
-it pass.
+it pass. **Graded at Checkpoint C: failed as written by 0.09 dB and accepted
+by the planning session.**
 
 - **All cases where Clean stopped at the clean limit:**
 
