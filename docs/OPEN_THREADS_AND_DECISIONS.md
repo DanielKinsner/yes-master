@@ -1,12 +1,12 @@
 # YES Master — Open Threads & Owner Decisions
 
-> **2026-11-24 — Smart Match at Checkpoint B: built and measured; one
-> end-to-end gate fails; planning session to grade (P1).** On branch
+> **2026-11-24 — Smart Match at Checkpoint B: built and measured; graded.**
+> The planning session accepted G6, which failed as written, with a documented
+> limitation, and the work continues to Slices 7 and 8. On branch
 > `claude/smart-balance-2e58b2`. The planning session pushed it as a backup at
-> `d45d5d1`; the Slice 4–6 commits are local, and nothing is merged. Dan
-> dropped the range-based Smart Balance at Checkpoint A in favour of
-> **Smart Match**: the user picks a reference song and the app nudges the
-> track's tone partway toward it
+> `89d884d` after its review; nothing is merged. Smart Balance (automatic
+> tone fixing) was dropped, and **Smart Match** (the user picks a reference
+> song) replaces it, approved on the planning session's recommendation
 > ([plan](plans/2026-11-24-smart-match-execution-plan.md)).
 >
 > Slices 3–6 are built: the decision function, the setting and the chain, the
@@ -20,10 +20,12 @@
 > compressor and limiter give back part of any tone change in sub, bass and
 > air. Corpus mixes and the owner's song pass almost everywhere.
 >
-> Open questions for the planning session:
-> - grade G6;
-> - confirm that mono references are accepted;
-> - decide the line for a 0% amount.
+> Rulings from the planning session:
+> - G6 is accepted with a documented limitation;
+> - mono references are accepted;
+> - there are locked lines for a 0% amount and for a track without a
+>   six-band profile;
+> - a signal-chain readout bug is to be fixed before Slice 7.
 >
 > Results: `docs/reviews/2026-11-24-smart-match-evaluation.md`.
 

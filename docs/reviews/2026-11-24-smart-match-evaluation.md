@@ -8,6 +8,17 @@ free library from Checkpoint A.
 
 ## Bottom line
 
+**Graded at Checkpoint B: G6 failed as written and was accepted with a
+documented limitation.** It stays recorded as a failure. The planning session
+accepted it as a property of the chain order: any EQ ahead of the compressor
+and limiter is partly given back on heavily limited material. The
+diagnostics below show that the EQ stage itself does what was asked. The
+planning session says the gate itself was its own mistake, because it did not
+separate already-limited masters from the mixes the product is built for.
+Nothing was retuned, and the holdout was not run again. The limitation is
+stated in the product documents and in a second caption line under the
+Advanced strip.
+
 **Everything Smart Match itself does passes. One end-to-end gate, G6, fails,
 on development and on the holdout alike.** The cause is not Smart Match's EQ.
 On loud, already-released masters, the chain's compressor and limiter give
@@ -41,10 +52,10 @@ songs plus the three holdout corpus pieces, run once at the frozen commit.
 | G3 Known-answer recovery | **Pass** (development and holdout) | Development: 761 counted bands in 644 cases over 46 songs. Holdout: 277 bands in 238 cases over 17 songs. In both: 0 wrong direction; the correction equals 0.5 × the measured gap exactly (worst 0.000 dB); unchanged bands stayed ≤ 0.5 dB in 100% of single- and two-band cases. Not graded: 73 (development) and 31 (holdout) boosts that the missing-band rule reduced |
 | G4 Realization accuracy | **Pass** | 288 cases (12 single-band caps and 20 mixed, × 3 rates × 3 filter placements); worst error 0.018 dB |
 | G5 Level invariance | **Pass** | 60 comparisons at ±12 dB; worst change 0.0000001 dB |
-| G6 Gap closed end to end | **Fail** (development and holdout) | Development: 62 of 761 bands outside 35–65% (sub 21, bass 10, low mids 2, mids 1, presence 1, air 27); range 0.33–0.83, median 0.55. Holdout: 27 of 277 outside (sub 6, bass 4, low mids 2, mids 1, presence 1, air 13); range 0.40–0.87, median 0.55 |
+| G6 Gap closed end to end | **Failed as written; accepted with a documented limitation** (development and holdout) | Development: 62 of 761 bands outside 35–65% (sub 21, bass 10, low mids 2, mids 1, presence 1, air 27); range 0.33–0.83, median 0.55. Holdout: 27 of 277 outside (sub 6, bass 4, low mids 2, mids 1, presence 1, air 13); range 0.40–0.87, median 0.55 |
 | G7 Amount and caps | **Pass** | 669 pairs × 5 amounts: 0 shrinking corrections, 0 over a cap, 0 partial-flag mismatches. 344 pairs reach a cap at 100% |
 | G8 Performance | **Pass** | `chain_bench` against the saved Slice 0 binary, 7 alternating runs: no reference −0.12% (coat) and +0.16% (Doors) against baseline; active match 96.0% and 100.9% of no-reference. Context, not gated: with both Advanced shelves on, the corrective stage of its own runs at 92.6% and 97.8% |
-| G9 Safety | **Pass** | Silent, 10-second and 22.05 kHz files refused with the right reasons; a non-audio file "could not be read"; mono accepted (see the deviation log); 5 songs with the sub band removed got no sub boost and rendered finite; hostile values inert |
+| G9 Safety | **Pass** | Silent, 10-second and 22.05 kHz files refused with the right reasons; a non-audio file "could not be read"; mono accepted, as the corrected gate text says (confirmed at Checkpoint B); 5 songs with the sub band removed got no sub boost and rendered finite; hostile values inert |
 | G10 Persistence | **Pass** | Reopened with the same match and the same decision after the reference file was deleted; a saved preset carries no reference, on disk or when listed |
 
 ### Where G6 fails, and why

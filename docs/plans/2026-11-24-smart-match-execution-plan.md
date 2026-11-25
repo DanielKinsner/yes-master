@@ -100,6 +100,8 @@ characters and available in full on hover or focus.
 | Switched off, reference kept | same | `Match to "<name>" is off.` |
 | Reference refused | previous state stays | `That file can't be used as a reference: <reason>.` |
 | Album mode (disabled) | | `Smart Match applies to Track Master, not Album renders.` |
+| On, Match amount at 0 *(added at Checkpoint B)* | same | `Match amount is at 0, so Smart Match is idle.` |
+| On, track analysed without a six-band profile *(added at Checkpoint B)* | same | `Not enough audio to analyze this track.` |
 
 Refusal reasons: `it is shorter than 30 seconds`, `it is silent`,
 `it could not be read`, `its sample rate is too low`.
@@ -121,7 +123,9 @@ joined by commas. The phrases are lowercase because they follow the
 
 Advanced only: slider label `Match amount`; strip column labels Sub, Bass,
 Low mids, Mids, Presence, Air; strip caption
-`Tone only. Loudness and width are not matched.`
+`Tone only. Loudness and width are not matched.` A second caption line,
+added at Checkpoint B:
+`Moves are applied before the compressor and limiter, so the final change can be smaller on loud material.`
 
 Export receipt line: `Smart Match: off`, or
 `Smart Match: "<name>" at 50% · already close`, or
@@ -302,7 +306,7 @@ committed. The owner's private files appear as anonymous IDs.
 | G6 Gap closed end to end | For the G3 copies rendered with Universal at default Intensity and the match at 50%, the re-measured gap in the changed band is between 35% and 65% of the original gap. |
 | G7 Amount and caps | Corrections grow with amount and never exceed the caps at 100%. The partial flag matches cap activity in every evaluated case. |
 | G8 Performance | `chain_bench` with no reference is within 2% of baseline; with an active match it is at least 95% of that. Reference changes go through the existing coefficient-update path with no new transition mechanism. |
-| G9 Safety | Silent, very short, mono and low-sample-rate files are refused as references with the right reason. A track with an empty band never gets that band boosted. Nothing panics. |
+| G9 Safety | Silent, very short and low-sample-rate files are refused as references with the right reason. A mono file is accepted, because it can be measured (M10; mono was wrongly listed among the refusals until Checkpoint B). A track with an empty band never gets that band boosted. Nothing panics. |
 | G10 Persistence | A project reopens with the same match when the reference file is absent. A saved preset contains no reference. |
 
 Also report, without gating:
@@ -802,7 +806,7 @@ numbers-only evidence in
 | G3 | Pass: 761 bands, 0 wrong direction, other bands quiet in 100% | Pass: 277 bands, 0 wrong direction, 100% |
 | G4 | Pass, worst 0.018 dB over 288 cases | — |
 | G5 | Pass, worst 0.0000001 dB | — |
-| G6 | **Fail, 62/761 outside 35–65%** | **Fail, 27/277 outside** |
+| G6 | **Failed as written, 62/761 outside 35–65%; accepted with a documented limitation** | **Failed as written, 27/277 outside; accepted with a documented limitation** |
 | G7 | Pass, 669 pairs × 5 amounts | — |
 | G8 | Pass (`chain_bench`, Slice 4) | — |
 | G9 | Pass | — |
@@ -899,3 +903,44 @@ Slice 7 has not started. For the planning session (row M24, item P1):
     The plan's movable parameters are the caps (lower only), the dead zone and
     the fade. None of them reaches that interaction, so I froze at `c61dbfb`,
     unchanged since Slice 5, and ran the holdout once as the protocol says.
+
+### Checkpoint B: graded by the planning session
+
+The planning session graded Checkpoint B on 2026-11-24 (row M24). It inspected
+the four commits, re-ran the identity, fingerprint, contract, wire-shape and
+Smart Match suites, and checked the committed evidence. Its rulings:
+
+1. **G6 failed as written; accepted with a documented limitation.** It stays
+   recorded as a failure. Any EQ ahead of the compressor and limiter is
+   partly given back on heavily limited material, and the diagnostics show
+   that the EQ stage itself does what was asked. The planning session says the
+   gate itself was its own mistake, because it did not separate
+   already-limited masters from the mixes the product is built for. No
+   retuning, and no second holdout run. Slice 8 states the limitation in
+   `docs/PRODUCT.md` and `docs/APP_BEHAVIOR.md`. The Advanced strip gets a
+   second locked caption line (see "Locked copy").
+2. **A bug to fix before Slice 7.** `SignalChainReadout::from_coeffs` reports
+   Warmth or Air as on when Smart Match borrows their idle slot. Those two
+   flags must reflect only the user's controls, and `eq_active` must be true
+   whenever Smart Match changes anything. Regression tests must cover all
+   three filter placements, and every consumer of those flags must be
+   checked.
+3. **Deviation 20 confirmed.** Mono references are accepted; the G9 text is
+   corrected above.
+4. **Deviation 21 decided:** a locked line for Match amount at 0.
+5. **Deviation 22 decided:** a locked line for a track analysed without a
+   six-band profile.
+6. **Accepted as reported:**
+   - the 92.6% speed figure with both Advanced shelves on;
+   - the drastic but capped moves from a badly mismatched reference (M10
+     stands).
+
+   Both stay visible in the evaluation note.
+7. **Carried to Checkpoint C:** the uncompiled Swift model change, as an open
+   Mac item.
+8. **How decisions are written.** Dan approves recommendations; he does not
+   evaluate technical options himself. Such choices are recorded as "approved
+   on the planning session's recommendation". The change of feature is said
+   in one plain sentence: Smart Balance (automatic tone fixing) was dropped,
+   and Smart Match (the user picks a reference song) replaces it.
+
