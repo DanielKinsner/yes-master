@@ -747,24 +747,29 @@ pub struct SignalChainReadout {
 
 impl SignalChainReadout {
     fn from_coeffs(coeffs: &crate::dsp::ChainCoeffs) -> Self {
-        use crate::dsp::BiquadCoeffs;
+        use crate::dsp::{BiquadCoeffs, SmartMatchSlot};
         let active = |b: &BiquadCoeffs| *b != BiquadCoeffs::identity();
-        let eq_active = [
-            &coeffs.sub_highpass,
-            &coeffs.sub,
-            &coeffs.low,
-            &coeffs.low_mid,
-            &coeffs.mid,
-            &coeffs.high_mid,
-            &coeffs.high,
-            &coeffs.sparkle,
-        ]
-        .into_iter()
-        .any(active);
+        // Smart Match's corrective filter may borrow the idle Warmth or
+        // Presence/Air slot. Those stages are shown as on only for the user's
+        // own control, and any Smart Match change counts as EQ.
+        let slot = coeffs.smart_match_slot;
+        let eq_active = slot != SmartMatchSlot::Idle
+            || [
+                &coeffs.sub_highpass,
+                &coeffs.sub,
+                &coeffs.low,
+                &coeffs.low_mid,
+                &coeffs.mid,
+                &coeffs.high_mid,
+                &coeffs.high,
+                &coeffs.sparkle,
+            ]
+            .into_iter()
+            .any(active);
         Self {
             eq_active,
-            warmth_active: active(&coeffs.warmth),
-            air_active: active(&coeffs.presence_air),
+            warmth_active: active(&coeffs.warmth) && slot != SmartMatchSlot::Warmth,
+            air_active: active(&coeffs.presence_air) && slot != SmartMatchSlot::PresenceAir,
             compression_active: coeffs.compression_active,
             width: coeffs.width_side_scale,
             saturation: coeffs.saturation_amount,
@@ -942,6 +947,39 @@ pub fn resolve_compression_plan(
 mod tests {
     use super::*;
     use crate::types::{SourceProfile, SpectralBalance6};
+
+    /// Checkpoint B fix: when the only thing Smart Match changes is the
+    /// corrective filter, sitting in the borrowed Warmth slot, EQ still reads
+    /// as active and Warmth does not.
+    #[test]
+    fn a_corrective_filter_alone_counts_as_eq_and_not_as_warmth() {
+        use crate::dsp::{BiquadCoeffs, ChainCoeffs, SmartMatchSlot};
+        let mut settings = settings_with(None, None);
+        settings.preset = crate::types::Preset::Custom { id: "flat".into() };
+        let mut c = ChainCoeffs::from_settings(48_000, &settings);
+        for b in [
+            &mut c.sub_highpass,
+            &mut c.sub,
+            &mut c.low,
+            &mut c.low_mid,
+            &mut c.mid,
+            &mut c.high_mid,
+            &mut c.high,
+            &mut c.sparkle,
+            &mut c.warmth,
+            &mut c.presence_air,
+        ] {
+            *b = BiquadCoeffs::identity();
+        }
+        let idle = SignalChainReadout::from_coeffs(&c);
+        assert!(!idle.eq_active && !idle.warmth_active && !idle.air_active);
+        c.warmth = BiquadCoeffs::peaking(48_000.0, 140.0, 0.9, -2.0);
+        c.smart_match_slot = SmartMatchSlot::Warmth;
+        let borrowed = SignalChainReadout::from_coeffs(&c);
+        assert!(borrowed.eq_active);
+        assert!(!borrowed.warmth_active);
+        assert!(!borrowed.air_active);
+    }
 
     struct AdaptiveCompressionGateReset(bool);
 

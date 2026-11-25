@@ -273,3 +273,45 @@ fn a_render_with_an_active_match_carries_the_receipt_line() {
     assert!(!json.contains("smart_match_digest"), "{json}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Checkpoint B fix: the signal chain shows Warmth and Air only for the user's
+/// own controls, even when Smart Match borrows their idle slot, and counts any
+/// Smart Match change as EQ.
+#[test]
+fn the_signal_chain_never_shows_a_borrowed_slot_as_the_users_control() {
+    let track = with_offsets([0.0; 6]);
+    let reference = with_offsets([2.0, -2.0, 0.0, 0.0, 0.0, 1.5]);
+    // (warmth slider, air slider, expected warmth, expected air)
+    let cases = [
+        (None, None, false, false),
+        (Some(0.5), None, true, false),
+        (Some(0.5), Some(0.25), true, true),
+    ];
+    for (warmth, air, want_warmth, want_air) in cases {
+        let mut s = settings(Some(track), state(Some(reference), true, 0.5));
+        s.advanced.warmth = warmth;
+        s.advanced.presence_air = air;
+        let chain = readout_for(&s).signal_chain.expect("signal chain");
+        assert_eq!(
+            chain.warmth_active, want_warmth,
+            "warmth {warmth:?} air {air:?}"
+        );
+        assert_eq!(chain.air_active, want_air, "warmth {warmth:?} air {air:?}");
+        assert!(chain.eq_active);
+        // Without the match the flags are the same: they follow the user.
+        let mut plain = s.clone();
+        plain.advanced.smart_match = None;
+        let off = readout_for(&plain).signal_chain.unwrap();
+        assert_eq!((off.warmth_active, off.air_active), (want_warmth, want_air));
+    }
+    // A flat Style: EQ reads flat with no match and active with one.
+    let mut flat = settings(Some(track), state(Some(reference), true, 0.5));
+    flat.preset = Preset::Custom { id: "flat".into() };
+    flat.advanced.adaptive_strength = Some(0.0);
+    let mut flat_plain = flat.clone();
+    flat_plain.advanced.smart_match = None;
+    assert!(!readout_for(&flat_plain).signal_chain.unwrap().eq_active);
+    let matched = readout_for(&flat).signal_chain.unwrap();
+    assert!(matched.eq_active);
+    assert!(!matched.warmth_active && !matched.air_active);
+}

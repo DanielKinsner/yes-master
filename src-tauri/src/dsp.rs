@@ -695,6 +695,21 @@ pub fn preset_calibration(preset: &Preset) -> PresetCalibration {
     }
 }
 
+/// Where Smart Match's corrective filter runs. `Idle` means the decision
+/// changes nothing. Displays read this so that a borrowed Warmth or
+/// Presence/Air slot is never shown as the user's own control.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SmartMatchSlot {
+    #[default]
+    Idle,
+    /// In the Warmth shelf's slot (the user's Warmth was idle).
+    Warmth,
+    /// In the Presence/Air shelf's slot (Warmth in use, Air idle).
+    PresenceAir,
+    /// In its own stage (both Advanced shelves in use).
+    OwnStage,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ChainCoeffs {
     /// Per-preset LR4 subsonic high-pass. One Butterworth stage is stored
@@ -732,6 +747,9 @@ pub struct ChainCoeffs {
     /// keeps the stage out of the per-sample path entirely, so an idle chain
     /// costs and sounds exactly as before (contract rules 8 and 9).
     pub smart_match_active: bool,
+    /// Where the corrective filter runs, and whether Smart Match changes
+    /// anything at all (`Idle` when it does not).
+    pub smart_match_slot: SmartMatchSlot,
     /// Phase A5 — preset transient shaper amount. Positive values lift
     /// attacks; negative values soften them. Custom defaults to 0.0.
     pub transient_amount: f32,
@@ -1044,6 +1062,7 @@ impl ChainCoeffs {
         ];
         let smart_match = crate::smart_match::decide_for_settings(settings);
         let mut smart_match_bass = BiquadCoeffs::identity();
+        let mut smart_match_slot = SmartMatchSlot::Idle;
         if smart_match.changes_anything() {
             let realization = crate::smart_match::realize(
                 sample_rate,
@@ -1069,10 +1088,13 @@ impl ChainCoeffs {
             // way: the solver already modelled those slots as identity.
             if warmth == BiquadCoeffs::identity() {
                 warmth = corrective;
+                smart_match_slot = SmartMatchSlot::Warmth;
             } else if presence_air == BiquadCoeffs::identity() {
                 presence_air = corrective;
+                smart_match_slot = SmartMatchSlot::PresenceAir;
             } else {
                 smart_match_bass = corrective;
+                smart_match_slot = SmartMatchSlot::OwnStage;
             }
         }
         let smart_match_active = smart_match_bass != BiquadCoeffs::identity();
@@ -1499,6 +1521,7 @@ impl ChainCoeffs {
             presence_air,
             smart_match_bass,
             smart_match_active,
+            smart_match_slot,
             transient_amount,
             transient_fast_attack_alpha,
             transient_fast_release_alpha,
