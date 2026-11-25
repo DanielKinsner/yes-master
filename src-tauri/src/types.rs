@@ -898,6 +898,9 @@ pub struct ResolvedGainStaging {
     pub limiter_load_db: f32,
     /// The drive stopped at the clean limit short of the target.
     pub stopped_at_clean_limit: bool,
+    /// Reach target: more drive stopped raising the delivered loudness,
+    /// because the song's peaks hold it down under the ceiling.
+    pub stopped_by_peak_check: bool,
 }
 
 /// Smart Match state saved with a song (plan M9): the reference's measured

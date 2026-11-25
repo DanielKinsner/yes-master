@@ -204,6 +204,55 @@ pub(super) fn timing_production(
     std::fs::write(output.join("timing-production.json"), text).map_err(|e| e.to_string())
 }
 
+/// Checkpoint B, E4 re-check: Reach target, through the export's own
+/// resolver (`gain_staging::render_export`, pinned bit-identical to the
+/// export), on every case where Clean stopped at the clean limit in a prior
+/// production ledger. Records the passes and why the search stopped.
+pub(super) fn reach_check_song(
+    song: &Song,
+    cases: &[(String, f32)],
+) -> Result<Vec<serde_json::Value>, String> {
+    let src = load(song, None)?;
+    let mut rows = Vec::new();
+    for (style, target) in cases {
+        let preset = standard_styles()
+            .into_iter()
+            .find(|(name, _)| name == style)
+            .map(|(_, p)| p)
+            .ok_or_else(|| format!("unknown style {style}"))?;
+        let mut s = standard_export_settings(preset, *target, src.profile, Some(src.lufs));
+        s.advanced.auto_gain_staging = Some(AutoGainStagingSettings {
+            enabled: true,
+            priority: LoudnessPriority::ReachTarget,
+        });
+        let t0 = Instant::now();
+        let outcome = yes_master_lib::gain_staging::render_export(
+            &src.samples,
+            src.rate,
+            src.channels as u16,
+            &mut s,
+            STANDARD_RATE,
+            STANDARD_BITS,
+            None,
+            &|_| {},
+        )
+        .map_err(|e| format!("{}: {e}", song.label))?
+        .ok_or_else(|| format!("{}: inert", song.label))?;
+        let r = s.advanced.gain_staging_resolved.unwrap_or_default();
+        rows.push(serde_json::json!({
+            "song": song.label, "style": style, "target": target,
+            "lufs": outcome.measured.lufs, "true_peak_dbtp": outcome.measured.true_peak_dbtp,
+            "passes": outcome.passes, "stop": format!("{:?}", outcome.stop),
+            "level_in_db": r.level_in_db, "drive_db": r.limiter_drive_db,
+            "limiter_load_db": r.limiter_load_db,
+            "stopped_by_peak_check": r.stopped_by_peak_check,
+            "receipt_line": yes_master_lib::gain_staging::receipt_digest(&s),
+            "seconds": t0.elapsed().as_secs_f64(),
+        }));
+    }
+    Ok(rows)
+}
+
 pub(super) fn process_song_production(song: &Song, scratch: &Path) -> SongResult {
     let start = Instant::now();
     let mut errors = Vec::new();

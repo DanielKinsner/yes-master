@@ -87,6 +87,9 @@ struct Args {
     holdout: bool,
     frozen_commit: Option<String>,
     quiet: Option<PathBuf>,
+    /// Checkpoint B (E4): re-run Reach target on the cases a prior
+    /// production ledger shows stopped at the clean limit.
+    reach_check: Option<PathBuf>,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -136,6 +139,7 @@ fn parse_args() -> Result<Args, String> {
         reach_target: map.get("priority").is_some_and(|v| v == "reach"),
         frozen_commit: map.get("frozen-commit").cloned(),
         quiet: map.get("quiet").map(PathBuf::from),
+        reach_check: map.get("reach-check").map(PathBuf::from),
         g_on_delivered: match map.get("g-resolve").map(String::as_str) {
             None | Some("delivered") => true,
             Some("chain-output") => false,
@@ -1249,6 +1253,40 @@ fn run() -> Result<(), String> {
         discovery.unmastered_files,
         discovery.unmastered_holdout
     );
+    if let Some(ledger) = &args.reach_check {
+        let prior = read_json(ledger)?;
+        let mut wanted: BTreeMap<String, Vec<(String, f32)>> = BTreeMap::new();
+        for r in prior["results"].as_array().ok_or("no results")? {
+            let label = r["song"]["label"].as_str().unwrap_or_default().to_string();
+            for x in r["rows"].as_array().into_iter().flatten() {
+                if x["design"] == "G" && x["stopped_at_clean_limit"] == true {
+                    wanted.entry(label.clone()).or_default().push((
+                        x["style"].as_str().unwrap_or_default().to_string(),
+                        x["target"].as_f64().unwrap_or_default() as f32,
+                    ));
+                }
+            }
+        }
+        let jobs: Vec<(Song, Vec<(String, f32)>)> = songs
+            .iter()
+            .filter_map(|s| wanted.get(&s.label).map(|c| (s.clone(), c.clone())))
+            .collect();
+        println!(
+            "reach check: {} songs, {} cases",
+            jobs.len(),
+            jobs.iter().map(|j| j.1.len()).sum::<usize>()
+        );
+        let rows = parallel_map(&jobs, args.workers, |(song, cases)| {
+            let r = production::reach_check_song(song, cases);
+            println!("done {}", song.label);
+            r
+        });
+        let mut all = Vec::new();
+        for r in rows {
+            all.extend(r?);
+        }
+        return write_json(&args.output.join("reach-check.json"), &all);
+    }
     if args.timing && args.production {
         let scratch = args.output.join("scratch");
         std::fs::create_dir_all(&scratch).map_err(|e| e.to_string())?;

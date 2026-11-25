@@ -520,6 +520,7 @@ fn receipt_lines_follow_the_locked_copy() {
         limiter_drive_db: 0.0,
         limiter_load_db: 0.0,
         stopped_at_clean_limit: false,
+        stopped_by_peak_check: false,
     });
     assert_eq!(
         receipt_digest(&on).as_deref(),
@@ -531,6 +532,7 @@ fn receipt_lines_follow_the_locked_copy() {
         limiter_drive_db: 4.5,
         limiter_load_db: 6.0,
         stopped_at_clean_limit: true,
+        stopped_by_peak_check: false,
     });
     assert_eq!(
         receipt_digest(&on).as_deref(),
@@ -637,4 +639,94 @@ fn the_settings_are_omitted_when_absent_and_round_trip_when_present() {
         serde_json::json!({"level_in_db": 20.0, "limiter_drive_db": 20.0});
     let parsed: MasteringSettings = serde_json::from_value(hostile).unwrap();
     assert!(parsed.advanced.gain_staging_resolved.is_none());
+}
+
+// ---------------------------------------------------------------------------
+// Checkpoint B item 3: `Limiter::detector_level` is pinned to the limiter
+// ---------------------------------------------------------------------------
+
+/// Signals that stress the limiter's detector in different ways: broadband
+/// noise, a near-Nyquist tone (intersample peaks well above the samples),
+/// sparse impulses, and a hard-clipped square-ish wave.
+fn detector_signal(kind: usize, rate: u32, channels: usize) -> Vec<f32> {
+    let frames = rate as usize / 2;
+    let mut seed = 0x9e37_79b9_u32 ^ (kind as u32 * 7919 + channels as u32);
+    let mut rnd = || {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        (seed >> 8) as f32 / (1u32 << 24) as f32 * 2.0 - 1.0
+    };
+    let mut out = vec![0.0_f32; frames * channels];
+    for i in 0..frames {
+        let t = i as f32 / rate as f32;
+        for c in 0..channels {
+            let phase = 0.37 * c as f32;
+            out[i * channels + c] = match kind {
+                0 => 0.5 * rnd(),
+                1 => 0.7 * (std::f32::consts::TAU * 0.45 * rate as f32 * t + phase).sin(),
+                2 => {
+                    if (i + 97 * c) % 2_411 == 0 {
+                        0.9
+                    } else {
+                        0.01 * rnd()
+                    }
+                }
+                _ => (3.0 * (std::f32::consts::TAU * 1_013.0 * t + phase).sin()).clamp(-0.8, 0.8),
+            };
+        }
+    }
+    out
+}
+
+/// The limiter's largest gain reduction over `x` scaled by `gain`, with the
+/// limiter built exactly as the chain builds it.
+fn limiter_reduction_db(x: &[f32], rate: u32, channels: usize, gain: f32) -> f32 {
+    let mut s = settings(Preset::Universal, Some(-9.0));
+    s.advanced.ceiling_dbtp = Some(-1.0);
+    let mut limiter = MasteringChain::fresh_limiter(rate, channels, &s);
+    let mut frame = vec![0.0_f32; channels];
+    let mut reduction = 0.0_f32;
+    for chunk in x.chunks_exact(channels) {
+        for (f, v) in frame.iter_mut().zip(chunk) {
+            *f = v * gain;
+        }
+        limiter.process_frame_inplace(&mut frame);
+        reduction = reduction.max(limiter.gain_reduction_db());
+    }
+    reduction
+}
+
+#[test]
+fn the_limiter_level_helper_matches_the_limiters_own_detection() {
+    let ceiling = 10.0_f32.powf(-1.0 / 20.0);
+    for rate in [44_100_u32, 48_000, 96_000] {
+        for channels in [1_usize, 2, 6] {
+            for kind in 0..4 {
+                let x = detector_signal(kind, rate, channels);
+                let level = yes_master_lib::dsp::Limiter::detector_level(&x, channels);
+                assert!(level > 0.0);
+                let at = ceiling / level;
+                let case = format!("rate {rate}, {channels} ch, signal {kind}");
+                // Just under the level the limiter reacts to: nothing reduced.
+                assert_eq!(
+                    limiter_reduction_db(&x, rate, channels, at * 0.9999),
+                    0.0,
+                    "{case}"
+                );
+                // Exactly at it: nothing beyond float rounding.
+                let exact = limiter_reduction_db(&x, rate, channels, at);
+                assert!(exact < 1e-4, "{case}: {exact} dB at the ceiling");
+                // 0.1% (0.0087 dB) over it: the limiter takes about that much.
+                let over = limiter_reduction_db(&x, rate, channels, at * 1.001);
+                assert!(
+                    (over - 0.008_68).abs() < 2e-3,
+                    "{case}: {over} dB just over the ceiling"
+                );
+                // A full dB over it: about a dB.
+                let db = limiter_reduction_db(&x, rate, channels, at * 10.0_f32.powf(0.05));
+                assert!((db - 1.0).abs() < 2e-3, "{case}: {db} dB one dB over");
+            }
+        }
+    }
 }

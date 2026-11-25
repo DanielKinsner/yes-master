@@ -41,9 +41,21 @@ pub const NOMINAL_PEAK_DBTP: f32 = -1.882_721;
 pub const CLEAN_LIMIT_DB: f32 = 6.0;
 /// Target tolerance when resolving the drive.
 pub const TARGET_TOLERANCE_LU: f32 = 0.2;
-/// Maximum resolution passes. Frozen at 6 after Checkpoint A (the plan
-/// allows 2 to 6) so the development material satisfies R4.
+/// Maximum resolution passes with priority Clean. Frozen at 6 after
+/// Checkpoint A (the plan allows 2 to 6) so the development material
+/// satisfies R4.
 pub const MAX_PASSES: usize = 6;
+/// Maximum resolution passes with priority Reach target, raised to 8 by the
+/// planning session at Checkpoint B (E4).
+pub const MAX_PASSES_REACH_TARGET: usize = 8;
+/// Reach target's no-progress rule (Checkpoint B): a pass that adds at least
+/// this much drive...
+pub const NO_PROGRESS_DRIVE_DB: f32 = 1.0;
+/// ...and raises the delivered loudness by less than this means the song's
+/// peaks, not the drive, set its loudness: the search stops.
+pub const NO_PROGRESS_LOUDNESS_LU: f32 = 0.1;
+/// The largest step Reach target's secant may take in one pass.
+pub const REACH_TARGET_MAX_STEP_DB: f32 = 6.0;
 /// Below this a source has no usable loudness measurement (A7).
 const UNUSABLE_LUFS: f32 = -70.0;
 
@@ -95,6 +107,8 @@ pub fn receipt_digest(settings: &MasteringSettings) -> Option<String> {
             db_text(g.limiter_load_db.max(0.0), false),
             if g.stopped_at_clean_limit {
                 " \u{b7} stopped at the clean limit"
+            } else if g.stopped_by_peak_check {
+                " \u{b7} stopped by the peak check"
             } else {
                 ""
             }
@@ -103,13 +117,128 @@ pub fn receipt_digest(settings: &MasteringSettings) -> Option<String> {
     })
 }
 
-/// The target, present only when the clean limit stopped the drive short of
-/// it, so the receipt can show the delivered loudness against it.
+/// The target, present only when the drive stopped short of it (at the
+/// clean limit, or by the peak check), so the receipt can show the delivered
+/// loudness against it.
 pub fn receipt_target_lufs(settings: &MasteringSettings) -> Option<f32> {
     settings
         .active_gain_staging()
-        .filter(|g| g.stopped_at_clean_limit)
+        .filter(|g| g.stopped_at_clean_limit || g.stopped_by_peak_check)
         .and(settings.effective_target_lufs())
+}
+
+// ---------------------------------------------------------------------------
+// The drive search (pure, so its rules are tested on synthetic curves)
+// ---------------------------------------------------------------------------
+
+/// Why the drive search stopped.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DriveStop {
+    /// Delivered within tolerance of the target.
+    Reached,
+    /// Clean: the limiter would take more than the clean limit.
+    CleanLimit,
+    /// Reach target: more drive no longer raises the delivered loudness;
+    /// the final peak check holds the song down.
+    PeakCheck,
+    /// The drive reached its ±24 dB bound, or the passes ran out.
+    Exhausted,
+}
+
+/// The drive search for one export: what to try next after each pass.
+///
+/// - **Clean** adds the remaining shortfall each pass, capped at the clean
+///   limit. A dB of drive adds at most a dB through a limiter, so it never
+///   overshoots (contract rule 5). At most `MAX_PASSES`.
+/// - **Reach target** takes a secant step through its last two passes, aimed
+///   half a tolerance under the target, at least the slope-one step and at
+///   most `REACH_TARGET_MAX_STEP_DB`. It may overshoot; the landing trims
+///   the remainder. It stops when a pass adds at least
+///   `NO_PROGRESS_DRIVE_DB` of drive and the delivered loudness rises by
+///   less than `NO_PROGRESS_LOUDNESS_LU`. At most `MAX_PASSES_REACH_TARGET`.
+#[derive(Debug, Clone)]
+pub struct DriveSearch {
+    priority: LoudnessPriority,
+    target: f32,
+    cap: f32,
+    history: Vec<(f32, f32)>,
+}
+
+impl DriveSearch {
+    pub fn new(priority: LoudnessPriority, target: f32, cap: f32) -> Self {
+        Self {
+            priority,
+            target,
+            cap: cap.min(GAIN_STAGING_RANGE_DB),
+            history: Vec::new(),
+        }
+    }
+
+    pub fn max_passes(&self) -> usize {
+        match self.priority {
+            LoudnessPriority::Clean => MAX_PASSES,
+            LoudnessPriority::ReachTarget => MAX_PASSES_REACH_TARGET,
+        }
+    }
+
+    pub fn cap(&self) -> f32 {
+        self.cap
+    }
+
+    /// The first drive: the difference between the target and the loudness
+    /// of the stages with the limiter idle.
+    pub fn first_drive(&self, stage_lufs: f32) -> f32 {
+        if stage_lufs.is_finite() && stage_lufs > UNUSABLE_LUFS {
+            (self.target - stage_lufs).clamp(-GAIN_STAGING_RANGE_DB, self.cap)
+        } else {
+            0.0
+        }
+    }
+
+    /// Record one pass (its drive and delivered loudness). Returns the next
+    /// drive to try, or why the search stops.
+    pub fn after_pass(&mut self, drive: f32, delivered_lufs: f32) -> Result<f32, DriveStop> {
+        self.history.push((drive, delivered_lufs));
+        if !delivered_lufs.is_finite() {
+            return Err(DriveStop::Exhausted);
+        }
+        if delivered_lufs >= self.target - TARGET_TOLERANCE_LU {
+            return Err(DriveStop::Reached);
+        }
+        let previous = self.history.len().checked_sub(2).map(|i| self.history[i]);
+        if self.priority == LoudnessPriority::ReachTarget {
+            if let Some((d0, l0)) = previous {
+                if drive - d0 >= NO_PROGRESS_DRIVE_DB
+                    && delivered_lufs - l0 < NO_PROGRESS_LOUDNESS_LU
+                {
+                    return Err(DriveStop::PeakCheck);
+                }
+            }
+        }
+        if drive >= self.cap {
+            return Err(
+                if self.priority == LoudnessPriority::Clean && self.cap < GAIN_STAGING_RANGE_DB {
+                    DriveStop::CleanLimit
+                } else {
+                    DriveStop::Exhausted
+                },
+            );
+        }
+        if self.history.len() >= self.max_passes() {
+            return Err(DriveStop::Exhausted);
+        }
+        let shortfall = self.target - delivered_lufs;
+        let step = match (self.priority, previous) {
+            (LoudnessPriority::ReachTarget, Some((d0, l0))) if drive > d0 => {
+                let slope = ((delivered_lufs - l0) / (drive - d0)).clamp(0.1, 1.0);
+                let aim = self.target - 0.5 * TARGET_TOLERANCE_LU;
+                ((aim - delivered_lufs) / slope)
+                    .clamp(shortfall, REACH_TARGET_MAX_STEP_DB.max(shortfall))
+            }
+            _ => shortfall,
+        };
+        Ok((drive + step).min(self.cap))
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +252,8 @@ pub struct ExportOutcome {
     pub measured: ProtectedPcm,
     /// Limiter passes run (each one a full delivery).
     pub passes: usize,
+    /// Why the drive search stopped.
+    pub stop: DriveStop,
 }
 
 fn cancelled(cancel: Option<&AtomicBool>) -> bool {
@@ -143,6 +274,8 @@ struct StageCapture {
 }
 
 const PROGRESS_CHUNK_FRAMES: usize = 4096;
+/// The share of an export's progress the stage capture takes.
+const CAPTURE_PROGRESS: f32 = 0.4;
 
 fn capture_stages(
     chain: &mut MasteringChain,
@@ -165,7 +298,7 @@ fn capture_stages(
             chain.process_stages_inplace(frame);
         }
         let done = ((chunk_index + 1) * PROGRESS_CHUNK_FRAMES).min(total);
-        progress(0.5 * done as f32 / total.max(1) as f32);
+        progress(CAPTURE_PROGRESS * done as f32 / total.max(1) as f32);
     }
     Ok(StageCapture {
         pre,
@@ -183,6 +316,7 @@ fn limiter_pass(
     template: &Limiter,
     stage: &StageCapture,
     drive_db: f32,
+    progress: &dyn Fn(f32),
 ) -> (Vec<f32>, f32) {
     let ch = stage.channels;
     let mut limiter = template.clone();
@@ -206,6 +340,9 @@ fn limiter_pass(
         if i >= stage.lookahead {
             let j = i - stage.lookahead;
             out[j * ch..(j + 1) * ch].copy_from_slice(&frame);
+        }
+        if i % (PROGRESS_CHUNK_FRAMES * 16) == 0 {
+            progress(i as f32 / (stage.frames + stage.lookahead).max(1) as f32);
         }
     }
     (out, load)
@@ -268,20 +405,24 @@ pub fn render_export(
             ceiling_db + CLEAN_LIMIT_DB - 20.0 * detector.log10()
         }
         _ => f32::INFINITY,
-    }
-    .min(GAIN_STAGING_RANGE_DB);
-    let mut drive = if stage_lufs.is_finite() && stage_lufs > UNUSABLE_LUFS {
-        (target - stage_lufs).clamp(-GAIN_STAGING_RANGE_DB, cap)
-    } else {
-        0.0
     };
+    let mut search = DriveSearch::new(priority, target, cap);
+    let usable_stage = stage_lufs.is_finite() && stage_lufs > UNUSABLE_LUFS;
+    let mut drive = search.first_drive(stage_lufs);
+    let max_passes = search.max_passes();
 
     let mut passes = 0;
     loop {
         if cancelled(cancel) {
             return Err(cancel_error());
         }
-        let (rendered, load) = limiter_pass(&chain, &template, &stage, drive);
+        // Progress keeps moving through every pass: 0.4 for the stages, then
+        // an equal share per possible pass.
+        let span = 0.6 / max_passes as f32;
+        let pass_start = CAPTURE_PROGRESS + span * passes as f32;
+        let (rendered, load) = limiter_pass(&chain, &template, &stage, drive, &|f: f32| {
+            progress(pass_start + span * 0.8 * f)
+        });
         let mut delivered = if delivery_rate != sample_rate {
             crate::sample_rate::convert_interleaved(
                 &rendered,
@@ -302,27 +443,31 @@ pub fn render_export(
             cancel,
         )?;
         passes += 1;
-        progress(0.5 + 0.5 * (passes as f32 / MAX_PASSES as f32).min(1.0));
-        let reached = measured.lufs >= target - TARGET_TOLERANCE_LU;
-        let at_cap = drive >= cap;
-        let short = !reached && stage_lufs.is_finite() && stage_lufs > UNUSABLE_LUFS;
-        if !short || at_cap || passes >= MAX_PASSES || !measured.lufs.is_finite() {
-            settings.advanced.gain_staging_resolved = Some(ResolvedGainStaging {
-                level_in_db: level_in,
-                limiter_drive_db: drive,
-                limiter_load_db: load,
-                stopped_at_clean_limit: short
-                    && at_cap
-                    && matches!(priority, LoudnessPriority::Clean)
-                    && cap < GAIN_STAGING_RANGE_DB,
-            });
-            return Ok(Some(ExportOutcome {
-                samples: delivered,
-                measured,
-                passes,
-            }));
+        progress(pass_start + span);
+        let next = if usable_stage {
+            search.after_pass(drive, measured.lufs)
+        } else {
+            Err(DriveStop::Exhausted)
+        };
+        match next {
+            Ok(next_drive) => drive = next_drive,
+            Err(stop) => {
+                settings.advanced.gain_staging_resolved = Some(ResolvedGainStaging {
+                    level_in_db: level_in,
+                    limiter_drive_db: drive,
+                    limiter_load_db: load,
+                    stopped_at_clean_limit: stop == DriveStop::CleanLimit,
+                    stopped_by_peak_check: stop == DriveStop::PeakCheck,
+                });
+                progress(1.0);
+                return Ok(Some(ExportOutcome {
+                    samples: delivered,
+                    measured,
+                    passes,
+                    stop,
+                }));
+            }
         }
-        drive = (drive + (target - measured.lufs)).min(cap);
     }
 }
 
@@ -342,6 +487,101 @@ mod tests {
         assert_eq!(level_in_db(UNUSABLE_LUFS, -60.0), None);
         assert_eq!(level_in_db(f32::NAN, -3.0), None);
         assert_eq!(level_in_db(-14.0, f32::INFINITY), None);
+    }
+
+    /// A limiter's delivered loudness against drive: one dB per dB until
+    /// `knee`, then `slope` dB per dB, and nothing past `ceiling` (a song the
+    /// peak check holds down).
+    fn curve(knee: f32, slope: f32, ceiling: f32) -> impl Fn(f32) -> f32 {
+        move |d: f32| {
+            let l = -14.0 + d.min(knee) + slope * (d - knee).max(0.0);
+            l.min(ceiling)
+        }
+    }
+
+    fn run(
+        search: &mut DriveSearch,
+        start: f32,
+        f: &dyn Fn(f32) -> f32,
+    ) -> (f32, usize, DriveStop) {
+        let mut d = start;
+        let mut passes = 0;
+        loop {
+            passes += 1;
+            match search.after_pass(d, f(d)) {
+                Ok(next) => {
+                    assert!(next > d, "the drive only rises: {d} -> {next}");
+                    d = next;
+                }
+                Err(stop) => return (d, passes, stop),
+            }
+        }
+    }
+
+    #[test]
+    fn clean_steps_never_overshoot_and_stop_at_the_clean_limit() {
+        for slope in [1.0_f32, 0.6, 0.3, 0.1] {
+            let f = curve(2.0, slope, 0.0);
+            let mut s = DriveSearch::new(LoudnessPriority::Clean, -9.0, 6.0);
+            let mut d = 0.0;
+            for _ in 0..MAX_PASSES {
+                let l = f(d);
+                assert!(l <= -9.0 + 1e-4, "slope {slope}: {l}");
+                match s.after_pass(d, l) {
+                    Ok(next) => {
+                        // Exactly the remaining shortfall, capped.
+                        assert!((next - (d + (-9.0 - l)).min(6.0)).abs() < 1e-5);
+                        d = next;
+                    }
+                    Err(stop) => {
+                        assert!(matches!(
+                            stop,
+                            DriveStop::Reached | DriveStop::CleanLimit | DriveStop::Exhausted
+                        ));
+                        break;
+                    }
+                }
+            }
+        }
+        // Clean never reports the peak check.
+        let f = curve(2.0, 0.0, -12.0);
+        let mut s = DriveSearch::new(LoudnessPriority::Clean, -9.0, 6.0);
+        let (_, passes, stop) = run(&mut s, 0.0, &f);
+        assert_eq!(stop, DriveStop::CleanLimit);
+        assert!(passes <= MAX_PASSES);
+    }
+
+    #[test]
+    fn reach_target_converges_within_eight_passes_on_heavy_limiting() {
+        // The slowest still needs only 22 dB of drive, inside the ±24 dB bound.
+        for slope in [0.6_f32, 0.3, 0.2, 0.15] {
+            let f = curve(2.0, slope, 0.0);
+            let mut s = DriveSearch::new(LoudnessPriority::ReachTarget, -9.0, f32::INFINITY);
+            let (d, passes, stop) = run(&mut s, 0.0, &f);
+            assert_eq!(stop, DriveStop::Reached, "slope {slope}");
+            assert!(passes <= MAX_PASSES_REACH_TARGET, "slope {slope}: {passes}");
+            // Delivered loudness before landing overshoots the target by
+            // little: at most the 6 dB step's worth past the knee.
+            assert!(
+                f(d) >= -9.2 && f(d) <= -9.0 + 6.0 * slope,
+                "slope {slope}: {}",
+                f(d)
+            );
+        }
+    }
+
+    #[test]
+    fn reach_target_stops_by_the_peak_check_when_drive_buys_nothing() {
+        // The song's peaks hold it at -11.3 LUFS whatever the drive.
+        let f = curve(2.0, 0.4, -11.3);
+        let mut s = DriveSearch::new(LoudnessPriority::ReachTarget, -9.0, f32::INFINITY);
+        let (d, passes, stop) = run(&mut s, 0.0, &f);
+        assert_eq!(stop, DriveStop::PeakCheck);
+        assert!(passes <= 4, "{passes} passes, drive {d}");
+        // A slow but real rise is not mistaken for it.
+        let f = curve(2.0, 0.15, 0.0);
+        let mut s = DriveSearch::new(LoudnessPriority::ReachTarget, -9.0, f32::INFINITY);
+        assert_eq!(run(&mut s, 0.0, &f).2, DriveStop::Reached);
     }
 
     #[test]
