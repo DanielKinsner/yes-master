@@ -1,5 +1,6 @@
-//! Smart Balance reference measurement runner (execution plan Slice 1):
-//! skip rules, determinism, and the privacy of the committable statistics.
+//! Smart Balance reference measurement runner (execution plan Slices 1-2):
+//! skip rules, determinism, the privacy of the committable statistics, corpus
+//! exclusion, the provisional label, and placement.
 //!
 //! Output-path safety for this runner lives with the other private runners in
 //! `tests/evidence_runner_paths.rs`.
@@ -10,8 +11,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use yes_master_lib::smart_balance_reference::{
-    run_reference_measurement, ReferenceRunConfig, SkipReason, SplitSide, LEDGER_CSV_FILE_NAME,
-    LEDGER_JSON_FILE_NAME, MIN_DURATION_SEC, STATS_FILE_NAME, STATS_SCHEMA,
+    read_stats, run_placement, run_reference_measurement, ReferenceRunConfig, SkipReason,
+    SplitSide, LEDGER_CSV_FILE_NAME, LEDGER_JSON_FILE_NAME, MIN_DURATION_SEC, STATS_FILE_NAME,
+    STATS_SCHEMA,
 };
 
 fn temp_root(tag: &str) -> PathBuf {
@@ -336,4 +338,202 @@ fn a_missing_reference_folder_is_an_error() {
     .expect_err("a missing folder must fail loudly");
     assert!(format!("{error}").contains("does not exist"));
     assert!(!root.join("out").exists(), "nothing created on failure");
+}
+
+// ---------------------------------------------------------------------------
+// Slice 2 additions: exclusion, the provisional label, placement, CSV shape.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn files_matching_an_excluded_folder_are_skipped_and_counted() {
+    // The test corpus must not shape the range it is later checked against.
+    let root = temp_root("exclude");
+    let lib = write_mixed_library(&root);
+    let corpus = root.join("corpus");
+    fs::create_dir_all(&corpus).expect("corpus dir");
+    fs::copy(lib.join("good-two.wav"), corpus.join("piece.wav")).expect("copy");
+
+    let config = ReferenceRunConfig {
+        exclude_matching: vec![corpus.clone()],
+        ..short_config()
+    };
+    let result = run_reference_measurement(&lib, &root.join("out"), &config).expect("run");
+    let skip = result
+        .ledger
+        .skipped
+        .iter()
+        .find(|s| s.relative_path == "good-two.wav")
+        .expect("good-two must be skipped");
+    assert_eq!(skip.reason, SkipReason::MatchesExcluded);
+    assert!(skip.detail.contains("corpus/piece.wav"), "{}", skip.detail);
+    assert_eq!(result.stats.counts.skipped_matches_excluded, 1);
+    assert_eq!(result.stats.counts.accepted, 2);
+    assert!(
+        result
+            .ledger
+            .accepted
+            .iter()
+            .all(|s| s.relative_path != "good-two.wav"),
+        "an excluded song must not be measured into the range"
+    );
+
+    let missing = ReferenceRunConfig {
+        exclude_matching: vec![root.join("no-such-corpus")],
+        ..short_config()
+    };
+    let error = run_reference_measurement(&lib, &root.join("out-missing"), &missing)
+        .expect_err("a missing exclude folder must fail loudly");
+    assert!(format!("{error}").contains("exclude folder does not exist"));
+}
+
+#[test]
+fn the_provisional_label_is_recorded_only_when_asked() {
+    let root = temp_root("provisional");
+    let lib = write_mixed_library(&root);
+    let plain = run_reference_measurement(&lib, &root.join("out-a"), &short_config()).expect("a");
+    assert!(!plain.stats.provisional);
+    let text = fs::read_to_string(&plain.stats_path).expect("stats");
+    assert!(text.contains("\"provisional\": false"));
+
+    let labelled = ReferenceRunConfig {
+        provisional: true,
+        ..short_config()
+    };
+    let marked = run_reference_measurement(&lib, &root.join("out-b"), &labelled).expect("b");
+    assert!(marked.stats.provisional);
+    let text = fs::read_to_string(&marked.stats_path).expect("stats");
+    assert!(text.contains("\"provisional\": true"));
+    // The label changes nothing that was measured.
+    assert_eq!(plain.stats.range, marked.stats.range);
+    assert_eq!(plain.stats.split, marked.stats.split);
+}
+
+#[test]
+fn placement_agrees_with_the_ledger_positions() {
+    let root = temp_root("placement");
+    let lib = write_mixed_library(&root);
+    let result = run_reference_measurement(&lib, &root.join("out"), &short_config()).expect("run");
+
+    // Placement reads the statistics back the way a committed copy is read.
+    let stats = read_stats(&result.stats_path).expect("read stats");
+    assert_eq!(stats, result.stats);
+
+    let placed = run_placement(
+        std::slice::from_ref(&lib),
+        &stats,
+        &root.join("placed"),
+        &short_config(),
+    )
+    .expect("place");
+    let report = &placed.report;
+    assert_eq!(report.library_build_songs, stats.counts.build);
+    assert!(placed.report_json_path.is_file());
+    assert!(placed.report_csv_path.is_file());
+    // Duplicates are reported, not skipped: good-one and its copy both appear.
+    assert_eq!(report.placed.len(), 4);
+    assert!(report
+        .placed
+        .iter()
+        .any(|p| p.label == "refsongs/nested/copy.wav"));
+    assert!(report
+        .skipped
+        .iter()
+        .any(|s| s.relative_path == "refsongs/notes.txt" && s.reason == SkipReason::NotAudio));
+
+    let range = stats.range.as_ref().expect("range");
+    for song in &result.ledger.accepted {
+        let p = report
+            .placed
+            .iter()
+            .find(|p| p.content_hash == song.content_hash)
+            .expect("every accepted song is placed");
+        assert_eq!(
+            Some(p.deviation_db),
+            song.deviation_db,
+            "{}",
+            song.relative_path
+        );
+        assert_eq!(
+            Some(p.inside_range),
+            song.inside_range,
+            "{}",
+            song.relative_path
+        );
+    }
+    for p in &report.placed {
+        for (b, band) in range.bands.iter().enumerate() {
+            let out = p.outside_by_db[b];
+            if p.inside_range[b] {
+                assert_eq!(
+                    out, 0.0,
+                    "{} {} inside but outside_by {out}",
+                    p.label, band.band
+                );
+            } else if p.deviation_db[b] < band.low_edge_db {
+                assert!(out < 0.0, "{} {} below the range", p.label, band.band);
+            } else {
+                assert!(out > 0.0, "{} {} above the range", p.label, band.band);
+            }
+        }
+    }
+
+    let mut empty = stats.clone();
+    empty.range = None;
+    let error = run_placement(
+        std::slice::from_ref(&lib),
+        &empty,
+        &root.join("placed-empty"),
+        &short_config(),
+    )
+    .expect_err("placing against no range must fail");
+    assert!(format!("{error}").contains("no range"));
+}
+
+/// Number of fields in one CSV line, honoring double-quoted fields.
+fn csv_field_count(line: &str) -> usize {
+    let mut in_quotes = false;
+    let mut fields = 1;
+    for c in line.chars() {
+        match c {
+            '"' => in_quotes = !in_quotes,
+            ',' if !in_quotes => fields += 1,
+            _ => {}
+        }
+    }
+    fields
+}
+
+#[test]
+fn every_csv_row_has_the_header_column_count() {
+    let root = temp_root("csv-shape");
+    let lib = write_mixed_library(&root);
+    let result = run_reference_measurement(&lib, &root.join("out"), &short_config()).expect("run");
+    let placed = run_placement(
+        std::slice::from_ref(&lib),
+        &result.stats,
+        &root.join("placed"),
+        &short_config(),
+    )
+    .expect("place");
+
+    for path in [&result.ledger_csv_path, &placed.report_csv_path] {
+        let text = fs::read_to_string(path).expect("csv");
+        let mut lines = text.lines();
+        let header = csv_field_count(lines.next().expect("header"));
+        let mut rows = 0;
+        for line in lines {
+            rows += 1;
+            assert_eq!(
+                csv_field_count(line),
+                header,
+                "{}: row has the wrong column count: {line}",
+                path.display()
+            );
+        }
+        assert!(
+            rows >= 4,
+            "{} should list accepted and skipped files",
+            path.display()
+        );
+    }
 }

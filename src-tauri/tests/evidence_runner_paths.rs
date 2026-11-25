@@ -14,7 +14,9 @@ use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use yes_master_lib::fixture_matrix::run_manifest_path;
 use yes_master_lib::reference_tuning::run_reference_tuning_dir;
-use yes_master_lib::smart_balance_reference::{run_reference_measurement, ReferenceRunConfig};
+use yes_master_lib::smart_balance_reference::{
+    run_placement, run_reference_measurement, ReferenceRunConfig,
+};
 
 /// `set_current_dir` is process-global, so the relative-path tests must not
 /// interleave. Cargo runs tests in a binary on parallel threads.
@@ -252,6 +254,54 @@ fn smart_balance_reference_rejects_an_output_dir_equal_to_the_reference_dir() {
     let error = run_reference_measurement(&references, &references, &smart_balance_test_config())
         .expect_err("output dir equal to the reference dir must be rejected");
     assert!(format!("{error}").contains("source"));
+}
+
+#[test]
+fn smart_balance_reference_rejects_an_output_dir_inside_an_excluded_dir() {
+    // The excluded folder is the test corpus: private audio, never a destination.
+    let root = temp_root("smart-balance-inside-excluded");
+    let references = write_reference_suite(&root);
+    let corpus = root.join("corpus");
+    fs::create_dir_all(&corpus).expect("create corpus dir");
+    let inside = corpus.join("out");
+    let config = ReferenceRunConfig {
+        exclude_matching: vec![corpus.clone()],
+        ..smart_balance_test_config()
+    };
+
+    let error = run_reference_measurement(&references, &inside, &config)
+        .expect_err("an output dir inside an excluded dir must be rejected");
+    assert!(format!("{error}").contains("source"));
+    assert!(
+        !inside.exists(),
+        "the rejected directory must NOT have been created"
+    );
+}
+
+#[test]
+fn smart_balance_placement_rejects_an_output_dir_inside_a_placed_dir() {
+    let root = temp_root("smart-balance-placement-inside");
+    let references = write_reference_suite(&root);
+    let measured = run_reference_measurement(
+        &references,
+        &root.join("evidence"),
+        &smart_balance_test_config(),
+    )
+    .expect("measure");
+    let inside = references.join("placed");
+
+    let error = run_placement(
+        std::slice::from_ref(&references),
+        &measured.stats,
+        &inside,
+        &smart_balance_test_config(),
+    )
+    .expect_err("an output dir inside a placed folder must be rejected");
+    assert!(format!("{error}").contains("source"));
+    assert!(
+        !inside.exists(),
+        "the rejected directory must NOT have been created"
+    );
 }
 
 // ---------------------------------------------------------------------------

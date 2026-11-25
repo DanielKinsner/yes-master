@@ -25,12 +25,21 @@
 //! **Determinism.** The same folder gives byte-identical statistics: files are
 //! visited in sorted order, the split and bootstrap use a recorded seed, and the
 //! statistics carry no timestamps or machine paths.
+//!
+//! **Held-out material stays out.** `exclude_matching` names folders (the test
+//! corpus) whose files must not shape the range. A library file with the same
+//! bytes as any file there is skipped with a logged reason.
+//!
+//! **Placement (Slice 2).** [`run_placement`] measures other songs through the
+//! same meter and reports where they sit against an existing range. It never
+//! changes the range.
 
 use crate::analysis::compute_spectral_balance_6band;
 use crate::decode::decode_full;
 use crate::evidence_lanes::{csv_escape, normalized_absolute_path, prepare_evidence_output_dir};
 use crate::types::{CommandError, CommandResult, SpectralBalance6};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -88,6 +97,13 @@ pub struct ReferenceRunConfig {
     pub seed: u64,
     pub min_duration_sec: f64,
     pub bootstrap_resamples: usize,
+    /// Recorded in the statistics: the range is a stand-in, to be re-measured
+    /// (plan decision D8 as changed on 2026-11-24).
+    pub provisional: bool,
+    /// Folders whose files must not shape the range. A library file with the
+    /// same bytes as any file in them is skipped as
+    /// [`SkipReason::MatchesExcluded`].
+    pub exclude_matching: Vec<PathBuf>,
 }
 
 impl Default for ReferenceRunConfig {
@@ -96,6 +112,8 @@ impl Default for ReferenceRunConfig {
             seed: DEFAULT_SEED,
             min_duration_sec: MIN_DURATION_SEC,
             bootstrap_resamples: BOOTSTRAP_RESAMPLES,
+            provisional: false,
+            exclude_matching: Vec::new(),
         }
     }
 }
@@ -119,6 +137,8 @@ pub enum SkipReason {
     LowSampleRate,
     Silent,
     Duplicate,
+    /// Same bytes as a file in an `exclude_matching` folder.
+    MatchesExcluded,
 }
 
 /// One accepted song. Private: it carries the relative path.
@@ -193,6 +213,8 @@ pub struct ReferenceCounts {
     pub skipped_low_sample_rate: usize,
     pub skipped_silent: usize,
     pub skipped_duplicate: usize,
+    #[serde(default)]
+    pub skipped_matches_excluded: usize,
 }
 
 /// Bootstrap stability of one band's two range edges.
@@ -256,6 +278,10 @@ pub struct ReferenceStats {
     pub parameters: ReferenceStatsParameters,
     pub counts: ReferenceCounts,
     pub meets_minimum_library_size: bool,
+    /// True when the run was labelled provisional: the range is a stand-in
+    /// that is expected to be re-measured.
+    #[serde(default)]
+    pub provisional: bool,
     /// `None` when the build split is empty.
     pub range: Option<RangeStats>,
     pub split: SplitMembership,
@@ -295,10 +321,25 @@ pub fn run_reference_measurement(
             reference_dir.display()
         )));
     }
-    let output_dir = prepare_evidence_output_dir(&cwd, output_dir, &[reference_root.as_path()])?;
+    let mut exclude_roots = Vec::with_capacity(config.exclude_matching.len());
+    for dir in &config.exclude_matching {
+        let root = normalized_absolute_path(&cwd, dir);
+        if !root.is_dir() {
+            return Err(CommandError::InvalidPath(format!(
+                "exclude folder does not exist: {}",
+                dir.display()
+            )));
+        }
+        exclude_roots.push(root);
+    }
+    // Neither the library nor an excluded folder may receive the output.
+    let mut source_roots: Vec<&Path> = vec![reference_root.as_path()];
+    source_roots.extend(exclude_roots.iter().map(PathBuf::as_path));
+    let output_dir = prepare_evidence_output_dir(&cwd, output_dir, &source_roots)?;
 
+    let excluded = excluded_hashes(&exclude_roots)?;
     let files = collect_files(&reference_root)?;
-    let (ledger, stats) = measure_files(&reference_root, &files, config);
+    let (ledger, stats) = measure_files(&reference_root, &files, config, &excluded);
 
     let stats_path = output_dir.join(STATS_FILE_NAME);
     let ledger_json_path = output_dir.join(LEDGER_JSON_FILE_NAME);
@@ -329,6 +370,30 @@ pub fn stats_json(stats: &ReferenceStats) -> CommandResult<String> {
 
 fn write_text(path: &Path, text: &str) -> CommandResult<()> {
     fs::write(path, text).map_err(|e| CommandError::Io(format!("write {}: {e}", path.display())))
+}
+
+/// Content hash of every file under the excluded folders, mapped to a label
+/// for the private ledger (`<folder name>/<path inside it>`).
+fn excluded_hashes(roots: &[PathBuf]) -> CommandResult<BTreeMap<u64, String>> {
+    let mut out = BTreeMap::new();
+    for root in roots {
+        for path in collect_files(root)? {
+            let bytes = fs::read(&path)
+                .map_err(|e| CommandError::Io(format!("read {}: {e}", path.display())))?;
+            out.entry(fnv1a64(&bytes, FNV_OFFSET))
+                .or_insert_with(|| root_label(root, &path));
+        }
+    }
+    Ok(out)
+}
+
+/// `<root folder name>/<path inside it>`, for runs that read several roots.
+fn root_label(root: &Path, path: &Path) -> String {
+    let name = root
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    format!("{name}/{}", relative_label(root, path))
 }
 
 /// Every regular file under `root`, sorted by its `/`-joined relative path.
@@ -390,7 +455,11 @@ struct MeasuredSong {
 }
 
 /// Measure one file. Never panics on bad input; every failure is a skip.
-fn measure_one(path: &Path, config: &ReferenceRunConfig) -> Measured {
+fn measure_one(
+    path: &Path,
+    config: &ReferenceRunConfig,
+    excluded: &BTreeMap<u64, String>,
+) -> Measured {
     if !is_audio_extension(path) {
         return Measured::Skipped(SkipReason::NotAudio, "not an audio file extension".into());
     }
@@ -400,6 +469,12 @@ fn measure_one(path: &Path, config: &ReferenceRunConfig) -> Measured {
     };
     let content_hash = fnv1a64(&bytes, FNV_OFFSET);
     drop(bytes);
+    if let Some(label) = excluded.get(&content_hash) {
+        return Measured::Skipped(
+            SkipReason::MatchesExcluded,
+            format!("same content as excluded {label}"),
+        );
+    }
 
     let pcm = match decode_full(path) {
         Ok(pcm) => pcm,
@@ -488,11 +563,12 @@ pub fn shares_to_db(shares: &[f64; 6]) -> [f64; 6] {
 
 /// Measure in parallel (bounded), then do every order-dependent step
 /// sequentially in sorted path order so the result is deterministic.
-fn measure_files(
-    root: &Path,
+/// Measure `files` on a bounded worker pool. The result is in `files` order.
+fn measure_parallel(
     files: &[PathBuf],
     config: &ReferenceRunConfig,
-) -> (ReferenceLedger, ReferenceStats) {
+    excluded: &BTreeMap<u64, String>,
+) -> Vec<Measured> {
     let workers = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(1)
@@ -507,13 +583,33 @@ fn measure_files(
                 let Some(path) = files.get(index) else {
                     break;
                 };
-                let measured = measure_one(path, config);
+                let measured = measure_one(path, config, excluded);
                 if let Ok(mut slot) = slots[index].lock() {
                     *slot = Some(measured);
                 }
             });
         }
     });
+    slots
+        .into_iter()
+        .map(|slot| {
+            slot.into_inner().ok().flatten().unwrap_or_else(|| {
+                Measured::Skipped(
+                    SkipReason::Undecodable,
+                    "measurement worker did not finish".into(),
+                )
+            })
+        })
+        .collect()
+}
+
+fn measure_files(
+    root: &Path,
+    files: &[PathBuf],
+    config: &ReferenceRunConfig,
+    excluded: &BTreeMap<u64, String>,
+) -> (ReferenceLedger, ReferenceStats) {
+    let measured_all = measure_parallel(files, config, excluded);
 
     let mut counts = ReferenceCounts {
         files_seen: files.len(),
@@ -522,14 +618,8 @@ fn measure_files(
     let mut skipped = Vec::new();
     let mut songs: Vec<(String, MeasuredSong)> = Vec::new();
     let mut seen_hashes = std::collections::BTreeSet::new();
-    for (path, slot) in files.iter().zip(slots) {
+    for (path, measured) in files.iter().zip(measured_all) {
         let label = relative_label(root, path);
-        let measured = slot.into_inner().ok().flatten().unwrap_or_else(|| {
-            Measured::Skipped(
-                SkipReason::Undecodable,
-                "measurement worker did not finish".into(),
-            )
-        });
         match measured {
             Measured::Song(song) => {
                 if seen_hashes.insert(song.content_hash) {
@@ -558,6 +648,7 @@ fn measure_files(
             SkipReason::LowSampleRate => counts.skipped_low_sample_rate += 1,
             SkipReason::Silent => counts.skipped_silent += 1,
             SkipReason::Duplicate => counts.skipped_duplicate += 1,
+            SkipReason::MatchesExcluded => counts.skipped_matches_excluded += 1,
         }
     }
 
@@ -635,6 +726,7 @@ fn measure_files(
             minimum_library_songs: MIN_LIBRARY_SONGS,
         },
         meets_minimum_library_size: counts.accepted >= MIN_LIBRARY_SONGS,
+        provisional: config.provisional,
         counts,
         range,
         split: SplitMembership {
@@ -897,6 +989,208 @@ impl SplitMix64 {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Placement: where other songs sit against an existing range.
+// ---------------------------------------------------------------------------
+
+/// One song placed against an existing healthy range. Private: it carries
+/// the file's label.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PlacedSong {
+    /// `<placed folder name>/<path inside it>`.
+    pub label: String,
+    pub content_hash: String,
+    pub duration_sec: f64,
+    pub sample_rate: u32,
+    pub channels: u16,
+    pub peak_dbfs: f64,
+    pub shares: [f64; 6],
+    pub shares_db: [f64; 6],
+    /// Position in the range's deviation space.
+    pub deviation_db: [f64; 6],
+    pub inside_range: [bool; 6],
+    /// Signed distance beyond the nearest edge: negative below the range,
+    /// positive above it, exactly zero inside.
+    pub outside_by_db: [f64; 6],
+}
+
+/// The private placement report.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PlacementReport {
+    pub schema: String,
+    /// What the range came from, copied from the statistics.
+    pub stats_schema: String,
+    pub library_build_songs: usize,
+    pub provisional: bool,
+    pub placed: Vec<PlacedSong>,
+    pub skipped: Vec<SkippedReferenceFile>,
+}
+
+/// Where a placement run wrote its outputs.
+#[derive(Debug, Clone)]
+pub struct PlacementRunResult {
+    pub output_dir: PathBuf,
+    pub report_json_path: PathBuf,
+    pub report_csv_path: PathBuf,
+    pub report: PlacementReport,
+}
+
+pub const PLACEMENT_JSON_FILE_NAME: &str = "smart-balance-placement.json";
+pub const PLACEMENT_CSV_FILE_NAME: &str = "smart-balance-placement.csv";
+
+/// Read statistics written by [`run_reference_measurement`] (or a committed
+/// copy of them).
+pub fn read_stats(path: &Path) -> CommandResult<ReferenceStats> {
+    let text = fs::read_to_string(path)
+        .map_err(|e| CommandError::Io(format!("read {}: {e}", path.display())))?;
+    let stats: ReferenceStats = serde_json::from_str(&text)
+        .map_err(|e| CommandError::Other(format!("parse {}: {e}", path.display())))?;
+    if stats.schema != STATS_SCHEMA {
+        return Err(CommandError::Other(format!(
+            "{} has schema {:?}, expected {STATS_SCHEMA:?}",
+            path.display(),
+            stats.schema
+        )));
+    }
+    Ok(stats)
+}
+
+/// Measure every file under each of `place_dirs` (recursively) and report
+/// where it sits against `stats`' range. Duplicates are all reported; the
+/// skip rules otherwise match the library run's.
+pub fn run_placement(
+    place_dirs: &[PathBuf],
+    stats: &ReferenceStats,
+    output_dir: &Path,
+    config: &ReferenceRunConfig,
+) -> CommandResult<PlacementRunResult> {
+    let range = stats.range.as_ref().ok_or_else(|| {
+        CommandError::Other("the statistics hold no range (empty build split)".into())
+    })?;
+    let cwd = std::env::current_dir().map_err(|e| CommandError::Io(format!("current dir: {e}")))?;
+    let mut roots = Vec::with_capacity(place_dirs.len());
+    for dir in place_dirs {
+        let root = normalized_absolute_path(&cwd, dir);
+        if !root.is_dir() {
+            return Err(CommandError::InvalidPath(format!(
+                "folder to place does not exist: {}",
+                dir.display()
+            )));
+        }
+        roots.push(root);
+    }
+    let root_refs: Vec<&Path> = roots.iter().map(PathBuf::as_path).collect();
+    let output_dir = prepare_evidence_output_dir(&cwd, output_dir, &root_refs)?;
+
+    let mut files = Vec::new();
+    let mut labels = Vec::new();
+    for root in &roots {
+        for path in collect_files(root)? {
+            labels.push(root_label(root, &path));
+            files.push(path);
+        }
+    }
+    let measured_all = measure_parallel(&files, config, &BTreeMap::new());
+
+    let mut placed = Vec::new();
+    let mut skipped = Vec::new();
+    for (label, measured) in labels.into_iter().zip(measured_all) {
+        match measured {
+            Measured::Song(song) => {
+                let shares_db = shares_to_db(&song.shares);
+                let deviation = deviation_from_typical(&shares_db, &range.typical_shape_db);
+                placed.push(PlacedSong {
+                    label,
+                    content_hash: format!("{:016x}", song.content_hash),
+                    duration_sec: round4(song.duration_sec),
+                    sample_rate: song.sample_rate,
+                    channels: song.channels,
+                    peak_dbfs: round4(song.peak_dbfs),
+                    shares: song.shares,
+                    shares_db: shares_db.map(round4),
+                    deviation_db: deviation.map(round4),
+                    inside_range: inside_flags(range, &deviation),
+                    outside_by_db: outside_by(range, &deviation).map(round4),
+                });
+            }
+            Measured::Skipped(reason, detail) => skipped.push(SkippedReferenceFile {
+                relative_path: label,
+                reason,
+                detail,
+            }),
+        }
+    }
+
+    let report = PlacementReport {
+        schema: "yes-master.smart-balance.placement.v1".to_string(),
+        stats_schema: stats.schema.clone(),
+        library_build_songs: stats.counts.build,
+        provisional: stats.provisional,
+        placed,
+        skipped,
+    };
+    let report_json_path = output_dir.join(PLACEMENT_JSON_FILE_NAME);
+    let report_csv_path = output_dir.join(PLACEMENT_CSV_FILE_NAME);
+    let json = serde_json::to_string_pretty(&report)
+        .map_err(|e| CommandError::Other(format!("serialize placement report: {e}")))?;
+    write_text(&report_json_path, &format!("{json}\n"))?;
+    write_text(&report_csv_path, &placement_csv(&report))?;
+    Ok(PlacementRunResult {
+        output_dir,
+        report_json_path,
+        report_csv_path,
+        report,
+    })
+}
+
+/// Signed distance beyond the nearest range edge, per band (0 inside).
+fn outside_by(range: &RangeStats, deviation: &[f64; 6]) -> [f64; 6] {
+    let mut out = [0.0; 6];
+    for (o, (band, d)) in out.iter_mut().zip(range.bands.iter().zip(deviation)) {
+        *o = if *d < band.low_edge_db {
+            d - band.low_edge_db
+        } else if *d > band.high_edge_db {
+            d - band.high_edge_db
+        } else {
+            0.0
+        };
+    }
+    out
+}
+
+fn placement_csv(report: &PlacementReport) -> String {
+    let mut out = String::from(
+        "status,label,duration_sec,sample_rate,peak_dbfs,\
+         sub_dev,bass_dev,low_mids_dev,mids_dev,presence_dev,air_dev,\
+         sub_out,bass_out,low_mids_out,mids_out,presence_out,air_out,detail\n",
+    );
+    for song in &report.placed {
+        let dev = song.deviation_db.map(|v| format!("{v:.4}")).join(",");
+        let outside = song.outside_by_db.map(|v| format!("{v:.4}")).join(",");
+        out.push_str(&format!(
+            "placed,{},{:.3},{},{:.2},{dev},{outside},\n",
+            csv_escape(&song.label),
+            song.duration_sec,
+            song.sample_rate,
+            song.peak_dbfs,
+        ));
+    }
+    for skip in &report.skipped {
+        let reason = serde_json::to_value(skip.reason)
+            .ok()
+            .and_then(|v| v.as_str().map(str::to_string))
+            .unwrap_or_default();
+        // Status, label, 15 empty measurement columns, detail: 18 columns.
+        out.push_str(&format!(
+            "skipped:{reason},{},{}{}\n",
+            csv_escape(&skip.relative_path),
+            ",".repeat(15),
+            csv_escape(&skip.detail),
+        ));
+    }
+    out
+}
+
 fn ledger_csv(ledger: &ReferenceLedger) -> String {
     let mut out = String::from(
         "status,relative_path,anon_id,split,duration_sec,sample_rate,channels,peak_dbfs,\
@@ -932,7 +1226,7 @@ fn ledger_csv(ledger: &ReferenceLedger) -> String {
         out.push_str(&format!(
             "skipped:{reason},{},{}{}\n",
             csv_escape(&skip.relative_path),
-            ",".repeat(19),
+            ",".repeat(18),
             csv_escape(&skip.detail),
         ));
     }
@@ -992,7 +1286,7 @@ mod tests {
             min_duration_sec: 1.0,
             ..Default::default()
         };
-        let Measured::Song(song) = measure_one(&path, &config) else {
+        let Measured::Song(song) = measure_one(&path, &config, &BTreeMap::new()) else {
             panic!("synthetic song should be accepted");
         };
         let analysis =

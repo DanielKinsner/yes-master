@@ -743,9 +743,28 @@ private audio exists only there.
   range comes from the build split only. Fewer than 40 accepted songs prints a
   warning and sets `meets_minimum_library_size: false`. Do not use it as the
   healthy range.
+- `--exclude-matching <dir>` (repeatable) keeps held-out material out of the
+  range. A library file with the same bytes as any file in that folder is
+  skipped as `matches_excluded`. The Slice 2 run excludes the September test
+  corpus's originals (`test-output/mastering-quality-20260915/originals`),
+  because two corpus pieces are also in the free library.
+- `--provisional` records `"provisional": true` in the statistics. Use it while
+  the range comes from a stand-in library (plan decision D8 as changed on
+  2026-11-24).
+
+To place other songs against an existing range, measured through the same
+meter, pass the statistics and one or more folders:
+
+```powershell
+cargo run --release --example smart_balance_reference -- --stats ../docs/reviews/evidence/2026-11-24-smart-balance-reference-range/smart-balance-reference-stats.json --place "<folder>" --output ../test-output/smart-balance/placement
+```
+
+It writes `smart-balance-placement.{json,csv}`: each song's position, which
+bands are inside, and the signed distance beyond the nearest edge. It names
+files, so it stays private. Placement never changes the range.
 
 The output rules in "Evidence-runner output paths" apply. The output may not be
-inside the reference folder.
+inside the reference folder, an excluded folder, or a placed folder.
 
 ## Preset Fingerprint Harness
 
