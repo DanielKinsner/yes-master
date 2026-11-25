@@ -23,7 +23,22 @@ Generated 2026-06-22 from the docs-hygiene recon.
 - **Tilt-vs-reference brightness** metric (spectral-slope-vs-pink) so a flat
   spectrum reads as zero excess by construction — the "principled" fix; never built.
 - **Genre/style classification** feeding adaptation.
-- **Reference-track upload / matching.**
+- **Reference-track upload / matching.** Tone matching is built on branch
+  `claude/smart-balance-2e58b2` as **Smart Match (Beta)**, not yet merged
+  (`docs/plans/2026-11-24-smart-match-execution-plan.md`). Still open, from
+  that plan's parking lot:
+  - matching loudness, dynamics or stereo width to the reference;
+  - built-in or bundled reference songs, or a genre picker with built-in
+    targets;
+  - time-varying matching, or finer than six bands;
+  - Smart Match in Album mode, on mobile, or in the browser try-it;
+  - a DAW plugin (only the M3 seam and the M22 measurement exist);
+  - a way round the G6 limitation (the EQ ahead of the compressor and
+    limiter is partly given back on heavily limited masters), which needs
+    its own design and owner decision, not a retune;
+  - in Standard at the minimum window the reference name chip shows only a
+    few letters (the full name is in the line, on hover and on focus), and
+    the Advanced Match amount box shows 0–1 beside a percent readout.
 - **Resonance detection + dynamic notching** (Soothe / Gullfoss style); active
   sibilance notch; realtime per-frequency dynamic EQ.
 - **Per-band stereo-width matching** (Ozone Width Match style).

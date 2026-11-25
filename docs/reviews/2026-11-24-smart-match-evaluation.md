@@ -324,6 +324,11 @@ status" section. These are the entries a grader most needs:
   change.
 - **32–43.** How G3 and G6 are measured, the two added diagnostics, and the
   decision not to tune.
+- **44–58 (Slices 7 and 8).** The interface and documents, logged in the
+  same section. A grader most needs: 44 (how the row fits 1360×740 without
+  moving an existing control), 45–46 (the clamped line and the squeezed name
+  chip in Standard), 49 (the receipt line answers deviation 24) and 55 (the
+  landing capture inputs, and why the owner's plates are untouched).
 
 ## Reproduce
 

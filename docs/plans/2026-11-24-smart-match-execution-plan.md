@@ -944,3 +944,147 @@ Smart Match suites, and checked the committed evidence. Its rulings:
    in one plain sentence: Smart Balance (automatic tone fixing) was dropped,
    and Smart Match (the user picks a reference song) replaces it.
 
+
+### Checkpoint B ruling 2: done (`f3698c8`)
+
+`ChainCoeffs` now records where Smart Match's corrective filter runs
+(`SmartMatchSlot`: idle, the Warmth slot, the Presence/Air slot, or a stage of
+its own). `warmth_active` and `air_active` reflect only the user's controls,
+and `eq_active` is true whenever Smart Match changes anything, including a
+chain where only the corrective filter is active. Regression tests cover all
+three placements through the real readout, a flat Style, and a
+corrective-filter-only chain. Consumers checked: `SignalChain.tsx` reads only
+these flags; the preview mock and the wire samples carry no Smart Match
+state, and the readout's keys did not change. The try-it engine was rebuilt.
+
+### Slice 7: done (`e79bfde`)
+
+- **Hook** (`useTrackMaster`): the pick (the existing audio file dialog, then
+  `measure_smart_match_reference`), a newer pick superseding an older one
+  still being measured, refusals that keep the previous reference, the
+  switch, remove and Match amount. Each is one settings edit, so one undo
+  step. The row keeps the last readout for the same track, dimmed, while a
+  fresh one is on its way. Album mode disables every action.
+- **View logic** (`src/lib/smart-match.ts`): every copy-table state, built from
+  the readout's numbers with the locked copy, including the two lines added
+  at Checkpoint B. Names past 60 characters are shortened, with the full name
+  on hover and focus.
+- **Standard**: one row in the right column under Loudness.
+- **Advanced**: the same row as a rail card after Delivery Profile, the
+  six-band strip (gap and closed, capped bands marked, every cell labelled for
+  screen readers), the Match amount slider and both locked captions. The
+  debug `AdaptiveReadout` is untouched.
+- **Standard-managed**: the reference and its switch are managed; a
+  non-default amount is an Advanced edit, reset to 50%.
+- **Receipt**: the render's own `smart_match_digest` under Mastering style.
+- **Tests**:
+  - 9 hook integration tests: pick, cancel, superseded pick, refusal and
+    failure, toggle/remove with undo, amount at 0, stale readout, no six-band
+    profile, Album;
+  - view, wording and settings-edit tests in `smart-match.test.ts`;
+  - `standard-managed` tests;
+  - 23 component tests (`SmartMatchRow.test.tsx`), covering every copy-table
+    state, the controls, the strip, the slider and the captions;
+  - StandardView placement and routing tests;
+  - two receipt tests.
+
+  A mutation check (the superseded-pick guard removed) made the superseded
+  test fail, as it should.
+- **Headless**: five Smart Match scenarios at 1440×900 and 1360×740 (pick and
+  interactions in Standard, active, off, Advanced, Advanced partial). The
+  Standard geometry probe now also checks the Smart Match controls, the card
+  sitting below Loudness, and the line inside its card and the window.
+
+### Deviation log (Slice 7)
+
+44. **Standard placement: a stacked right column.** At 1360×740 the only
+    spare height in Standard was inside the Loudness card. The right column
+    became a flex column, with Loudness and then the Smart Match card. I
+    measured it with and without the row (the row hidden by injected CSS):
+    the Intensity card stays 283.3 px, the Loudness options stay 40.5 px, and
+    the zone chips and knob do not move. The line ends at 738.9 px, inside
+    740. Stop trigger 5 was not reached. The headless probe now checks this at
+    both sizes.
+45. **The line is clamped in Standard.** At the minimum window it shows two
+    lines (four from 860 px tall), so a long applied line with the partial
+    notice usually ends in an ellipsis there. The full line is on hover, read
+    by screen readers (`role="status"`), and shown unclamped in Advanced. At
+    1440×900 the full partial line shows.
+46. **The name chip is squeezed in Standard at the minimum window.** It shows
+    only a few letters ("War…" in the capture). The full name is on hover and
+    keyboard focus, and the line repeats it. Logged as polish in
+    `docs/IDEAS_BACKLOG.md`.
+47. **Resets.** Tone reset (the EQ and Intensity ↺) leaves Smart Match alone.
+    Reset all and the Advanced-to-Standard return keep the reference and its
+    switch, and put a non-default amount back to 50% (M13). A song with no
+    reference gets no Smart Match state from either.
+48. **Removing a reference keeps a non-default amount.** The amount is an
+    Advanced edit, so it survives as `{ reference: null, enabled: true,
+    amount }` and the next pick uses it. At the default amount, removal leaves
+    no Smart Match state at all.
+49. **The receipt line (deviation 24's open question).** The desktop receipt
+    shows no `Smart Match: off` when the render carried no line, so songs that
+    never used Smart Match keep their receipt exactly. The line sits under
+    Mastering style in the visible column, not in the collapsed Advanced
+    details, because Smart Match is a setting the user chose (hand-test step
+    6 looks for it). It always shows the render's digest, never a
+    frontend-built one.
+50. **The 0% line shows in Standard too.** The amount is set only in Advanced,
+    but the row reports it wherever it appears.
+51. **Small placement calls.** The Match amount slider is disabled with no
+    reference. The Advanced card sits after Delivery Profile.
+52. **The refusal line's lifetime.** A refusal is per track and replaces the
+    line until the next pick, switch or removal. An amount change does not
+    clear it.
+53. **Undo coalescing.** Each Smart Match action is one undo step when the
+    actions are more than 300 ms apart. Two edits inside that window merge,
+    as for every other control. The hook tests wait 320 ms between actions
+    to model separate clicks.
+54. **The preview mock's sample reference has a neutral name.** The `/app`
+    browser preview is reachable on the public site (`vercel.json` rewrites
+    `/app`), so the sample reference is "Warm Reference (browser preview)",
+    not a filename containing another company's brand. The mock imitates the
+    backend's visible rules for the browser only; it is not the decision
+    function.
+55. **`SmartMatchRow.tsx` joined the landing capture inputs.** The list must
+    name every non-test component, and nothing checks that automatically, so
+    it would otherwise have been missed. The three scripted captures were
+    recaptured (the Standard one now shows the empty Smart Match row). The
+    owner's real-session plates are untouched. They predate Smart Match, so
+    once it ships the Standard plate no longer shows the current Standard
+    view: an owner item (O2) for release time, not for this branch.
+56. **Test fakes.** Three App test files and StandardView's `fakeTm` hand-build
+    the hook's return value; they gained the Smart Match fields. No product
+    code was loosened for them.
+
+### Slice 8: done
+
+- `docs/PRODUCT.md`: a Smart Match (Beta) section, including the G6
+  limitation, and the "deferred reference-track UX" line narrowed to what is
+  still parked.
+- `docs/APP_BEHAVIOR.md`: a Smart Match subsection under Track Master, with
+  every line, the controls, the minimum-window clamp, the strip, the G6
+  limitation, persistence, resets, the receipt and the signal-chain readout.
+- `docs/ARCHITECTURE.md`: the frontend and backend pieces, and where the
+  correction sits in the chain.
+- `docs/TESTING.md`: the Smart Match headless scenarios; why Smart Balance was
+  dropped at Checkpoint A; the measurement tool's role now; the evaluation
+  runner; and a table of the lanes a Smart Match change requires.
+- `docs/OPEN_THREADS_AND_DECISIONS.md`, `docs/IDEAS_BACKLOG.md` and
+  `docs/CHANGELOG.md` (an internal entry, marked as not merged and not a
+  release).
+- `CLAUDE.md` and `AGENTS.md`, byte-identical: Smart Match joins the product
+  contracts.
+- No user-facing text says "Smart Balance" (searched the app sources).
+
+### Deviation log (Slice 8)
+
+57. **The measurement tool keeps its old name.** `smart_balance_reference` and
+    its TESTING section keep "Smart Balance" in their names, because renaming
+    would be churn. The section now opens by saying Smart Balance was dropped
+    and why, and that the tool still generates Smart Match's typical shape.
+58. **The contract line says a little more than the plan's phrase.** Besides
+    "off until the user picks a reference; do not raise its caps or default
+    amount without an owner decision", it says that a song without a
+    reference must render bit-identically, and it points to the G6 limitation
+    in `docs/PRODUCT.md`.

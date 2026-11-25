@@ -460,9 +460,28 @@ mistaken for coverage it does not have.
 **`/app` preview scenarios.** Deterministic states selected with
 `?scenario=<name>` (see `PREVIEW_SCENARIOS` in `src/lib/preview-mock.ts`):
 `clean`, `empty`, `warning`, `long-copy`, `export-success`, `export-cancel`,
-`album-1`, `album-4`, `album-12`, `album-long`, `album-warning`. `?empty=1`
-still works as an alias for `empty`. Every scenario is checked at 1440×900 and,
-where layout matters, at the supported minimum 1360×740.
+`album-1`, `album-4`, `album-12`, `album-long`, `album-warning`,
+`smart-match-none`, `smart-match-active`, `smart-match-partial`,
+`smart-match-off`. `?empty=1` still works as an alias for `empty`. Every
+scenario is checked at 1440×900 and, where layout matters, at the supported
+minimum 1360×740.
+
+**Smart Match scenarios (plan Slice 7).** The preview mock answers Smart Match
+with fixed gaps and the backend's visible rules, so the sentences are known in
+advance. Each runs at both sizes:
+
+- `smart-match-standard-pick` drives Standard, picks a reference, then switches
+  it off and on and removes it.
+- `smart-match-standard-active` and `smart-match-standard-off` check the
+  Standard row's line and switch (axe-gated when active).
+- `smart-match-advanced` and `smart-match-advanced-partial` check the Advanced
+  strip (six bands, capped bands marked), the Match amount slider, both
+  captions and the partial notice, with Delivery Format and Export still
+  reachable.
+
+The Standard geometry probe also covers the Smart Match row: its buttons and
+name chip must be visible and topmost, its card must sit below Loudness, and
+its line must not be cut by the card or the window.
 
 **Export-receipt shell geometry (audit U-02).** The `warning` scenario's
 reduced-motion pass measures the OPEN receipt after two settled animation
@@ -715,12 +734,31 @@ runner output and rendered WAVs are private/ignored and must not be committed.
 
 ## Smart Balance Reference Measurement
 
-Local-only runner for the Smart Balance healthy range
-(`docs/plans/2026-11-24-smart-balance-execution-plan.md`, Slices 1–2). It
-measures a folder of released songs, searched recursively, through the app's
-own six-band meter (`analysis::compute_spectral_balance_6band`; a unit test pins
-bit-identity with `analyze_one`). It renders nothing and changes no product
-behavior.
+**Smart Balance was dropped at Checkpoint A (2026-11-24); Smart Match replaced
+it.** Smart Balance (automatic tone fixing) was dropped, and Smart Match (the
+user picks a reference song) replaces it. The measurement below showed why one
+"healthy range" for all music is too blunt. A finished master's bands sit 5 to
+10 dB either side of typical, so the range would leave almost everything
+alone. Where it did act, it would act on style (solo piano, scooped metal mids,
+a dark film score). Its edges also moved 4 to 9 dB under resampling. Tone needs
+a target someone chooses. The record is
+`docs/reviews/2026-11-24-smart-balance-reference-range.md` and the plan's "Why
+the plan changed" section
+(`docs/plans/2026-11-24-smart-match-execution-plan.md`).
+
+The tool keeps its old name, because renaming it would be churn. It still
+serves Smart Match: its statistics generate
+`src-tauri/src/smart_match_typical_shape.rs`, the library's typical shape that
+Smart Match uses only for its missing-band rule. Re-run it with
+`--emit-typical-shape <stats.json>`; the test
+`smart_match_typical_shape_matches_the_committed_statistics` fails if the
+generated file and the committed statistics disagree.
+
+Local-only runner (`docs/plans/2026-11-24-smart-balance-execution-plan.md`,
+Slices 1–2). It measures a folder of released songs, searched recursively,
+through the app's own six-band meter
+(`analysis::compute_spectral_balance_6band`; a unit test pins bit-identity with
+`analyze_one`). It renders nothing and changes no product behavior.
 
 ```powershell
 cd src-tauri
@@ -765,6 +803,45 @@ files, so it stays private. Placement never changes the range.
 
 The output rules in "Evidence-runner output paths" apply. The output may not be
 inside the reference folder, an excluded folder, or a placed folder.
+
+## Smart Match Evaluation
+
+Local-only evidence runner for the Smart Match gates G1–G10 (plan Slice 6):
+`src-tauri/src/smart_match_evaluation.rs`, run by
+`examples/smart_match_evaluation.rs`, and tested in
+`tests/smart_match_evaluation.rs`. It changes no product behavior. Known-answer
+copies are made with an independent FFT equalizer, never the chain's own
+filters.
+
+```powershell
+cd src-tauri
+cargo run --release --example smart_match_evaluation -- --phase development --library "<free-cc folder>" --library-sources ../docs/reviews/evidence/2026-11-24-smart-balance-reference-range/library-sources.json --corpus-json ../docs/reviews/evidence/2026-09-15-mastering-quality/corpus.json --corpus-root "<mastering-quality-20260915 folder>" --owner-dir "<tests for presets folder>" --output "<private dir>" --evidence "<committable dir>"
+```
+
+- Every path is required. From a worktree, pass the main checkout's private
+  folders by absolute path; private audio exists only there. The exact command
+  used is in `docs/reviews/2026-11-24-smart-match-evaluation.md`.
+- `--phase development` runs every gate on development material; use it for
+  any tuning. `--phase holdout --frozen-commit <sha>` runs G3 and G6 once on
+  held-out material with frozen parameters. Do not re-run the holdout to
+  chase a result.
+- The ledger names files and stays under `test-output/`. The summary written
+  to `--evidence` is committable: free-library and corpus names, with the
+  owner's files as anonymous IDs.
+- G6 (gap closed end to end) failed as written at Checkpoint B and was
+  accepted with a documented limitation. The EQ ahead of the compressor and
+  limiter is partly given back on heavily limited material. The runner reports
+  the EQ stage alone beside the end-to-end figure, so the two can be told
+  apart.
+
+### Lanes a Smart Match change requires
+
+| Change | Lanes |
+| --- | --- |
+| `smart_match.rs`, `smart_match_reference.rs`, or the Smart Match parts of `dsp.rs`, `guardrails.rs` or `types.rs` | `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test --target-dir target\codex-rc` (includes `smart_match_readout`, the evaluation runner's tests, the identity and fingerprint suites), the slow fixture lane, both mobile bridge lanes, `npm run build:tryit-wasm` and its tests (the try-it compiles `smart_match.rs`) |
+| A wire type (`types.rs`, `bindings.ts`) | The above, plus `npm test` (`bindings-drift`, `wire-samples`) and `npm run build` |
+| The row, the card, the copy or the hook | `npm test`, `npm run build`, `npm run verify:headless` (the Smart Match scenarios above), and `npm run verify:landing-assets` (Standard and Advanced are captured surfaces) |
+| Caps, default amount, dead zone or fade | An owner decision first. Then the development phase of the evaluation runner, and a new holdout only with the planning session's agreement |
 
 ## Preset Fingerprint Harness
 

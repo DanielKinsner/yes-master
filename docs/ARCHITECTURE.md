@@ -22,6 +22,13 @@ Important frontend helpers:
 - `src/lib/export-location.ts` tracks last-used export folders and path helpers.
 - `src/lib/shortcuts.ts` is the one keyboard-shortcut catalogue (handlers,
   the `?` overlay and Help all read it).
+- `src/lib/smart-match.ts` words Smart Match from the backend readout (the
+  locked copy, the view state, and the per-edit settings helpers).
+  `src/components/SmartMatchRow.tsx` renders the Standard row and the
+  Advanced card. `useTrackMaster` owns the pick (file dialog, then
+  `measure_smart_match_reference`), the superseded-pick counter, the refusal
+  and the last-readout-while-pending state. Every number shown comes from the
+  readout; the frontend never recomputes a correction.
 
 ## Rust Backend
 
@@ -48,6 +55,16 @@ Important frontend helpers:
   app-data (`prepare_demo_track`); swap the generator for a bundled file
   without changing the command's contract.
 - `src-tauri/src/types.rs` defines shared command/data contracts.
+- `src-tauri/src/smart_match.rs` is Smart Match's decision and realization:
+  `decide_for_settings` turns the stored reference and the track's six-band
+  profile into per-band corrections (amount, caps, dead zone, fade, partial
+  flag), and `realize` fits those corrections onto the 7-band EQ plus one
+  corrective 140 Hz peak. The same decision feeds the chain, the readout
+  (`readout_for_settings`) and the receipt (`receipt_digest`), so all three
+  agree by construction. `smart_match_reference.rs` measures a chosen file
+  with the track analysis's own decoder and six-band meter, and
+  `smart_match_typical_shape.rs` is generated from the committed reference
+  statistics.
 - `src-tauri/src/album_render.rs` is the active album render path
   (`render_album_plan_impl`), invoked by the `render_album_plan` command in
   `engine.rs`. `album.rs` is the separate album *planner*; the two are
@@ -120,7 +137,11 @@ The mastering chain, as implemented in `MasteringChain::process_frame_inplace`
 
 1. Decode/source PCM.
 2. Input gain.
-3. Preset/tone EQ (7 bands).
+3. Preset/tone EQ (7 bands), then the Warmth and Presence/Air shelves.
+   Smart Match adds its corrections to the 7 band gains and places its
+   corrective 140 Hz peak in whichever shelf slot is idle, or in a stage of
+   its own when the user has both shelves in use. With no reference this
+   step is unchanged, bit for bit.
 4. Creative/preset multiband compression.
 5. Transient shaping.
 6. Stereo width (M/S) — applied before saturation so the non-linear stage

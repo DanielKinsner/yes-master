@@ -12,6 +12,30 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-11-24 — Smart Match (Beta) built on a branch
+
+Internal entry, not a release or an announcement. Built on
+`claude/smart-balance-2e58b2`, not merged; the plan is
+`docs/plans/2026-11-24-smart-match-execution-plan.md`.
+
+- Smart Balance (automatic tone fixing) was dropped, and Smart Match (the user
+  picks a reference song) replaces it. This was approved on the planning
+  session's recommendation, after Checkpoint A showed one healthy range for
+  all music is too blunt.
+- The chain moves the track's six-band tone part of the way toward a chosen
+  reference: 50% by default, capped at a 4 dB cut or a 3 dB boost per band,
+  with a 0.3 dB dead zone. A song without a reference is bit-identical to
+  before.
+- Standard gets one row under Loudness; Advanced adds a six-band strip and a
+  Match amount slider; the Track receipt carries the render's Smart Match
+  line. Album, mobile and the browser try-it are unchanged.
+- The evaluation passed 9 of 10 gates. G6 (gap closed end to end) failed as
+  written and was accepted with a documented limitation: the moves come before
+  the compressor and limiter, so the final change can be smaller on loud
+  material.
+
+---
+
 ## 2026-09-04 — Audio correctness and regression hardening
 
 Integrated into `main`; not a published release. Implementation commits

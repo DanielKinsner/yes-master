@@ -1,5 +1,29 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-24 — Smart Match at Checkpoint C: interface built; owner hand test
+> and merge/push decision needed (O1).** On branch `claude/smart-balance-2e58b2`
+> (not merged; the planning session pushes after its review). Smart Balance
+> (automatic tone fixing) was dropped, and **Smart Match** (the user picks a
+> reference song) replaces it, approved on the planning session's
+> recommendation ([plan](plans/2026-11-24-smart-match-execution-plan.md)).
+>
+> Slices 7 and 8 are built. Standard has one Smart Match row under Loudness
+> (Beta); Advanced adds the six-band strip and the Match amount slider; the
+> Track receipt carries the render's Smart Match line. It fits the 1360×740
+> minimum window without moving any existing control. With no reference the
+> chain stays bit-identical. G6 stays recorded as failed as written, accepted
+> with the limitation now stated in `docs/PRODUCT.md` and
+> `docs/APP_BEHAVIOR.md` and in a second Advanced caption.
+>
+> Open:
+> - **O1 (owner):** the eight-step hand test in the plan, run with
+>   `npm run tauri dev` from the branch; then merge and push.
+> - **Mac:** the Swift model change (the optional receipt digest in
+>   `NativeMasteringBridge.swift`) has not been compiled; it needs a Mac
+>   build.
+> - **O2 at release time:** the owner's real-session landing plates predate
+>   Smart Match; the Standard plate will not show the row once it ships.
+
 > **2026-11-24 — Smart Match at Checkpoint B: built and measured; graded.**
 > The planning session accepted G6, which failed as written, with a documented
 > limitation, and the work continues to Slices 7 and 8. On branch

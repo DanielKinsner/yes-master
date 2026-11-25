@@ -69,6 +69,10 @@ and evidence justify it; do not execute unrelated parked backlog by default.
   presets or activate Adaptive Compressor, Phase-B confidence, or album-character
   behavior without the required owner decision/listening signoff. Keep the Adaptive
   Compressor's gated `TBD-CALIBRATION` constants unchanged pending that signoff.
+- Smart Match (Beta, Track Master tone matching to a user-picked reference) is
+  off until the user picks a reference; a song without one must render
+  bit-identically. Do not raise its caps or default amount without an owner
+  decision. Its G6 limitation is documented in `docs/PRODUCT.md`.
 - Do not commit private audio/masters without explicit approval for those fixtures.
   Use existing owner-supplied files where available; ask only for a specific missing
   source needed to resolve a finding.

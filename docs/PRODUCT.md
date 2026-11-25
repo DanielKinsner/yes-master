@@ -181,6 +181,9 @@ What deliberately does not adapt today:
   (see `docs/OPEN_THREADS_AND_DECISIONS.md`, 2026-08-25 block).
 - Phase-B per-window confidence gating is built but OFF by default,
   pending the owner calibration sitting.
+- Smart Match (below) is the one reference-matched tone layer, and it is
+  opt-in per song. It sits on top of the preset and leaves the preset's own
+  voicing unchanged.
 
 Adaptive Compressor (decided 2026-06-12): per-band track-aware compression
 with transient protection and already-mastered stand-down is **built,
@@ -190,6 +193,49 @@ code but is not current listening behavior; do not enable it or describe it
 as active. Note the distinction: the Tier-1 guardrail restraint described
 under Compressor Canon below IS active today; the per-band adaptive
 processing is what stays disabled.
+
+## Smart Match (Beta)
+
+Smart Balance (automatic tone fixing) was dropped, and Smart Match (the user
+picks a reference song) replaces it. This was approved on the planning
+session's recommendation at Checkpoint A, 2026-11-24. The plan is
+`docs/plans/2026-11-24-smart-match-execution-plan.md`, and the evaluation is
+`docs/reviews/2026-11-24-smart-match-evaluation.md`.
+
+The user picks a released song they want this track to sit next to. YES Master
+measures both songs with the same six-band meter, then moves the track's tone
+part of the way toward the reference with one small corrective EQ ahead of
+the compressor and limiter.
+
+- **Off until the user picks a reference.** A song with no reference renders
+  bit-identically to one made before Smart Match existed.
+- **Tone only.** Loudness, dynamics and stereo width are not matched, and the
+  Advanced strip says so.
+- **Bounded.** By default it closes 50% of the gap (Match amount, in Advanced).
+  No band moves more than a 4 dB cut or a 3 dB boost, and moves under 0.3 dB
+  are skipped. Do not raise the caps or the default amount without an owner
+  decision.
+- **Truthful.** The result line, the Advanced strip and the export receipt
+  report the corrections the chain actually used.
+- **Known limitation.** The end-to-end gate G6 failed as written and was
+  accepted with a documented limitation. The moves are applied before the
+  compressor and limiter, so on loud, heavily limited material the change
+  measured on the finished master can be smaller than the move shown. The EQ
+  stage itself does what is asked. The Advanced strip's second caption says so.
+- **Where it lives.** Standard has one row under Loudness: the label, a Beta
+  tag, the reference controls and a result line. Advanced adds a six-band strip
+  (the gap to the reference and how much of it is closed) and the Match amount
+  slider.
+- **Per song, never per preset.** Saving a preset never stores a reference,
+  and applying a preset keeps the song's reference.
+- **Standard-managed.** The reference and its switch survive Standard's resets
+  and Advanced's Reset all. A non-default Match amount is an Advanced edit,
+  and those resets put it back to 50%.
+- **Track Master only.** In Album mode it is disabled, with an explanation.
+  It is not on mobile or in the browser try-it.
+- **Refusals.** A reference is refused only when it can't be measured: under
+  30 seconds, silent, unreadable, or a sample rate too low for the air band.
+  Mono references are accepted.
 
 ## Compressor Canon
 
@@ -351,7 +397,8 @@ Strategy detail: `docs/plans/2026-06-30-launch-plan.md`; execution sequencing:
 ## Deferred
 
 - Store-style distribution (Microsoft Store; Mac App Store skipped).
-- New reference-track UX.
+- Reference-track work beyond Smart Match (Beta): matching loudness, dynamics
+  or width; built-in references; time-varying or finer-than-six-band matching.
 - Major Album Master dashboard/report expansion.
 - Further subjective preset retuning beyond the 2026-06-22 "85% lean", without
   fresh listening notes.

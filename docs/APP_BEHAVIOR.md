@@ -212,6 +212,72 @@ Album-layer sound shaping (owner decisions 2026-07-03 D7/D9):
 Mastered preview readiness timeouts surface recoverable user-facing guidance
 instead of silent non-playback.
 
+### Smart Match (Beta)
+
+Smart Balance (automatic tone fixing) was dropped, and Smart Match (the user
+picks a reference song) replaces it. What it is and its limits are in
+`docs/PRODUCT.md`; the wording below is the plan's locked copy
+(`docs/plans/2026-11-24-smart-match-execution-plan.md`).
+
+- **Where.** Standard shows one row in the right column under Loudness.
+  Advanced shows the same row as a rail card after Delivery Profile, plus the
+  six-band strip and the Match amount slider.
+- **Choosing.** `Choose reference…` opens the audio file dialog. While the file
+  is measured the line reads "Listening to your reference…" and the controls
+  are busy. A pick that is measured switches Smart Match on at the current
+  amount. A newer pick supersedes one still being measured. A refused or
+  unreadable file keeps the previous reference, and the line says why
+  ("That file can't be used as a reference: …") until the next pick, switch
+  or removal.
+- **The line.** It is built from the backend readout's numbers:
+  - no reference: "Pick a song you want this track to sit next to.";
+  - track not analysed yet: "Listening to your track…";
+  - track analysed without a six-band profile: "Not enough audio to analyze
+    this track.";
+  - applied: `Matching "<name>": cleared 1.2 dB of mud, added 0.8 dB of air.`,
+    naming up to three moves of 0.3 dB or more, largest first, with " Your
+    reference is very different from this track, so the match is partial."
+    added when a cap limited a band;
+  - nothing to move: `Already close to "<name>". Nothing to change.`;
+  - switched off: `Match to "<name>" is off.`;
+  - Match amount at 0: "Match amount is at 0, so Smart Match is idle.";
+  - Album mode: "Smart Match applies to Track Master, not Album renders."
+
+  While a fresh readout is on its way after an edit, the last numbers stay on
+  screen, dimmed.
+- **Controls.** With a reference: the name (shortened past 60 characters, full
+  name on hover and keyboard focus), an on/off switch, `Change…` and a remove
+  button. Choosing, changing, switching, removing and each amount change are
+  one undo step each.
+- **Standard at the minimum window.** At 1360×740 the line shows two lines and
+  ends in an ellipsis when longer. The full line is on hover, read by screen
+  readers, and shown unclamped in Advanced. From 860 px tall it shows up to
+  four lines.
+- **Advanced strip.** Per band (Sub, Bass, Low mids, Mids, Presence, Air): the
+  gap to the reference and the correction applied, with capped bands marked.
+  Two captions: "Tone only. Loudness and width are not matched." and "Moves
+  are applied before the compressor and limiter, so the final change can be
+  smaller on loud material." The Match amount slider runs 0–100% (default
+  50%) and is disabled without a reference.
+- **Known limitation (G6).** The corrective EQ runs ahead of the compressor
+  and limiter. On loud, heavily limited material the change measured on the
+  finished master can be smaller than the move shown. The gate that checked
+  the end-to-end change failed as written and was accepted with this
+  documented limitation; nothing was retuned to hide it.
+- **Persistence.** The reference (its name and six-band measurement, not the
+  audio) is saved with the song in the project and the session. Presets never
+  carry it.
+- **Resets.** Tone reset (EQ and Intensity) leaves Smart Match alone. Reset
+  all and the return to Standard keep the reference and its switch, and put
+  a non-default Match amount back to 50%.
+- **Receipt.** When the song has a reference, the Track export receipt shows
+  the render's own line under Mastering style, for example
+  `Smart Match: "<name>" at 50% · cleared 1.2 dB mud, added 0.8 dB air`, or
+  `Smart Match: off` when the reference is kept but inactive. A song that
+  never used Smart Match shows no line.
+- **Signal chain readout.** When Smart Match borrows the Warmth or Air slot,
+  the readout counts it as EQ and never shows the user's Warmth or Air as on.
+
 ## Project, Settings, And Help
 
 - Save Project and Open Project use `.ams.json` project files.
