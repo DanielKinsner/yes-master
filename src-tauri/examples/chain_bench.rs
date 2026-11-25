@@ -5,6 +5,11 @@
 //! Usage:
 //!   cargo run --example chain_bench -- "C:\path\to\file.wav" [--smart-match]
 //!
+//! `--auto-gain-staging` switches auto gain staging on with resolved gains
+//! (level in −2 dB, limiter drive +1.5 dB) and a −9 LUFS target, so the
+//! level-in and limiter-drive stages are active (auto gain staging plan, gate
+//! E7). Without it the run is the baseline configuration.
+//!
 //! `--smart-match` measures the file through the app's meter, resolves that
 //! as the track profile, and sets a reference 3 dB darker in sub and 3 dB
 //! brighter in air, at the default 50% amount, so the Smart Match corrective
@@ -24,6 +29,7 @@ fn main() {
         .expect("usage: chain_bench <file> [--smart-match]");
     let smart_match = std::env::args().skip(2).any(|a| a == "--smart-match");
     let with_shelves = std::env::args().skip(2).any(|a| a == "--with-shelves");
+    let auto_gain_staging = std::env::args().skip(2).any(|a| a == "--auto-gain-staging");
     let pcm =
         yes_master_lib::decode::decode_full(std::path::Path::new(&path)).expect("decode failed");
     let ch = pcm.channels.max(1) as usize;
@@ -86,7 +92,26 @@ fn main() {
             ..SmartMatchSettings::default()
         });
     }
+    if auto_gain_staging {
+        settings.advanced.lufs_offset_db = Some(-9.0);
+        settings.advanced.auto_gain_staging = Some(yes_master_lib::AutoGainStagingSettings {
+            enabled: true,
+            priority: yes_master_lib::LoudnessPriority::Clean,
+        });
+        settings.advanced.gain_staging_resolved = Some(yes_master_lib::ResolvedGainStaging {
+            level_in_db: -2.0,
+            limiter_drive_db: 1.5,
+            ..Default::default()
+        });
+    }
     let mut chain = MasteringChain::new(pcm.sample_rate, ch, &settings);
+    if auto_gain_staging {
+        assert!(
+            chain.coeffs.limiter_drive_active,
+            "the limiter drive must be active for this run"
+        );
+        println!("auto gain staging active: level in -2.0 dB, limiter drive +1.5 dB");
+    }
     if smart_match {
         let d = yes_master_lib::smart_match::decide_for_settings(&settings);
         assert!(

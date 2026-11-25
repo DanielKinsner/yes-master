@@ -1244,6 +1244,11 @@ fn run() -> Result<(), String> {
         discovery.unmastered_files,
         discovery.unmastered_holdout
     );
+    if args.timing && args.production {
+        let scratch = args.output.join("scratch");
+        std::fs::create_dir_all(&scratch).map_err(|e| e.to_string())?;
+        return production::timing_production(&songs, &scratch, &args.output);
+    }
     if args.timing {
         return timing(&songs, nominal, &args.output, args.max_passes);
     }

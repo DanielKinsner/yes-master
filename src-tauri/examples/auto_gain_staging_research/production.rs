@@ -144,6 +144,66 @@ fn smart_match_unchanged(src: &Loaded) -> bool {
         && a.warmth == b.warmth
 }
 
+/// E7: export time through the production path, switch off against switch
+/// on (priority Clean), Universal at each Standard loudness, three runs each,
+/// single-threaded. Decoding is part of both.
+pub(super) fn timing_production(
+    songs: &[Song],
+    scratch: &Path,
+    output: &Path,
+) -> Result<(), String> {
+    let mut rows = Vec::new();
+    for song in songs {
+        let src = load(song, None)?;
+        let seconds_of_audio = (src.samples.len() / src.channels) as f64 / f64::from(src.rate);
+        for target in STANDARD_TARGETS {
+            let off = standard_export_settings(
+                yes_master_lib::types::Preset::Universal,
+                target,
+                src.profile,
+                Some(src.lufs),
+            );
+            let mut on = off.clone();
+            on.advanced.auto_gain_staging = Some(AutoGainStagingSettings {
+                enabled: true,
+                priority: LoudnessPriority::Clean,
+            });
+            let mut off_s = Vec::new();
+            let mut on_s = Vec::new();
+            let mut digest = String::new();
+            for run in 0..3 {
+                let t0 = Instant::now();
+                export_master(
+                    &song.path,
+                    &off,
+                    scratch,
+                    &format!("{}-off-{run}", song.anon),
+                )?;
+                off_s.push(t0.elapsed().as_secs_f64());
+                let t0 = Instant::now();
+                let (_, m) =
+                    export_master(&song.path, &on, scratch, &format!("{}-on-{run}", song.anon))?;
+                on_s.push(t0.elapsed().as_secs_f64());
+                digest = m.auto_gain_staging_digest.unwrap_or_default();
+            }
+            let med = |v: &[f64]| median(v).unwrap_or(f64::NAN);
+            println!(
+                "{} {seconds_of_audio:.0}s target {target}: off {:.2}s, on {:.2}s ({digest})",
+                song.label,
+                med(&off_s),
+                med(&on_s)
+            );
+            rows.push(serde_json::json!({
+                "song": song.label, "seconds_of_audio": seconds_of_audio, "target": target,
+                "export_off_s": med(&off_s), "export_on_s": med(&on_s), "runs": 3,
+                "receipt_line": digest,
+            }));
+        }
+    }
+    let text = serde_json::to_string_pretty(&rows).map_err(|e| e.to_string())?;
+    std::fs::write(output.join("timing-production.json"), text).map_err(|e| e.to_string())
+}
+
 pub(super) fn process_song_production(song: &Song, scratch: &Path) -> SongResult {
     let start = Instant::now();
     let mut errors = Vec::new();

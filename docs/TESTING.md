@@ -876,6 +876,37 @@ cargo run --release --example auto_gain_staging_research -- --library "<free-cc 
 - `--only "<a>|<b>"` and `--excerpt-seconds <s>` are for smoke runs only; the
   decision needs the full set. `--timing 1 --only "<a>|<b>|<c>"` times the
   production render, T and G single-threaded, three runs each.
+- **Slice 4, the production path:** `--path production`.
+  - T and G are rendered by the real export
+    (`engine::mastering_render_to_path`) to a scratch WAV, read back and
+    deleted.
+  - T must equal the research render at the 24-bit PCM level; the WAV
+    writer's dither is replayed by `wav_writer::DeliveryPcm`.
+  - G's gains come from the export receipt's own line, and Reach target runs
+    wherever Clean stopped at the clean limit.
+  - The rule applied is the one frozen at Checkpoint A: R1b, R1c and R2–R7.
+- **Other options:**
+  - `--quiet <folder>` adds the open-licensed quiet, dynamic pieces, split
+    75/25 by content hash.
+  - `--phase holdout --frozen-commit <sha>` runs the held-out songs: the
+    library's 14 and the quiet folder's 25%. Run it once.
+  - `--path production --timing 1 --only "…"` times real exports with the
+    switch off and on.
+  - `--max-passes 4` reproduces the Phase A runs, which predate the frozen
+    limit of 6.
+- **Product tests:** the setting, the chain stages and export resolution are
+  pinned by `src-tauri/tests/auto_gain_staging.rs`. Its reference-song test
+  needs the slow fixture lane with `AMS_REAL_FIXTURE_PATH` set to
+  `It’s a coat-original-test.wav`.
+
+### Lanes an auto gain staging change requires
+
+| Change | Lanes |
+| --- | --- |
+| `gain_staging.rs`, or the gain-staging parts of `dsp.rs`, `types.rs`, `analysis.rs` or `engine.rs` | `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test --target-dir target\codex-rc` with the slow fixture lane on the reference song (identity, fingerprint and `auto_gain_staging` suites), both mobile bridge lanes, `npm run build:tryit-wasm` and its tests (the try-it compiles `dsp.rs`, `types.rs` and `analysis.rs`) |
+| A wire type (the setting or the receipt fields) | The above, plus `npm test` (`bindings-drift`, `export-receipt`) and `npm run build` |
+| The clean limit, the reference level or the pass limit | A planning-session or owner decision first (see the plan), then the development run through `--path production`; a new holdout only with the planning session's agreement |
+| Chain speed | `chain_bench` with and without `--auto-gain-staging` against the saved baseline binary |
 
 ## Preset Fingerprint Harness
 
