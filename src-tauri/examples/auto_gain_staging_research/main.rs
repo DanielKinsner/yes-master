@@ -24,12 +24,20 @@
 //! `--g-resolve chain-output` is given, which reproduces the first
 //! development run (the chain's output loudness before delivery).
 //!
+//! Slice 4: `--path production` renders T and G through the production
+//! export (`engine::mastering_render_to_path`) instead of the research split,
+//! and applies the rule as frozen at Checkpoint A (R1b, R1c, R2–R7).
+//! `--phase holdout --frozen-commit <sha>` runs the held-out songs once.
+//! `--quiet <folder>` adds the open-licensed quiet, dynamic pieces, split
+//! 75/25 by content hash like the owner's folders.
+//!
 //! Optional: `--only <a|b|…>` keeps songs whose label contains any of the
 //! texts (smoke runs; the decision needs the full set), `--excerpt-seconds
 //! <s>` renders the first seconds only (smoke runs), `--timing 1` runs the
 //! controlled single-thread timing on the `--only` songs instead of the
 //! measurement, after checking their full-length split render bit for bit.
 
+mod production;
 mod research;
 #[allow(dead_code)]
 #[path = "../../src/sample_rate.rs"]
@@ -69,6 +77,13 @@ struct Args {
     /// or, with `--g-resolve chain-output`, on the chain's output before
     /// delivery (the first development run).
     g_on_delivered: bool,
+    max_passes: usize,
+    /// Slice 4: render through the production export path.
+    production: bool,
+    /// Slice 4: the held-out songs instead of the development songs.
+    holdout: bool,
+    frozen_commit: Option<String>,
+    quiet: Option<PathBuf>,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -101,6 +116,22 @@ fn parse_args() -> Result<Args, String> {
         only: map.get("only").cloned(),
         excerpt_seconds: map.get("excerpt-seconds").and_then(|s| s.parse().ok()),
         timing: map.get("timing").is_some_and(|v| v == "1"),
+        max_passes: map
+            .get("max-passes")
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(MAX_PASSES),
+        production: match map.get("path").map(String::as_str) {
+            None | Some("research") => false,
+            Some("production") => true,
+            Some(other) => return Err(format!("--path {other}: use research or production")),
+        },
+        holdout: match map.get("phase").map(String::as_str) {
+            None | Some("development") => false,
+            Some("holdout") => true,
+            Some(other) => return Err(format!("--phase {other}: use development or holdout")),
+        },
+        frozen_commit: map.get("frozen-commit").cloned(),
+        quiet: map.get("quiet").map(PathBuf::from),
         g_on_delivered: match map.get("g-resolve").map(String::as_str) {
             None | Some("delivered") => true,
             Some("chain-output") => false,
@@ -167,6 +198,9 @@ fn owner_kind(name: &str) -> &'static str {
 
 struct Discovery {
     songs: Vec<Song>,
+    reference: Song,
+    quiet_files: usize,
+    quiet_holdout: usize,
     library_build: usize,
     library_holdout_skipped: usize,
     suno_files: usize,
@@ -204,10 +238,17 @@ fn discover(args: &Args) -> Result<Discovery, String> {
             continue;
         };
         match t["split"].as_str() {
-            Some("build") => library_build += 1,
+            Some("build") => {
+                library_build += 1;
+                if args.holdout {
+                    continue;
+                }
+            }
             Some("holdout") => {
                 library_holdout_skipped += 1;
-                continue;
+                if !args.holdout {
+                    continue;
+                }
             }
             _ => continue,
         }
@@ -217,7 +258,11 @@ fn discover(args: &Args) -> Result<Discovery, String> {
                 t["artist"].as_str().unwrap_or("?"),
                 t["title"].as_str().unwrap_or("?")
             ),
-            group: "library-build".into(),
+            group: if args.holdout {
+                "library-holdout".into()
+            } else {
+                "library-build".into()
+            },
             kind: String::new(),
             anon,
             reference: false,
@@ -276,7 +321,21 @@ fn discover(args: &Args) -> Result<Discovery, String> {
         }
     }
 
-    // The owner's Suno songs and unmastered mixes: 75/25 by content hash.
+    let reference = owner
+        .iter()
+        .find(|s| s.reference)
+        .cloned()
+        .ok_or("the reference song was not found")?;
+    if args.holdout {
+        // Owner and corpus songs are development material only.
+        owner.clear();
+        corpus_songs.clear();
+    }
+
+    // The owner's Suno songs and unmastered mixes, and the open-licensed
+    // quiet, dynamic pieces: 75/25 by content hash. The development phase
+    // takes the 75, the holdout phase the 25.
+    let holdout_phase = args.holdout;
     let mut split_folder = |dir: &Path, group: &str| -> Result<(usize, usize), String> {
         let files: Vec<PathBuf> = if dir.exists() {
             files_under(dir)
@@ -295,14 +354,29 @@ fn discover(args: &Args) -> Result<Discovery, String> {
         let sides = seeded_split(&hashes, DEFAULT_SEED, HOLDOUT_FRACTION);
         let mut holdout = 0;
         for ((path, anon), side) in files.iter().zip(anons).zip(sides) {
-            if side == SplitSide::Holdout {
+            let held_out = side == SplitSide::Holdout;
+            if held_out {
                 holdout += 1;
+            }
+            if held_out != holdout_phase {
                 continue;
             }
+            let open_licence = group == "quiet-dynamic";
             owner.push(Song {
-                label: format!("owner {anon}"),
+                label: if open_licence {
+                    path.file_stem()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("?")
+                        .replace(" - ", " \u{2013} ")
+                } else {
+                    format!("owner {anon}")
+                },
                 group: group.into(),
-                kind: "owner song".into(),
+                kind: if open_licence {
+                    "open-licensed quiet, dynamic piece".into()
+                } else {
+                    "owner song".into()
+                },
                 reference: false,
                 anon,
                 path: path.clone(),
@@ -313,12 +387,19 @@ fn discover(args: &Args) -> Result<Discovery, String> {
     let (suno_files, suno_holdout) = split_folder(&args.suno, "owner-suno")?;
     let (unmastered_files, unmastered_holdout) =
         split_folder(&args.unmastered, "owner-unmastered")?;
+    let (quiet_files, quiet_holdout) = match &args.quiet {
+        Some(dir) => split_folder(dir, "quiet-dynamic")?,
+        None => (0, 0),
+    };
 
     for s in owner.into_iter().chain(corpus_songs).chain(library) {
         add(&mut songs, s);
     }
     Ok(Discovery {
         songs,
+        reference,
+        quiet_files,
+        quiet_holdout,
         library_build,
         library_holdout_skipped,
         suno_files,
@@ -378,6 +459,65 @@ struct SongResult {
     rows: Vec<RenderRow>,
     errors: Vec<String>,
     wall_seconds: f64,
+    /// Slice 4: every production T export matched the research T render bit
+    /// for bit.
+    production_t_identical: Option<bool>,
+    /// Slice 4 (E6): Smart Match's decision unchanged with the switch on.
+    smart_match_unchanged: Option<bool>,
+}
+
+impl SongResult {
+    fn failed(song: &Song, error: String, start: Instant) -> Self {
+        SongResult {
+            song: song.clone(),
+            rate: 0,
+            channels: 0,
+            seconds_of_audio: 0.0,
+            source_lufs: f32::NAN,
+            source_true_peak_dbtp: f32::NAN,
+            source_lra: f32::NAN,
+            level_in_db: None,
+            decomposition_bit_identical: false,
+            coefficients_target_independent: false,
+            transient_anchors: 0,
+            section_pair: None,
+            rows: Vec::new(),
+            errors: vec![error],
+            wall_seconds: start.elapsed().as_secs_f64(),
+            production_t_identical: None,
+            smart_match_unchanged: None,
+        }
+    }
+
+    fn from_loaded(
+        song: &Song,
+        src: &Loaded,
+        level_in_db: Option<f32>,
+        rows: Vec<RenderRow>,
+        errors: Vec<String>,
+        start: Instant,
+    ) -> Self {
+        SongResult {
+            song: song.clone(),
+            rate: src.rate,
+            channels: src.channels,
+            seconds_of_audio: (src.samples.len() / src.channels.max(1)) as f64
+                / f64::from(src.rate),
+            source_lufs: src.lufs,
+            source_true_peak_dbtp: src.true_peak,
+            source_lra: src.lra,
+            level_in_db,
+            decomposition_bit_identical: true,
+            coefficients_target_independent: true,
+            transient_anchors: 0,
+            section_pair: None,
+            rows,
+            errors,
+            wall_seconds: start.elapsed().as_secs_f64(),
+            production_t_identical: None,
+            smart_match_unchanged: None,
+        }
+    }
 }
 
 struct Loaded {
@@ -517,6 +657,7 @@ fn process_song(
     nominal: Nominal,
     excerpt: Option<f64>,
     g_on_delivered: bool,
+    max_passes: usize,
 ) -> SongResult {
     let start = Instant::now();
     let mut errors = Vec::new();
@@ -539,6 +680,8 @@ fn process_song(
                 rows: Vec::new(),
                 errors: vec![e],
                 wall_seconds: start.elapsed().as_secs_f64(),
+                production_t_identical: None,
+                smart_match_unchanged: None,
             }
         }
     };
@@ -626,7 +769,7 @@ fn process_song(
                 t_lufs,
                 *target,
                 TARGET_TOLERANCE_LU,
-                MAX_PASSES,
+                max_passes,
             );
             match render {
                 None => {
@@ -696,7 +839,7 @@ fn process_song(
                     target,
                     Some(CLEAN_LIMIT_DB),
                     TARGET_TOLERANCE_LU,
-                    MAX_PASSES,
+                    max_passes,
                 )
                 .map(|(res, load, samples, facts)| {
                     let m = measure_delivered(samples, facts, &src, &source_shape, &anchors);
@@ -709,7 +852,7 @@ fn process_song(
                     STANDARD_CEILING_DBTP,
                     Some(CLEAN_LIMIT_DB),
                     TARGET_TOLERANCE_LU,
-                    MAX_PASSES,
+                    max_passes,
                 );
                 let load = limited.max_gain_reduction_db;
                 measure_delivery(limited.samples, &src, target, &source_shape, &anchors)
@@ -752,6 +895,8 @@ fn process_song(
         rows,
         errors,
         wall_seconds: start.elapsed().as_secs_f64(),
+        production_t_identical: None,
+        smart_match_unchanged: None,
     }
 }
 
@@ -769,6 +914,8 @@ fn outcome(r: &RenderRow) -> DesignOutcome {
         under_ceiling: r.under_ceiling,
         stopped_at_clean_limit: r.stopped_at_clean_limit,
         tone_band_delta_db: r.change.tone_band_delta_db,
+        section_contrast_delta_db: r.change.section_contrast_delta_db,
+        attack_median_delta_db: r.change.attack_median_delta_db,
     }
 }
 
@@ -887,6 +1034,11 @@ fn csv_ledger(results: &[SongResult]) -> String {
 struct Summary<'a> {
     schema: &'static str,
     commit: String,
+    path: &'static str,
+    phase: &'static str,
+    frozen_commit: Option<String>,
+    frozen_conditions: Vec<Condition>,
+    checks: BTreeMap<&'static str, serde_json::Value>,
     g_resolves_on: &'static str,
     excerpt_seconds: Option<f64>,
     parameters: BTreeMap<&'static str, f64>,
@@ -945,7 +1097,12 @@ fn summary_rows(s: &SongResult) -> Vec<serde_json::Value> {
 // Controlled timing (single thread, sequential)
 // ---------------------------------------------------------------------------
 
-fn timing(songs: &[Song], nominal: Nominal, output: &Path) -> Result<(), String> {
+fn timing(
+    songs: &[Song],
+    nominal: Nominal,
+    output: &Path,
+    max_passes: usize,
+) -> Result<(), String> {
     let mut rows = Vec::new();
     for song in songs {
         let src = load(song, None)?;
@@ -999,7 +1156,7 @@ fn timing(songs: &[Song], nominal: Nominal, output: &Path) -> Result<(), String>
                     target,
                     Some(CLEAN_LIMIT_DB),
                     TARGET_TOLERANCE_LU,
-                    MAX_PASSES,
+                    max_passes,
                 )?;
                 drop(stage);
                 g_s.push(t0.elapsed().as_secs_f64());
@@ -1049,13 +1206,13 @@ fn run() -> Result<(), String> {
     std::fs::create_dir_all(&args.output).map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&args.evidence).map_err(|e| e.to_string())?;
 
+    if args.holdout && (!args.production || args.frozen_commit.is_none()) {
+        return Err(
+            "the holdout runs once, through the production path, with --frozen-commit".into(),
+        );
+    }
     let discovery = discover(&args)?;
-    let reference = discovery
-        .songs
-        .iter()
-        .find(|s| s.reference)
-        .ok_or("the reference song was not found")?
-        .clone();
+    let reference = discovery.reference.clone();
     let reference_loaded = load(&reference, None)?;
     let nominal = Nominal {
         lufs: reference_loaded.lufs,
@@ -1074,22 +1231,38 @@ fn run() -> Result<(), String> {
         });
     }
     println!(
-        "songs: {} (library build {}, library holdout skipped {}, suno {} with {} held out, unmastered {} with {} held out)",
+        "{} {} phase: {} songs (library build {}, library holdout {}, quiet {} with {} held out, suno {} with {} held out, unmastered {} with {} held out)",
+        if args.production { "production" } else { "research" },
+        if args.holdout { "holdout" } else { "development" },
         songs.len(),
         discovery.library_build,
         discovery.library_holdout_skipped,
+        discovery.quiet_files,
+        discovery.quiet_holdout,
         discovery.suno_files,
         discovery.suno_holdout,
         discovery.unmastered_files,
         discovery.unmastered_holdout
     );
     if args.timing {
-        return timing(&songs, nominal, &args.output);
+        return timing(&songs, nominal, &args.output, args.max_passes);
     }
 
     let started = Instant::now();
+    let scratch = args.output.join("scratch");
+    std::fs::create_dir_all(&scratch).map_err(|e| e.to_string())?;
     let results = parallel_map(&songs, args.workers, |song| {
-        let r = process_song(song, nominal, args.excerpt_seconds, args.g_on_delivered);
+        let r = if args.production {
+            production::process_song_production(song, &scratch)
+        } else {
+            process_song(
+                song,
+                nominal,
+                args.excerpt_seconds,
+                args.g_on_delivered,
+                args.max_passes,
+            )
+        };
         println!(
             "done {} ({:.0}s audio, {:.0}s wall, {} rows, {} errors)",
             song.label,
@@ -1103,9 +1276,24 @@ fn run() -> Result<(), String> {
     let wall = started.elapsed().as_secs_f64();
 
     let (cases, distinct) = rule_inputs(&results);
-    let g = evaluate_rule(&cases, &distinct, Design::G);
-    let s = evaluate_rule(&cases, &distinct, Design::S);
-    let selected = select_design(&g, &s);
+    let (g, s, selected, frozen) = if args.production {
+        let frozen = evaluate_frozen_rule(&cases, &distinct);
+        for c in frozen.iter() {
+            println!(
+                "frozen {} {} ({} cases): {}",
+                c.id,
+                if c.pass { "PASS" } else { "FAIL" },
+                c.cases,
+                c.detail
+            );
+        }
+        (Vec::new(), Vec::new(), "G (frozen rule)", frozen)
+    } else {
+        let g = evaluate_rule(&cases, &distinct, Design::G);
+        let s = evaluate_rule(&cases, &distinct, Design::S);
+        let selected = select_design(&g, &s);
+        (g, s, selected, Vec::new())
+    };
     for c in g.iter() {
         println!(
             "G {} {} ({} cases): {}",
@@ -1164,11 +1352,76 @@ fn run() -> Result<(), String> {
     let mut parameters = BTreeMap::new();
     parameters.insert("clean_limit_db", f64::from(CLEAN_LIMIT_DB));
     parameters.insert("target_tolerance_lu", f64::from(TARGET_TOLERANCE_LU));
-    parameters.insert("max_passes", MAX_PASSES as f64);
+    parameters.insert("max_passes", args.max_passes as f64);
     parameters.insert("level_in_range_db", f64::from(LEVEL_IN_RANGE_DB));
+    let reach: Vec<&RenderRow> = results
+        .iter()
+        .flat_map(|r| r.rows.iter())
+        .filter(|r| r.design == "G-reach")
+        .collect();
+    let g_rows: Vec<&RenderRow> = results
+        .iter()
+        .flat_map(|r| r.rows.iter())
+        .filter(|r| r.design == "G")
+        .collect();
+    let mut checks = BTreeMap::new();
+    if args.production {
+        checks.insert(
+            "e1_every_production_t_matches_research_t",
+            serde_json::json!(results
+                .iter()
+                .all(|r| r.production_t_identical == Some(true))),
+        );
+        checks.insert(
+            "e4_clean_max_limiter_load_db",
+            serde_json::json!(g_rows
+                .iter()
+                .map(|r| r.limiter_load_db)
+                .fold(0.0_f32, f32::max)),
+        );
+        checks.insert("e4_reach_target_runs", serde_json::json!(reach.len()));
+        checks.insert(
+            "e4_reach_target_within_tolerance",
+            serde_json::json!(reach
+                .iter()
+                .filter(|r| (r.lufs - r.target).abs() <= TARGET_TOLERANCE_LU)
+                .count()),
+        );
+        checks.insert(
+            "e5_g_above_target_by_more_than_tolerance",
+            serde_json::json!(g_rows
+                .iter()
+                .chain(reach.iter())
+                .filter(|r| r.lufs > r.target + TARGET_TOLERANCE_LU)
+                .count()),
+        );
+        checks.insert(
+            "e6_smart_match_unchanged_every_song",
+            serde_json::json!(results
+                .iter()
+                .all(|r| r.smart_match_unchanged == Some(true))),
+        );
+        checks.insert(
+            "errors",
+            serde_json::json!(results.iter().map(|r| r.errors.len()).sum::<usize>()),
+        );
+    }
     let summary = Summary {
         schema: "auto-gain-staging-phase-a-v1",
         commit: git_commit(),
+        path: if args.production {
+            "production"
+        } else {
+            "research"
+        },
+        phase: if args.holdout {
+            "holdout"
+        } else {
+            "development"
+        },
+        frozen_commit: args.frozen_commit.clone(),
+        frozen_conditions: frozen,
+        checks,
         g_resolves_on: if args.g_on_delivered {
             "delivered loudness"
         } else {
@@ -1208,7 +1461,12 @@ fn run() -> Result<(), String> {
             })
             .collect(),
     };
-    write_json(&args.evidence.join("phase-a-summary.json"), &summary)?;
+    let summary_name = match (args.production, args.holdout) {
+        (false, _) => "phase-a-summary.json",
+        (true, false) => "slice-4-development-summary.json",
+        (true, true) => "slice-4-holdout-summary.json",
+    };
+    write_json(&args.evidence.join(summary_name), &summary)?;
     if results.iter().any(|r| !r.decomposition_bit_identical) {
         return Err("the split render did not match the production chain; results invalid".into());
     }

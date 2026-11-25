@@ -246,6 +246,8 @@ fn outcome(lufs: f32, plr: f32, landing: f32, stopped: bool) -> DesignOutcome {
         under_ceiling: true,
         stopped_at_clean_limit: stopped,
         tone_band_delta_db: [0.0; 9],
+        section_contrast_delta_db: Some(-1.0),
+        attack_median_delta_db: Some(-1.0),
     }
 }
 
@@ -312,4 +314,91 @@ fn the_decision_rule_reads_cases_as_written() {
     )];
     let g = evaluate_rule(&cases, &distinct, Design::G);
     assert!(!g.iter().find(|c| c.id == "R4").unwrap().pass);
+}
+
+#[test]
+fn the_frozen_rule_reads_r1b_and_r1c_as_written() {
+    let distinct = vec![DistinctCase {
+        song: "x".into(),
+        source_lufs: -10.0,
+        target: -9.0,
+        t: Some(1.0),
+        s: None,
+        g: Some(1.2),
+    }];
+    let with = |plr: f32, section: f64, attack: f64| {
+        let mut g = outcome(-9.0, plr, 0.0, false);
+        g.section_contrast_delta_db = Some(section);
+        g.attack_median_delta_db = Some(attack);
+        g
+    };
+    // 40 cases: T turned down 2 dB; G keeps 1 dB more PLR and the same
+    // dynamics, except one case worse by 0.6 dB in section contrast (2.5%).
+    let mut cases: Vec<RuleCase> = (0..40)
+        .map(|_| case(outcome(-9.0, 8.0, -2.0, false), with(9.0, -1.0, -1.0), true))
+        .collect();
+    cases[3].g = Some(with(9.0, -1.6, -1.0));
+    let r = evaluate_frozen_rule(&cases, &distinct);
+    let ids: Vec<&str> = r.iter().map(|c| c.id.as_str()).collect();
+    assert_eq!(
+        ids,
+        [
+            "R1b",
+            "R1c-section",
+            "R1c-attack",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+        ]
+    );
+    assert!(r.iter().all(|c| c.pass), "{r:?}");
+    // Three cases worse by more than 0.5 dB (7.5%) fail the 5% share.
+    for i in [4, 5, 6] {
+        cases[i].g = Some(with(9.0, -1.6, -1.0));
+    }
+    let r = evaluate_frozen_rule(&cases, &distinct);
+    assert!(!r.iter().find(|c| c.id == "R1c-section").unwrap().pass);
+    // One case worse by more than 1.0 dB fails outright.
+    let mut cases: Vec<RuleCase> = (0..40)
+        .map(|_| case(outcome(-9.0, 8.0, -2.0, false), with(9.0, -1.0, -1.0), true))
+        .collect();
+    cases[0].g = Some(with(9.0, -1.0, -2.1));
+    let r = evaluate_frozen_rule(&cases, &distinct);
+    assert!(!r.iter().find(|c| c.id == "R1c-attack").unwrap().pass);
+    assert!(r.iter().find(|c| c.id == "R1c-section").unwrap().pass);
+    // R1b: a PLR loss of 0.51 dB fails, 0.49 dB passes.
+    let mut cases: Vec<RuleCase> = (0..4)
+        .map(|_| {
+            case(
+                outcome(-9.0, 8.0, -2.0, false),
+                with(7.51, -1.0, -1.0),
+                true,
+            )
+        })
+        .collect();
+    let r = evaluate_frozen_rule(&cases, &distinct);
+    assert!(r.iter().find(|c| c.id == "R1b").unwrap().pass);
+    cases[0].g = Some(with(7.49, -1.0, -1.0));
+    let r = evaluate_frozen_rule(&cases, &distinct);
+    assert!(!r.iter().find(|c| c.id == "R1b").unwrap().pass);
+}
+
+#[test]
+fn the_receipt_line_parses_back_to_its_numbers() {
+    assert_eq!(
+        parse_receipt_digest(
+            "Auto gain staging: level in \u{2212}3.3 dB \u{b7} limiter drive 0.0 dB \u{b7} limiting 0.0 dB"
+        ),
+        Some((-3.3, 0.0, 0.0, false))
+    );
+    assert_eq!(
+        parse_receipt_digest(
+            "Auto gain staging: level in +2.1 dB \u{b7} limiter drive +4.5 dB \u{b7} limiting 6.0 dB \u{b7} stopped at the clean limit"
+        ),
+        Some((2.1, 4.5, 6.0, true))
+    );
+    assert_eq!(parse_receipt_digest("Auto gain staging: off"), None);
 }

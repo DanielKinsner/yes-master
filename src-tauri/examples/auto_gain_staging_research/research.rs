@@ -53,7 +53,9 @@ pub const CLEAN_LIMIT_DB: f32 = 6.0;
 /// Target tolerance when resolving, and "within tolerance" for R1/R2.
 pub const TARGET_TOLERANCE_LU: f32 = 0.2;
 /// Maximum resolution passes (limiter passes for G, full passes for S).
-pub const MAX_PASSES: usize = 4;
+/// Development runs 1 and 2 used 4; frozen at 6 after Checkpoint A (inside
+/// the plan's 2–6 bound) so R4 holds. `--max-passes` overrides it.
+pub const MAX_PASSES: usize = 6;
 /// Level in is limited to the existing ±24 dB input range (contract rule 2).
 pub const LEVEL_IN_RANGE_DB: f32 = 24.0;
 
@@ -1090,6 +1092,12 @@ pub struct DesignOutcome {
     pub under_ceiling: bool,
     pub stopped_at_clean_limit: bool,
     pub tone_band_delta_db: [f64; 9],
+    /// Section contrast change and paired-attack median against the source
+    /// (R1c, frozen at Checkpoint A).
+    #[serde(default)]
+    pub section_contrast_delta_db: Option<f64>,
+    #[serde(default)]
+    pub attack_median_delta_db: Option<f64>,
 }
 
 impl DesignOutcome {
@@ -1312,6 +1320,106 @@ pub fn evaluate_rule(cases: &[RuleCase], distinct: &[DistinctCase], d: Design) -
         ),
     });
     out
+}
+
+/// R1c on one measure: over cases where T and G both land within
+/// tolerance, G may be worse than T by more than 0.5 dB in at most 5% of
+/// cases, and by more than 1.0 dB in none.
+fn r1c(
+    cases: &[RuleCase],
+    id: &str,
+    what: &str,
+    pick_measure: impl Fn(&DesignOutcome) -> Option<f64>,
+) -> Condition {
+    let both = |c: &&RuleCase| {
+        c.t.as_ref().is_some_and(|t| t.within(c.target))
+            && c.g.as_ref().is_some_and(|g| g.within(c.target))
+    };
+    let compared = cases.iter().filter(both).count();
+    let diffs: Vec<(f64, &RuleCase)> = cases
+        .iter()
+        .filter(both)
+        .filter_map(|c| {
+            let (t, g) = (c.t.as_ref()?, c.g.as_ref()?);
+            Some((pick_measure(g)? - pick_measure(t)?, c))
+        })
+        .collect();
+    let missing = compared - diffs.len();
+    let worse_05 = diffs.iter().filter(|(d, _)| *d < -0.5).count();
+    let worse_10 = diffs.iter().filter(|(d, _)| *d < -1.0).count();
+    let share = worse_05 as f64 / diffs.len().max(1) as f64;
+    let worst = diffs
+        .iter()
+        .min_by(|a, b| a.0.total_cmp(&b.0))
+        .map(|(d, c)| format!("{d:+.3} dB ({}, {}, {})", c.song, c.style, c.target))
+        .unwrap_or_else(|| "n/a".into());
+    Condition {
+        id: id.into(),
+        pass: !diffs.is_empty() && missing == 0 && share <= 0.05 && worse_10 == 0,
+        cases: diffs.len(),
+        detail: format!(
+            "{what}, G against T where both within \u{b1}{TARGET_TOLERANCE_LU} LU: worse by more than 0.5 dB in {worse_05} ({:.2}%), by more than 1.0 dB in {worse_10}; worst {worst}; {missing} without the measure",
+            100.0 * share
+        ),
+    }
+}
+
+/// The rule as frozen at Checkpoint A (planning session, 2026-11-24): R1b,
+/// R1c on section contrast and on the paired-attack median, then R2 to R7
+/// unchanged. G only; S is dropped.
+pub fn evaluate_frozen_rule(cases: &[RuleCase], distinct: &[DistinctCase]) -> Vec<Condition> {
+    let r1b: Vec<(f64, &RuleCase)> = cases
+        .iter()
+        .filter_map(|c| {
+            let (t, g) = (c.t.as_ref()?, c.g.as_ref()?);
+            (t.within(c.target) && g.within(c.target)).then(|| (f64::from(g.plr_db - t.plr_db), c))
+        })
+        .collect();
+    let below = r1b.iter().filter(|(d, _)| *d < -0.5).count();
+    let worst = r1b
+        .iter()
+        .min_by(|a, b| a.0.total_cmp(&b.0))
+        .map(|(d, c)| format!("{d:+.3} dB ({}, {}, {})", c.song, c.style, c.target))
+        .unwrap_or_else(|| "n/a".into());
+    let mut out = vec![
+        Condition {
+            id: "R1b".into(),
+            pass: !r1b.is_empty() && below == 0,
+            cases: r1b.len(),
+            detail: format!(
+                "G PLR \u{2212} T PLR where both within \u{b1}{TARGET_TOLERANCE_LU} LU: {below} more than 0.5 dB below; worst {worst}"
+            ),
+        },
+        r1c(cases, "R1c-section", "section contrast change", |o| {
+            o.section_contrast_delta_db
+        }),
+        r1c(cases, "R1c-attack", "paired-attack median", |o| {
+            o.attack_median_delta_db
+        }),
+    ];
+    out.extend(
+        evaluate_rule(cases, distinct, Design::G)
+            .into_iter()
+            .filter(|c| c.id != "R1"),
+    );
+    out
+}
+
+/// The gains and flags in the export receipt's locked line, e.g.
+/// `Auto gain staging: level in +2.1 dB · limiter drive +4.5 dB · limiting
+/// 6.0 dB · stopped at the clean limit`. `None` for `Auto gain staging: off`.
+pub fn parse_receipt_digest(line: &str) -> Option<(f32, f32, f32, bool)> {
+    let rest = line.strip_prefix("Auto gain staging: level in ")?;
+    let number = |text: &str| -> Option<f32> {
+        let t = text.trim().strip_suffix(" dB")?.replace('\u{2212}', "-");
+        t.parse().ok()
+    };
+    let mut parts = rest.split(" \u{b7} ");
+    let level_in = number(parts.next()?)?;
+    let drive = number(parts.next()?.strip_prefix("limiter drive ")?)?;
+    let load = number(parts.next()?.strip_prefix("limiting ")?)?;
+    let stopped = parts.next() == Some("stopped at the clean limit");
+    Some((level_in, drive, load, stopped))
 }
 
 /// The plan's selection: G if R1–R7 all hold; else S if G fails R1, R6 or
