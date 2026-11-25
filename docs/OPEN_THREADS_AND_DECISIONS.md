@@ -1,5 +1,32 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-24 — Smart Match at Checkpoint B: built and measured; one
+> end-to-end gate fails; planning session to grade (P1).** On branch
+> `claude/smart-balance-2e58b2`. The planning session pushed it as a backup at
+> `d45d5d1`; the Slice 4–6 commits are local, and nothing is merged. Dan
+> dropped the range-based Smart Balance at Checkpoint A in favour of
+> **Smart Match**: the user picks a reference song and the app nudges the
+> track's tone partway toward it
+> ([plan](plans/2026-11-24-smart-match-execution-plan.md)).
+>
+> Slices 3–6 are built: the decision function, the setting and the chain, the
+> reference measurement, the readout and receipt, and the evaluation runner.
+> With no reference, Smart Match is off and the chain is bit-identical. There
+> is no interface yet (Slice 7).
+>
+> Of the evaluation's gates, 9 of 10 pass. **G6 (gap closed end to end) fails**
+> on development and on the holdout. Smart Match's own EQ closes about half
+> the gap, as designed. On loud released masters, though, Universal's
+> compressor and limiter give back part of any tone change in sub, bass and
+> air. Corpus mixes and the owner's song pass almost everywhere.
+>
+> Open questions for the planning session:
+> - grade G6;
+> - confirm that mono references are accepted;
+> - decide the line for a 0% amount.
+>
+> Results: `docs/reviews/2026-11-24-smart-match-evaluation.md`.
+
 > **2026-11-24 — Smart Balance at Checkpoint A: provisional range measured;
 > owner grade needed (O2).** On branch `claude/smart-balance-2e58b2` (not
 > pushed, not merged). Dan changed decision D8: the healthy range is first

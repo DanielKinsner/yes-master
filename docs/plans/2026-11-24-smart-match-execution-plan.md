@@ -779,3 +779,123 @@ Lanes run for Slice 5 (office PC):
     preview builds for this branch, because the branch was pushed as a backup,
     and it touches only `vercel.json`. My commits sit on top of it with no
     conflict, so stop trigger 8 does not apply. I have not pushed anything.
+
+### Slice 6: done; stopped at Checkpoint B (stop trigger 4)
+
+The evaluation runner is `src-tauri/src/smart_match_evaluation.rs`, run by
+`examples/smart_match_evaluation.rs`, and tested in
+`tests/smart_match_evaluation.rs`. That test file covers the independent
+equalizer's accuracy, the tilt, the loudest-window finder and the gate
+arithmetic. The parameters were frozen at `c61dbfb`. The development phase ran
+twice on that same code; the second run added the diagnostic columns and gave
+identical gate results. The holdout phase ran once.
+
+The results are in
+[the evaluation note](../reviews/2026-11-24-smart-match-evaluation.md), with
+numbers-only evidence in
+`docs/reviews/evidence/2026-11-24-smart-match-evaluation/`.
+
+| Gate | Development | Holdout |
+| --- | --- | --- |
+| G1 | Pass, 54/54 bit-identical | — |
+| G2 | Pass, 18/18 | — |
+| G3 | Pass: 761 bands, 0 wrong direction, other bands quiet in 100% | Pass: 277 bands, 0 wrong direction, 100% |
+| G4 | Pass, worst 0.018 dB over 288 cases | — |
+| G5 | Pass, worst 0.0000001 dB | — |
+| G6 | **Fail, 62/761 outside 35–65%** | **Fail, 27/277 outside** |
+| G7 | Pass, 669 pairs × 5 amounts | — |
+| G8 | Pass (`chain_bench`, Slice 4) | — |
+| G9 | Pass | — |
+| G10 | Pass | — |
+
+**G6 in one paragraph.** Smart Match's EQ stage closes about half the gap, as
+designed: the median remaining is 0.51 in development and 0.52 on the holdout,
+with only 6 and 4 bands out of range. The full chain then gives part of it
+back on loud released masters, because Universal's compressor and limiter
+relax when the band that drives them is cut. Released masters account for
+60 of the 62 development misses and 26 of the 27 holdout misses. The corpus
+mixes miss 2 of 82 and 1 of 47, and the owner's song misses none of 18. No
+parameter the plan lets me move reaches that interaction, so nothing was
+tuned.
+
+Lanes for Slice 6: `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test` 48 suites, 794 passed, 0 failed, 35 ignored. Both bridge lanes were re-run, because the runner module also compiles into the bridges' copy of the library (results recorded in the Checkpoint B report).
+
+### Checkpoint B
+
+Stopped as the plan directs, after the holdout failure (stop trigger 4).
+Slice 7 has not started. For the planning session (row M24, item P1):
+
+- grade G6's failure and its decomposition;
+- confirm deviation 20 (mono accepted);
+- decide deviation 21 (the amount-zero line);
+- look at the cross-genre finding: a mismatched reference produces drastic,
+  capped moves, with the partial notice as the only warning.
+
+### Deviation log (Slice 6)
+
+32. **How G3 and G6 are measured.** The plan names the cases but not the
+    method, so I chose it and fixed it in code before any result came in.
+    Copies come from an independent FFT equalizer (65,536-sample sqrt-Hann
+    overlap-add), with three kinds of change:
+    - brick-wall gains on the meter's band edges, each band ±4 dB;
+    - low mids +4 dB with presence −4 dB;
+    - a tilt of +1 dB per octave.
+
+    Then:
+    - A band counts when its measured gap is 1 dB or more. A boost that the
+      missing-band rule reduced is reported, not graded: M16 deliberately
+      refuses those.
+    - G3's "equals amount × gap before caps" is checked on counted bands where
+      no cap bound.
+    - G6's re-measured gap is the original gap minus what the match changed
+      end to end. That is the matched render minus the unmatched render of the
+      same copy, through Universal at default Intensity and default Adapt.
+    - The full chain renders whole songs, without the export's loudness
+      landing, which does not change band balance.
+    - A copy's profile is its original's analysis profile with the copy's own
+      measured shares.
+33. **G6 also reports two numbers that are not graded**, added after the
+    first development run and before the freeze:
+    - the EQ stage alone, which separates Smart Match's own accuracy from what
+      the chain's dynamics do;
+    - the copy rendered with the match against the original rendered without
+      it.
+
+    The graded definition did not change.
+34. **G1 and G2 use real songs**: 30-second excerpts of the owner's song and
+    one library song, all nine presets. G2's self-match uses the song's own
+    measured shares.
+35. **G5** scales the five development corpus pieces, and three fixed library
+    references, by ±12 dB before metering.
+36. **G7** covers every known-answer pair and every cross-genre pair at five
+    amounts. The partial flag is checked against an independent
+    recomputation, and pairs within 1e-4 dB of a cap edge are skipped.
+37. **G9** tests synthetic WAVs (silent, 10 seconds, 22.05 kHz, mono), a file
+    that is not audio, the five development pieces with their sub band
+    removed, and hostile values. Mono is accepted (entry 20).
+38. **G10** uses a real song as the reference file. The project is saved, the
+    file deleted, and the project reopened: the stored match and the decision
+    are unchanged. A preset is then saved and listed, and carries no
+    reference.
+39. **G8 comes from `chain_bench`** (Slice 4). The runner does not time
+    anything.
+40. **I labelled the corpus genres myself**, because the corpus list has none.
+    The cross-genre picks are one build song per other genre, five per piece.
+41. **The fixed references** for G5 and the 30-second report are the first
+    build song, by label, in each of three genres.
+42. **The 30-second report for the holdout corpus pieces ran in the holdout
+    phase**, after the freeze, so holdout material was not examined during
+    development.
+43. **No parameter was tuned on results.** G6 failed in development. A probe
+    on its worst cases showed Smart Match's EQ landing within about 0.1 to
+    0.4 dB of the request on the real song. The full chain then gave back up
+    to two thirds of it:
+
+    | Case | Intended | EQ alone, on the song | After the full chain |
+    | --- | --- | --- | --- |
+    | C. Scott – Determinate, sub +4 | −2.0 dB | −1.93 dB | −0.70 dB |
+    | Fonkdongo – TamosReady, air +4 | −2.0 dB | −1.60 dB | −1.02 dB |
+
+    The plan's movable parameters are the caps (lower only), the dead zone and
+    the fade. None of them reaches that interaction, so I froze at `c61dbfb`,
+    unchanged since Slice 5, and ran the holdout once as the protocol says.
