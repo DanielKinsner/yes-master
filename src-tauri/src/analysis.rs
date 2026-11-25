@@ -29,6 +29,61 @@ pub fn nudge_role_by_position(result: &mut AnalysisResult, index: usize, total: 
     }
 }
 
+/// A source's integrated loudness, loudness range and true peak, exactly as
+/// the track analysis reports them. Auto gain staging's level in reads the
+/// same numbers from the same function, so the reference song's level in is
+/// exactly 0.0 dB.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SourceLevel {
+    pub lufs_integrated: f32,
+    pub lra: f32,
+    pub true_peak_dbtp: f32,
+}
+
+pub fn measure_source_level(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+) -> CommandResult<SourceLevel> {
+    let channels_u32 = u32::from(channels.max(1));
+    let mut ebu = EbuR128::new(
+        channels_u32,
+        sample_rate,
+        Mode::I | Mode::LRA | Mode::TRUE_PEAK,
+    )
+    .map_err(|e| CommandError::Other(format!("ebur128 init: {e}")))?;
+    ebu.add_frames_f32(samples)
+        .map_err(|e| CommandError::Other(format!("ebur128 feed: {e}")))?;
+
+    let lufs_integrated = sanitize_lufs(
+        ebu.loudness_global()
+            .map_err(|e| CommandError::Other(format!("ebur128 global: {e}")))? as f32,
+    );
+    let lra = ebu
+        .loudness_range()
+        .map_err(|e| CommandError::Other(format!("ebur128 lra: {e}")))? as f32;
+
+    let mut peak_lin: f64 = 0.0;
+    for ch in 0..channels_u32 {
+        let tp = ebu
+            .true_peak(ch)
+            .map_err(|e| CommandError::Other(format!("ebur128 tp: {e}")))?;
+        if tp > peak_lin {
+            peak_lin = tp;
+        }
+    }
+    let true_peak_dbtp = if peak_lin > 0.0 {
+        (20.0 * peak_lin.log10()) as f32
+    } else {
+        -60.0
+    };
+    Ok(SourceLevel {
+        lufs_integrated,
+        lra,
+        true_peak_dbtp,
+    })
+}
+
 pub(crate) fn analyze_one(
     track_id: TrackId,
     path: &Path,
@@ -68,38 +123,11 @@ pub(crate) fn analyze_one_with_progress(
     }
 
     progress(0.35, "Checking dynamics");
-    let channels_u32 = u32::from(pcm.channels.max(1));
-    let mut ebu = EbuR128::new(
-        channels_u32,
-        pcm.sample_rate,
-        Mode::I | Mode::LRA | Mode::TRUE_PEAK,
-    )
-    .map_err(|e| CommandError::Other(format!("ebur128 init: {e}")))?;
-    ebu.add_frames_f32(&pcm.samples)
-        .map_err(|e| CommandError::Other(format!("ebur128 feed: {e}")))?;
-
-    let lufs_integrated = sanitize_lufs(
-        ebu.loudness_global()
-            .map_err(|e| CommandError::Other(format!("ebur128 global: {e}")))? as f32,
-    );
-    let lra = ebu
-        .loudness_range()
-        .map_err(|e| CommandError::Other(format!("ebur128 lra: {e}")))? as f32;
-
-    let mut peak_lin: f64 = 0.0;
-    for ch in 0..channels_u32 {
-        let tp = ebu
-            .true_peak(ch)
-            .map_err(|e| CommandError::Other(format!("ebur128 tp: {e}")))?;
-        if tp > peak_lin {
-            peak_lin = tp;
-        }
-    }
-    let true_peak_dbtp = if peak_lin > 0.0 {
-        (20.0 * peak_lin.log10()) as f32
-    } else {
-        -60.0
-    };
+    let SourceLevel {
+        lufs_integrated,
+        lra,
+        true_peak_dbtp,
+    } = measure_source_level(&pcm.samples, pcm.sample_rate, pcm.channels)?;
 
     progress(0.55, "Evaluating stereo field");
     let stereo_width = compute_stereo_width(&pcm.samples, pcm.channels as usize);

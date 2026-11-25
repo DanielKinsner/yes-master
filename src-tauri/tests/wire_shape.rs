@@ -27,11 +27,12 @@ use yes_master_lib::smart_match::{SmartMatchBandReadout, SmartMatchReadout, Smar
 use yes_master_lib::smart_match_reference::{SmartMatchReferenceMeasurement, SmartMatchRefusal};
 use yes_master_lib::types::{
     AdvancedSettings, AlbumArc, AlbumArcKind, AlbumCharacter, AlbumPlan, AlbumTrackEntry,
-    AnalysisProgress, AnalysisResult, CompressionMode, ExportReport, ImportedTrack,
-    InferenceConfidence, JobStatus, LandingStatus, PlaybackTick, Preset, PresetKind, ProjectMode,
-    ProjectState, QualityCheck, QualityLevel, RenderJob, RenderKind, RenderedMeasurements,
-    SmartMatchReference, SmartMatchSettings, SourceProfile, SpectralBalance, SpectralBalance6,
-    TrackCharacter, TrackId, TrackRole, TransitionSpec, UserPreset, WaveformPeaks,
+    AnalysisProgress, AnalysisResult, AutoGainStagingSettings, CompressionMode, ExportReport,
+    ImportedTrack, InferenceConfidence, JobStatus, LandingStatus, LoudnessPriority, PlaybackTick,
+    Preset, PresetKind, ProjectMode, ProjectState, QualityCheck, QualityLevel, RenderJob,
+    RenderKind, RenderedMeasurements, SmartMatchReference, SmartMatchSettings, SourceProfile,
+    SpectralBalance, SpectralBalance6, TrackCharacter, TrackId, TrackRole, TransitionSpec,
+    UserPreset, WaveformPeaks,
 };
 
 mod common;
@@ -100,6 +101,14 @@ fn advanced_sample() -> AdvancedSettings {
             enabled: true,
             amount: 0.5,
         }),
+        // Switched on but never resolved here, so the chain and every
+        // downstream sampled value stay unchanged; the key set still shows.
+        auto_gain_staging: Some(AutoGainStagingSettings {
+            enabled: true,
+            priority: LoudnessPriority::Clean,
+        }),
+        // #[serde(skip)]: backend-resolved, never on the wire.
+        gain_staging_resolved: None,
     }
 }
 
@@ -182,6 +191,8 @@ fn rendered_measurements_sample() -> RenderedMeasurements {
         effective_adaptive_strength: 0.75,
         source_profile_digest: Some("bass +1.2 | air -0.4".to_string()),
         smart_match_digest: Some("Smart Match: \"Wire sample\" at 50% · already close".to_string()),
+        auto_gain_staging_digest: Some("Auto gain staging: level in +2.1 dB · limiter drive +4.5 dB · limiting 6.0 dB · stopped at the clean limit".to_string()),
+        auto_gain_staging_target_lufs: Some(-9.0),
         confidence_digest: Some("bass 0.9 | tilt 0.6".to_string()),
         compression_digest: Some(
             "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00"
@@ -423,6 +434,11 @@ fn export_report_sample() -> ExportReport {
         effective_adaptive_strength: 0.5,
         source_profile_digest: Some("bass +1.2 | air -0.4".to_string()),
         smart_match_digest: Some("Smart Match: \"Wire sample\" at 50% · already close".to_string()),
+        auto_gain_staging_digest: Some(
+            "Auto gain staging: level in +2.1 dB · limiter drive +4.5 dB · limiting 6.0 dB · stopped at the clean limit"
+                .to_string(),
+        ),
+        auto_gain_staging_target_lufs: Some(-9.0),
         confidence_digest: Some("bass 0.9 | tilt 0.6".to_string()),
         compression_digest: Some("compression eased low 20%".to_string()),
         measurements_are_rendered: true,

@@ -1260,99 +1260,114 @@ pub fn mastering_render_format_with_cancel(
     let mut samples = pcm.samples;
     let mut render_settings = settings.clone();
     render_settings.volume_match = false;
-    let mut chain =
-        crate::dsp::MasteringChain::new(pcm.sample_rate, channels_max, &render_settings);
+    // Auto gain staging resolves from this render's own measurement. A value
+    // arriving with the settings is never used (it is not on the wire).
+    render_settings.advanced.gain_staging_resolved = None;
+    let requested_rate = render_settings.effective_sample_rate(pcm.sample_rate);
+    let rendered_sample_rate = encoding.delivery_rate(requested_rate);
+    let bit_depth = encoding.delivery_bits(render_settings.effective_bit_depth());
 
-    // Process in 4096-frame chunks (~93 ms at 44.1 kHz) so progress callbacks
-    // fire ~10 times per second. The chain's per-frame state (limiter
-    // lookahead, biquad memory) flows through chunk boundaries because we
-    // call into the same `chain` instance for each chunk.
-    const CHUNK_FRAMES: usize = 4096;
-    let chunk_samples = CHUNK_FRAMES * channels_max;
-    let total_samples = samples.len();
-    let mut processed = 0;
-    if let Some(cb) = options.on_progress {
-        cb(0.0);
-    }
-    if render_cancelled(options.cancel_flag) {
-        return Ok(cancelled_render_job(
-            job_id,
-            kind,
-            vec![track_id],
-            0.0,
-            started_at_iso,
-        ));
-    }
-    let t_stage = std::time::Instant::now();
-    // Progress emits are throttled to ≥1% fraction steps (or the final 1.0):
-    // the chain runs many times faster than realtime, so an unthrottled emit
-    // per 4096-frame chunk produced hundreds of IPC events per second — pure
-    // overhead for a progress bar nobody can read that fast (F9).
-    let mut last_emitted_fraction = 0.0_f32;
-    while processed < total_samples {
+    // Auto gain staging (Beta): when active it resolves level in and the
+    // limiter drive on the delivered loudness and returns the delivered,
+    // protected PCM. Inert (switch off, no target, no usable measurement)
+    // falls through to the unchanged render below.
+    let staged = if render_settings.auto_gain_staging_enabled() {
+        if let Some(cb) = options.on_progress {
+            cb(0.0);
+        }
+        let t_stage = std::time::Instant::now();
+        let last_emitted = std::cell::Cell::new(0.0_f32);
+        let progress = |fraction: f32| {
+            if let Some(cb) = options.on_progress {
+                let fraction = fraction.clamp(0.0, 1.0);
+                if fraction >= 1.0 || fraction - last_emitted.get() >= 0.01 {
+                    last_emitted.set(fraction);
+                    cb(fraction);
+                }
+            }
+        };
+        match crate::gain_staging::render_export(
+            &samples,
+            pcm.sample_rate,
+            pcm.channels,
+            &mut render_settings,
+            rendered_sample_rate,
+            bit_depth,
+            options.cancel_flag,
+            &progress,
+        ) {
+            Ok(Some(outcome)) => Some((outcome, stage_ms(t_stage))),
+            Ok(None) => None,
+            Err(_) if render_cancelled(options.cancel_flag) => {
+                return Ok(cancelled_render_job(
+                    job_id,
+                    kind,
+                    vec![track_id],
+                    last_emitted.get(),
+                    started_at_iso,
+                ));
+            }
+            Err(error) => return Err(error),
+        }
+    } else {
+        None
+    };
+    let (measured, chain_ms, tail_and_src_ms, measure_ms) = if let Some((outcome, ms)) = staged {
+        samples = outcome.samples;
+        (outcome.measured, ms, 0, 0)
+    } else {
+        let mut chain =
+            crate::dsp::MasteringChain::new(pcm.sample_rate, channels_max, &render_settings);
+
+        // Process in 4096-frame chunks (~93 ms at 44.1 kHz) so progress callbacks
+        // fire ~10 times per second. The chain's per-frame state (limiter
+        // lookahead, biquad memory) flows through chunk boundaries because we
+        // call into the same `chain` instance for each chunk.
+        const CHUNK_FRAMES: usize = 4096;
+        let chunk_samples = CHUNK_FRAMES * channels_max;
+        let total_samples = samples.len();
+        let mut processed = 0;
+        if let Some(cb) = options.on_progress {
+            cb(0.0);
+        }
         if render_cancelled(options.cancel_flag) {
             return Ok(cancelled_render_job(
                 job_id,
                 kind,
                 vec![track_id],
-                processed as f32 / total_samples.max(1) as f32,
+                0.0,
                 started_at_iso,
             ));
         }
-        let end = (processed + chunk_samples).min(total_samples);
-        chain.process_interleaved(&mut samples[processed..end], channels_max);
-        processed = end;
-        if let Some(cb) = options.on_progress {
-            let fraction = (processed as f32 / total_samples.max(1) as f32).min(1.0);
-            if fraction >= 1.0 || fraction - last_emitted_fraction >= 0.01 {
-                last_emitted_fraction = fraction;
-                cb(fraction);
+        let t_stage = std::time::Instant::now();
+        // Progress emits are throttled to ≥1% fraction steps (or the final 1.0):
+        // the chain runs many times faster than realtime, so an unthrottled emit
+        // per 4096-frame chunk produced hundreds of IPC events per second — pure
+        // overhead for a progress bar nobody can read that fast (F9).
+        let mut last_emitted_fraction = 0.0_f32;
+        while processed < total_samples {
+            if render_cancelled(options.cancel_flag) {
+                return Ok(cancelled_render_job(
+                    job_id,
+                    kind,
+                    vec![track_id],
+                    processed as f32 / total_samples.max(1) as f32,
+                    started_at_iso,
+                ));
+            }
+            let end = (processed + chunk_samples).min(total_samples);
+            chain.process_interleaved(&mut samples[processed..end], channels_max);
+            processed = end;
+            if let Some(cb) = options.on_progress {
+                let fraction = (processed as f32 / total_samples.max(1) as f32).min(1.0);
+                if fraction >= 1.0 || fraction - last_emitted_fraction >= 0.01 {
+                    last_emitted_fraction = fraction;
+                    cb(fraction);
+                }
             }
         }
-    }
-    let chain_ms = stage_ms(t_stage);
-    if render_cancelled(options.cancel_flag) {
-        return Ok(cancelled_render_job(
-            job_id,
-            kind,
-            vec![track_id],
-            1.0,
-            started_at_iso,
-        ));
-    }
-    // RS-09 fix (2026-07-03): drain the limiter's lookahead so the final
-    // ~3 ms of the master isn't dropped and the output stays sample-aligned
-    // with the source. Must run BEFORE sample-rate conversion/measurement.
-    let t_stage = std::time::Instant::now();
-    chain.flush_render_tail(&mut samples, channels_max);
-
-    let requested_rate = render_settings.effective_sample_rate(pcm.sample_rate);
-    let rendered_sample_rate = encoding.delivery_rate(requested_rate);
-    if rendered_sample_rate != pcm.sample_rate {
-        samples = convert_interleaved(
-            &samples,
-            pcm.sample_rate,
-            rendered_sample_rate,
-            pcm.channels,
-        )?;
-    }
-    let tail_and_src_ms = stage_ms(t_stage);
-    let t_stage = std::time::Instant::now();
-
-    // Final-rate qualified peak preparation, optional LUFS landing, then exact
-    // deterministic delivery verification. Every delivered sample is scanned;
-    // loudness absolute gating is remeasured rather than shifted arithmetically.
-    let bit_depth = encoding.delivery_bits(render_settings.effective_bit_depth());
-    let measured = match measure_and_apply_ceiling_bounded_landing(
-        &mut samples,
-        rendered_sample_rate,
-        pcm.channels,
-        &render_settings,
-        bit_depth,
-        options.cancel_flag,
-    ) {
-        Ok(measured) => measured,
-        Err(_) if render_cancelled(options.cancel_flag) => {
+        let chain_ms = stage_ms(t_stage);
+        if render_cancelled(options.cancel_flag) {
             return Ok(cancelled_render_job(
                 job_id,
                 kind,
@@ -1361,9 +1376,49 @@ pub fn mastering_render_format_with_cancel(
                 started_at_iso,
             ));
         }
-        Err(error) => return Err(error),
+        // RS-09 fix (2026-07-03): drain the limiter's lookahead so the final
+        // ~3 ms of the master isn't dropped and the output stays sample-aligned
+        // with the source. Must run BEFORE sample-rate conversion/measurement.
+        let t_stage = std::time::Instant::now();
+        chain.flush_render_tail(&mut samples, channels_max);
+
+        if rendered_sample_rate != pcm.sample_rate {
+            samples = convert_interleaved(
+                &samples,
+                pcm.sample_rate,
+                rendered_sample_rate,
+                pcm.channels,
+            )?;
+        }
+        let tail_and_src_ms = stage_ms(t_stage);
+        let t_stage = std::time::Instant::now();
+
+        // Final-rate qualified peak preparation, optional LUFS landing, then exact
+        // deterministic delivery verification. Every delivered sample is scanned;
+        // loudness absolute gating is remeasured rather than shifted arithmetically.
+        let measured = match measure_and_apply_ceiling_bounded_landing(
+            &mut samples,
+            rendered_sample_rate,
+            pcm.channels,
+            &render_settings,
+            bit_depth,
+            options.cancel_flag,
+        ) {
+            Ok(measured) => measured,
+            Err(_) if render_cancelled(options.cancel_flag) => {
+                return Ok(cancelled_render_job(
+                    job_id,
+                    kind,
+                    vec![track_id],
+                    1.0,
+                    started_at_iso,
+                ));
+            }
+            Err(error) => return Err(error),
+        };
+        let measure_ms = stage_ms(t_stage);
+        (measured, chain_ms, tail_and_src_ms, measure_ms)
     };
-    let measure_ms = stage_ms(t_stage);
 
     let (delivered_lufs, delivered_tp, lra) =
         (measured.lufs, measured.true_peak_dbtp, measured.lra);
@@ -1407,6 +1462,10 @@ pub fn mastering_render_format_with_cancel(
         confidence_digest,
         compression_digest,
         smart_match_digest,
+        // Auto gain staging: the receipt line and, when the clean limit
+        // stopped the drive, the target, from the gains this render used.
+        auto_gain_staging_digest: crate::gain_staging::receipt_digest(&render_settings),
+        auto_gain_staging_target_lufs: crate::gain_staging::receipt_target_lufs(&render_settings),
     };
     if render_cancelled(options.cancel_flag) {
         return Ok(cancelled_render_job(

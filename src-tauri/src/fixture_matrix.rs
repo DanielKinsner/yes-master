@@ -523,6 +523,8 @@ mod tests {
             effective_adaptive_strength: 0.0,
             source_profile_digest: None,
             smart_match_digest: None,
+            auto_gain_staging_digest: None,
+            auto_gain_staging_target_lufs: None,
             confidence_digest: None,
             compression_digest: None,
         };

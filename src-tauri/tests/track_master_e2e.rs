@@ -85,6 +85,8 @@ fn receipt_from(
         effective_adaptive_strength: rendered.effective_adaptive_strength,
         source_profile_digest: rendered.source_profile_digest.clone(),
         smart_match_digest: rendered.smart_match_digest.clone(),
+        auto_gain_staging_digest: rendered.auto_gain_staging_digest.clone(),
+        auto_gain_staging_target_lufs: rendered.auto_gain_staging_target_lufs,
         confidence_digest: rendered.confidence_digest.clone(),
         compression_digest: rendered.compression_digest.clone(),
         measurements_are_rendered: true,

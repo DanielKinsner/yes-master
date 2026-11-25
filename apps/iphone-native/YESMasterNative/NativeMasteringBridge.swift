@@ -25,6 +25,11 @@ struct NativeRenderedMeasurements: Decodable, Equatable {
     /// Smart Match receipt line. Phones never store a reference, so the Rust
     /// side never writes it there; mirrored so the wire models stay complete.
     let smartMatchDigest: String?
+    /// Auto gain staging receipt line and stopped-at target. Phones never turn
+    /// the feature on, so the Rust side never writes them there; mirrored so
+    /// the wire models stay complete.
+    let autoGainStagingDigest: String?
+    let autoGainStagingTargetLufs: Double?
 
     init(
         lufsIntegrated: Double,
@@ -36,7 +41,9 @@ struct NativeRenderedMeasurements: Decodable, Equatable {
         sourceProfileDigest: String? = nil,
         confidenceDigest: String? = nil,
         compressionDigest: String? = nil,
-        smartMatchDigest: String? = nil
+        smartMatchDigest: String? = nil,
+        autoGainStagingDigest: String? = nil,
+        autoGainStagingTargetLufs: Double? = nil
     ) {
         self.lufsIntegrated = lufsIntegrated
         self.truePeakDbtp = truePeakDbtp
@@ -48,6 +55,8 @@ struct NativeRenderedMeasurements: Decodable, Equatable {
         self.confidenceDigest = confidenceDigest
         self.compressionDigest = compressionDigest
         self.smartMatchDigest = smartMatchDigest
+        self.autoGainStagingDigest = autoGainStagingDigest
+        self.autoGainStagingTargetLufs = autoGainStagingTargetLufs
     }
 }
 

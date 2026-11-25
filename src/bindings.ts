@@ -73,6 +73,20 @@ export interface AdvancedSettings {
   /// (the backend never writes `null` here). Saved user presets never carry
   /// it; applying a preset keeps the current value.
   smart_match?: SmartMatchSettings | null;
+  /// Auto gain staging (Beta): the Advanced switch and the loudness
+  /// priority. Mirrors `types::AutoGainStagingSettings`. Absent when the song
+  /// never used it, which means off (the backend never writes `null` here).
+  /// The gains it resolves are backend-only and never on the wire.
+  auto_gain_staging?: AutoGainStagingSettings | null;
+}
+
+/// Mirrors `types::LoudnessPriority`.
+export type LoudnessPriority = "clean" | "reach_target";
+
+/// Mirrors `types::AutoGainStagingSettings`.
+export interface AutoGainStagingSettings {
+  enabled: boolean;
+  priority: LoudnessPriority;
 }
 
 /// Mirrors `types::SmartMatchSettings`. The reference's measured numbers and
@@ -591,6 +605,12 @@ export interface RenderedMeasurements {
   // Smart Match: the receipt's locked Smart Match line; absent when no
   // reference was stored.
   smart_match_digest?: string | null;
+  // Auto gain staging: the receipt's locked line, from the gains the render
+  // used; absent when the song never used the feature.
+  auto_gain_staging_digest?: string | null;
+  // The loudness target, present only when the clean limit stopped the
+  // drive short of it.
+  auto_gain_staging_target_lufs?: number | null;
 }
 
 export interface RenderJob {
@@ -631,6 +651,8 @@ export interface ExportReport {
   confidence_digest?: string | null;
   compression_digest?: string | null;
   smart_match_digest?: string | null;
+  auto_gain_staging_digest?: string | null;
+  auto_gain_staging_target_lufs?: number | null;
   // True when the measured_* fields describe the rendered output rather than
   // the legacy source-analysis fallback; gates target-comparison checks.
   measurements_are_rendered?: boolean;

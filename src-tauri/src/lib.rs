@@ -17,6 +17,7 @@ pub mod export_format;
 pub mod exports;
 pub mod files;
 pub mod fixture_matrix;
+pub mod gain_staging;
 pub mod guardrails;
 pub mod mp3;
 pub mod output_protection;

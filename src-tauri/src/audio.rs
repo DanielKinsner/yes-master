@@ -1824,6 +1824,10 @@ fn settings_landing_values_are_finite(settings: &MasteringSettings) -> bool {
     .all(f32::is_finite)
         && settings.album.as_ref().is_none_or(album_plan_is_finite)
         && option_f32_is_finite(settings.advanced.lufs_offset_db)
+        && settings
+            .advanced
+            .gain_staging_resolved
+            .is_none_or(|g| g.level_in_db.is_finite() && g.limiter_drive_db.is_finite())
         && option_f32_is_finite(settings.advanced.ceiling_dbtp)
         && option_f32_is_finite(settings.advanced.width)
         && option_f32_is_finite(settings.advanced.warmth)
@@ -1879,6 +1883,13 @@ fn settings_landing_hash(settings: &MasteringSettings) -> LandingSettingsHash {
     };
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     json.hash(&mut hasher);
+    // Auto gain staging's resolved gains are `serde(skip)`, so the JSON above
+    // cannot see them; they change the chain, so they must change the key
+    // (plan Slice 2 cache invariant). Absent, the hash is exactly as before.
+    if let Some(g) = to_hash.advanced.gain_staging_resolved {
+        g.level_in_db.to_bits().hash(&mut hasher);
+        g.limiter_drive_db.to_bits().hash(&mut hasher);
+    }
     LandingSettingsHash::Stable(hasher.finish())
 }
 
@@ -4602,6 +4613,44 @@ mod tests {
     /// the landing gain is independent of VM state. If toggling VM
     /// busts the cache, every Volume Match click pays for a re-measure
     /// that returns the identical value.
+    /// Auto gain staging plan, Slice 2 cache invariant: the switch, the
+    /// priority and the resolved gains each miss the preview-loudness cache.
+    #[test]
+    fn auto_gain_staging_changes_invalidate_the_preview_loudness() {
+        use crate::types::{AutoGainStagingSettings, LoudnessPriority, ResolvedGainStaging};
+        let base = settings_with_intensity(0.5);
+        let with = |enabled: bool, priority: LoudnessPriority, resolved: Option<(f32, f32)>| {
+            let mut s = base.clone();
+            s.advanced.auto_gain_staging = Some(AutoGainStagingSettings { enabled, priority });
+            s.advanced.gain_staging_resolved =
+                resolved.map(|(level_in_db, limiter_drive_db)| ResolvedGainStaging {
+                    level_in_db,
+                    limiter_drive_db,
+                    ..Default::default()
+                });
+            s
+        };
+        let keys = [
+            settings_landing_hash(&base),
+            settings_landing_hash(&with(false, LoudnessPriority::Clean, None)),
+            settings_landing_hash(&with(true, LoudnessPriority::Clean, None)),
+            settings_landing_hash(&with(true, LoudnessPriority::ReachTarget, None)),
+            settings_landing_hash(&with(true, LoudnessPriority::Clean, Some((-2.0, 0.0)))),
+            settings_landing_hash(&with(true, LoudnessPriority::Clean, Some((-2.0, 1.5)))),
+            settings_landing_hash(&with(true, LoudnessPriority::Clean, Some((-1.0, 1.5)))),
+        ];
+        for i in 0..keys.len() {
+            for j in (i + 1)..keys.len() {
+                assert_ne!(keys[i], keys[j], "cases {i} and {j} share a cache key");
+            }
+        }
+        // Non-finite resolved gains never hit the cache.
+        assert_eq!(
+            settings_landing_hash(&with(true, LoudnessPriority::Clean, Some((f32::NAN, 0.0)))),
+            LandingSettingsHash::AlwaysMiss
+        );
+    }
+
     #[test]
     fn settings_landing_hash_ignores_volume_match_toggle() {
         let mut a = settings_with_intensity(0.5);

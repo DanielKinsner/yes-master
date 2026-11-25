@@ -693,6 +693,28 @@ impl MasteringSettings {
             .or(self.advanced.lufs_offset_db)
     }
 
+    /// Auto gain staging's switch is on (whether or not it can act).
+    pub fn auto_gain_staging_enabled(&self) -> bool {
+        self.advanced.auto_gain_staging.is_some_and(|a| a.enabled)
+    }
+
+    /// The resolved gains the chain applies: only while the switch is on, a
+    /// loudness target exists, the surface is Track Master, and resolved,
+    /// finite gains are present (contract rules 6 and 7). Everything else is
+    /// inert, and the chain is then bit-identical to the feature not
+    /// existing.
+    pub fn active_gain_staging(&self) -> Option<ResolvedGainStaging> {
+        if !self.auto_gain_staging_enabled()
+            || self.album.is_some()
+            || self.effective_target_lufs().is_none_or(|t| !t.is_finite())
+        {
+            return None;
+        }
+        self.advanced
+            .gain_staging_resolved
+            .filter(|r| r.level_in_db.is_finite() && r.limiter_drive_db.is_finite())
+    }
+
     /// Phase A3 — effective true-peak ceiling in dBTP. Profile shadows the
     /// user-set value when non-`Custom`. Falls back to `-1.0` when no
     /// value is set anywhere (matches the prior default).
@@ -824,6 +846,58 @@ pub struct AdvancedSettings {
     /// presets never carry it (plan M12; `settings.rs` strips it).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub smart_match: Option<SmartMatchSettings>,
+    /// Auto gain staging (Beta): the Advanced switch and the loudness
+    /// priority (auto gain staging plan, Slice 2). `None` means the song never
+    /// used it, which is off, and is never written, so a project that never
+    /// touched it keeps the exact shape the public 0.9.2 build reads.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_gain_staging: Option<AutoGainStagingSettings>,
+    /// Auto gain staging: the gains the backend resolved for this render.
+    /// `serde(skip)` keeps them off the wire, so the frontend can never set
+    /// them (contract rules 1 and 9). The chain applies them only while the
+    /// feature is active (`MasteringSettings::active_gain_staging`).
+    #[serde(skip)]
+    pub gain_staging_resolved: Option<ResolvedGainStaging>,
+}
+
+/// Auto gain staging: which way to resolve a conflict between the chosen
+/// loudness and the clean limit (plan A3/A4).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum LoudnessPriority {
+    /// Stop when the limiter would take more than the clean limit.
+    #[default]
+    Clean,
+    /// Reach the chosen loudness, past the clean limit if needed.
+    ReachTarget,
+}
+
+/// Auto gain staging state saved with a song.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Default)]
+pub struct AutoGainStagingSettings {
+    /// The Advanced switch. Off by default (A2).
+    #[serde(default)]
+    pub enabled: bool,
+    /// Loudness priority, shown only while the switch is on.
+    #[serde(default)]
+    pub priority: LoudnessPriority,
+}
+
+/// Auto gain staging: level in and the limiter drive are each limited to the
+/// existing input-gain range (plan contract rule 2; E8 bounded gains).
+pub const GAIN_STAGING_RANGE_DB: f32 = 24.0;
+
+/// The gains auto gain staging resolved for one render. Backend-only.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct ResolvedGainStaging {
+    /// Level in, dB, added to the Style push and the user's input gain.
+    pub level_in_db: f32,
+    /// Limiter drive, dB, applied immediately before the limiter.
+    pub limiter_drive_db: f32,
+    /// The limiter's largest gain reduction in the render, dB.
+    pub limiter_load_db: f32,
+    /// The drive stopped at the clean limit short of the target.
+    pub stopped_at_clean_limit: bool,
 }
 
 /// Smart Match state saved with a song (plan M9): the reference's measured
@@ -956,6 +1030,17 @@ pub struct RenderedMeasurements {
     /// (and every phone receipt) keep their exact shape.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub smart_match_digest: Option<String>,
+    /// Auto gain staging traceability: the receipt's locked line
+    /// (`gain_staging::receipt_digest`), or `None` when the song never used
+    /// the feature. Never written when `None`, so every other receipt (and
+    /// every phone receipt) keeps its exact shape.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_gain_staging_digest: Option<String>,
+    /// The loudness target, present only when the clean limit stopped the
+    /// drive short of it, so the receipt can show the delivered loudness
+    /// against the target.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_gain_staging_target_lufs: Option<f32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -999,6 +1084,12 @@ pub struct ExportReport {
     /// Smart Match line, mirrored from the render's `RenderedMeasurements`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub smart_match_digest: Option<String>,
+    /// Auto gain staging line and stopped-at target, mirrored from the
+    /// render's `RenderedMeasurements`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_gain_staging_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_gain_staging_target_lufs: Option<f32>,
     /// 2026-06-09 export-metrics inquiry — true when the measured_* fields
     /// describe the rendered output (`RenderedMeasurements`) rather than the
     /// legacy source-analysis fallback. Gates checks that compare delivered

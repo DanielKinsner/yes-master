@@ -30,6 +30,11 @@ data class WireMeasurements(
     // Smart Match receipt line. Phones never store a reference, so the Rust
     // side never writes it there; mirrored so the wire models stay complete.
     @SerializedName("smart_match_digest") val smartMatchDigest: String? = null,
+    // Auto gain staging receipt line and stopped-at target. Phones never turn
+    // the feature on, so the Rust side never writes them there; mirrored so
+    // the wire models stay complete.
+    @SerializedName("auto_gain_staging_digest") val autoGainStagingDigest: String? = null,
+    @SerializedName("auto_gain_staging_target_lufs") val autoGainStagingTargetLufs: Double? = null,
 )
 
 data class WireRenderJob(

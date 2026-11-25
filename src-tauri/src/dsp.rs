@@ -778,6 +778,13 @@ pub struct ChainCoeffs {
     /// same gain from the audio thread so audition level matches export level.
     /// Defaults to 1.0 in render/export paths.
     pub export_landing_gain_lin: f32,
+    /// Auto gain staging: the limiter drive, a gain immediately before the
+    /// limiter (plan contract rule 3). 1.0 when idle.
+    pub limiter_drive_lin: f32,
+    /// True only while a resolved limiter drive is not exactly 0 dB. False
+    /// keeps the drive stage out of the per-sample path, so an idle or switched
+    /// off chain costs and sounds exactly as before (contract rule 7).
+    pub limiter_drive_active: bool,
     /// Phase 12.2 — stereo width via M/S processing. Scales the side
     /// component between EQ and saturation; 0 = mono (collapse side to zero),
     /// 1 = neutral (no-op), > 1 widens. Only consulted when the chain is
@@ -1124,7 +1131,32 @@ impl ChainCoeffs {
         // preset's baseline gain push lands on top of it.
         let user_input_gain_db = clamp_finite_or(settings.input_gain_db, 0.0, -24.0, 24.0);
         let input_gain_db = preset_gain_db * preset_scale + user_input_gain_db;
+        // Auto gain staging: level in adds to the Style push and the user's
+        // input gain, and the limiter drive sits just before the limiter.
+        // Inert (switch off, no target, Album, nothing resolved) adds nothing,
+        // not even a +0.0, so the coefficients stay bit-identical.
+        let gain_staging = settings.active_gain_staging();
+        let input_gain_db = match gain_staging {
+            Some(g) if g.level_in_db != 0.0 => {
+                input_gain_db
+                    + g.level_in_db.clamp(
+                        -crate::types::GAIN_STAGING_RANGE_DB,
+                        crate::types::GAIN_STAGING_RANGE_DB,
+                    )
+            }
+            _ => input_gain_db,
+        };
         let input_gain_lin = 10.0_f32.powf(input_gain_db / 20.0);
+        let (limiter_drive_lin, limiter_drive_active) = match gain_staging {
+            Some(g) if g.limiter_drive_db != 0.0 => {
+                let drive_db = g.limiter_drive_db.clamp(
+                    -crate::types::GAIN_STAGING_RANGE_DB,
+                    crate::types::GAIN_STAGING_RANGE_DB,
+                );
+                (10.0_f32.powf(drive_db / 20.0), true)
+            }
+            _ => (1.0, false),
+        };
 
         let saturation_amount = preset_sat * preset_scale;
 
@@ -1533,6 +1565,8 @@ impl ChainCoeffs {
             user_output_gain_lin,
             volume_match_gain_lin,
             export_landing_gain_lin: 1.0,
+            limiter_drive_lin,
+            limiter_drive_active,
             width_side_scale,
             compression_active,
             comp_low_lp,
@@ -1802,6 +1836,41 @@ impl Limiter {
         for i in 0..frame.len().min(ch) {
             frame[i] = self.oldest_frame_buf[i] * self.gain;
         }
+    }
+
+    /// The level this limiter reacts to, linear, over a whole interleaved
+    /// signal: the largest of every sample and 1.012 x every four-phase
+    /// reconstructed peak, computed exactly as `process_frame_inplace` does.
+    /// The limiter's load at a gain `g` is then
+    /// `max(0, 20 log10(g * level / ceiling))`. Auto gain staging uses it to
+    /// cap the limiter drive at the clean limit without trial renders.
+    pub fn detector_level(samples: &[f32], channels: usize) -> f32 {
+        let ch = channels.max(1);
+        let frames = samples.len() / ch;
+        let filter = true_peak_filter();
+        let mut level = 0.0_f32;
+        for i in 0..frames {
+            for c in 0..ch {
+                level = level.max(samples[i * ch + c].abs());
+            }
+            let mut peak = 0.0_f32;
+            for c in 0..ch {
+                for weights in filter {
+                    let mut value = 0.0;
+                    for (tap, weight) in weights.iter().enumerate() {
+                        let s = if i >= tap {
+                            samples[(i - tap) * ch + c]
+                        } else {
+                            0.0
+                        };
+                        value += s * weight;
+                    }
+                    peak = peak.max(value.abs());
+                }
+            }
+            level = level.max(peak * 1.012);
+        }
+        level
     }
 
     pub fn reset(&mut self) {
@@ -2269,9 +2338,23 @@ impl MasteringChain {
     /// saturating preserves the chosen stereo image instead of having the
     /// non-linearity smear it back toward mono.
     pub fn process_frame_inplace(&mut self, frame: &mut [f32]) {
+        if !self.process_stages_inplace(frame) {
+            return;
+        }
+        self.apply_limiter_drive(frame);
+        self.limiter.process_frame_inplace(frame);
+        self.apply_post_limiter(frame);
+    }
+
+    /// Every stage before the limiter drive: input gain, EQ, compressor,
+    /// transient shaper, width and saturation. Returns `false` (and does
+    /// nothing) for an empty frame. Auto gain staging's export resolver runs
+    /// this alone to capture the signal that reaches the limiter.
+    #[inline(always)]
+    pub fn process_stages_inplace(&mut self, frame: &mut [f32]) -> bool {
         let channels = frame.len().min(self.states.len());
         if channels == 0 {
-            return;
+            return false;
         }
         let smart_match_active = self.coeffs.smart_match_active;
         // Pass 1: per-channel input gain + 7-band EQ.
@@ -2342,7 +2425,25 @@ impl MasteringChain {
                 *sample = (*sample * drive).tanh() / denom;
             }
         }
-        self.limiter.process_frame_inplace(frame);
+        true
+    }
+
+    /// Auto gain staging's limiter drive, immediately before the limiter.
+    /// Skipped entirely while idle (contract rule 7).
+    #[inline(always)]
+    pub fn apply_limiter_drive(&self, frame: &mut [f32]) {
+        if self.coeffs.limiter_drive_active {
+            let gain = self.coeffs.limiter_drive_lin;
+            for s in frame.iter_mut() {
+                *s *= gain;
+            }
+        }
+    }
+
+    /// Every stage after the limiter: Volume Match, the user's output gain and
+    /// the live export-landing gain.
+    #[inline(always)]
+    pub fn apply_post_limiter(&self, frame: &mut [f32]) {
         // Volume Match: applied AFTER the limiter so the limiter still sees
         // the full post-gain peaks (and bounds them to the ceiling). The VM
         // scalar then attenuates the limited output down to source-matched
@@ -2368,6 +2469,24 @@ impl MasteringChain {
                 *s *= self.coeffs.export_landing_gain_lin;
             }
         }
+    }
+
+    /// A limiter built exactly as `MasteringChain::new` builds this chain's,
+    /// with no state: auto gain staging's export resolver runs one per
+    /// limiter pass.
+    pub fn fresh_limiter(
+        sample_rate: u32,
+        channels: usize,
+        settings: &MasteringSettings,
+    ) -> Limiter {
+        let ceiling_dbfs = clamp_finite_or(settings.effective_ceiling_dbtp(), -1.0, -6.0, 0.0);
+        Limiter::new(
+            sample_rate,
+            channels,
+            ceiling_dbfs,
+            LIMITER_LOOKAHEAD_MS,
+            LIMITER_RELEASE_MS,
+        )
     }
 
     fn apply_multiband_compressor(&mut self, frame: &mut [f32], channels: usize) {

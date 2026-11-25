@@ -27,6 +27,7 @@ import type {
   AnalysisProgress,
   AnalysisResult,
   AudioOutputDevice,
+  AutoGainStagingSettings,
   AxisConfidence,
   ImportedTrack,
   CompressionBandPlan,
@@ -217,6 +218,12 @@ export type Drift_SourceProfile_TsOnly = AssertNever<
   TsOnly<typeof samples.advanced.source_profile, SourceProfile>
 >;
 
+export type Drift_AutoGainStagingSettings_RustOnly = AssertNever<
+  RustOnly<typeof samples.advanced.auto_gain_staging, AutoGainStagingSettings>
+>;
+export type Drift_AutoGainStagingSettings_TsOnly = AssertNever<
+  TsOnly<typeof samples.advanced.auto_gain_staging, AutoGainStagingSettings>
+>;
 export type Drift_SmartMatchSettings_RustOnly = AssertNever<
   RustOnly<typeof samples.advanced.smart_match, SmartMatchSettings>
 >;
@@ -415,5 +422,13 @@ describe("wire-samples drift gate", () => {
     expect(samples.advanced.smart_match.reference).not.toBeNull();
     expect(samples.guardrail_readout.smart_match.bands).toHaveLength(6);
     expect(samples.rendered_measurements.smart_match_digest).toContain("Smart Match");
+    expect(samples.advanced.auto_gain_staging).not.toBeNull();
+    expect(samples.advanced.auto_gain_staging.priority).toBe("clean");
+    expect(samples.rendered_measurements.auto_gain_staging_digest).toContain(
+      "Auto gain staging",
+    );
+    expect(samples.rendered_measurements.auto_gain_staging_target_lufs).toBe(-9);
+    // Resolved gains are backend-only (`serde(skip)`): never on the wire.
+    expect(samples.advanced).not.toHaveProperty("gain_staging_resolved");
   });
 });

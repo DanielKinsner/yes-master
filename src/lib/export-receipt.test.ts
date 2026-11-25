@@ -133,6 +133,21 @@ describe("buildExportReport", () => {
     expect(report.smart_match_digest).toBeNull();
   });
 
+  it("carries the render's auto gain staging line and stopped-at target", () => {
+    const plain = build(MEASUREMENTS);
+    expect(plain.auto_gain_staging_digest).toBeNull();
+    expect(plain.auto_gain_staging_target_lufs).toBeNull();
+    const line =
+      "Auto gain staging: level in +2.1 dB \u00b7 limiter drive +4.5 dB \u00b7 limiting 6.0 dB \u00b7 stopped at the clean limit";
+    const report = build({
+      ...MEASUREMENTS,
+      auto_gain_staging_digest: line,
+      auto_gain_staging_target_lufs: -9,
+    });
+    expect(report.auto_gain_staging_digest).toBe(line);
+    expect(report.auto_gain_staging_target_lufs).toBe(-9);
+  });
+
   it("carries the render's Smart Match line onto the receipt", () => {
     const line = 'Smart Match: "Reference" at 50% · cleared 1.2 dB mud, added 0.8 dB air';
     const report = build({ ...MEASUREMENTS, smart_match_digest: line });
