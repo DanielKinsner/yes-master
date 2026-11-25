@@ -910,6 +910,11 @@ no product code changed since `6901451`.
     `_sources.json` at Slice 4. The 75/25 content-hash split gave 14 to
     development and 5 to the holdout. The pieces are open-licensed, so they
     are named in the evidence, like the library.
+    - Their source list is committed as attribution
+      (`docs/reviews/evidence/2026-11-25-auto-gain-staging-evaluation/quiet-dynamic-sources.json`),
+      with IDs and split; every file's SHA-256 matched it.
+    - The set is classical and piano heavy, with no band mixes. That limit is
+      stated in the evaluation note.
 33. **`--priority reach`** is a diagnostic-only runner option: the research
     path with priority Reach target, used once with `--max-passes 12` on the
     E4 misses. It is part of no gate and changed no frozen parameter.

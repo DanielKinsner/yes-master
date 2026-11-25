@@ -91,6 +91,17 @@ conversion and a final check, up to about 13 s on the 7-minute song at −9.
 - **Holdout (19 songs):** the library's 14 held-out songs and the quiet
   folder's other 5.
 - **The owner's Suno and unmastered folders** were still empty.
+- **The quiet set's known limit: it is classical and piano heavy.**
+  - It holds 9 solo piano, 4 chamber, 3 choral, 2 orchestral and 1 ambient
+    piece, from −32.3 to −18.1 LUFS, with a loudness range of 6.0 to 21.1 LU.
+  - It has no folk, small-group jazz, or unmastered pop or rock mixes: every
+    candidate of those kinds measured too loud.
+  - So it tests quiet, dynamic input well. It does not represent a typical
+    unmastered band mix, and nothing here establishes how G treats one.
+  - Its source list (licences and origins, verified by the planning session)
+    is committed as attribution in `quiet-dynamic-sources.json`, with each
+    piece's content-hash ID and its side of the split. The audio is not
+    committed.
 
 ## Findings
 
@@ -125,6 +136,8 @@ conversion and a final check, up to about 13 s on the 7-minute song at −9.
   compiled; it needs a Mac build.
 - **Album, mobile and the browser try-it** stay inert by design, and are not
   evaluated beyond building and their existing tests.
+- **Typical unmastered band mixes.** The quiet material is classical and
+  piano heavy (see "Material").
 - **Timings** are this PC only.
 
 ## Evidence
@@ -134,6 +147,7 @@ Numbers only, in `docs/reviews/evidence/2026-11-25-auto-gain-staging-evaluation/
 - `slice-4-development-summary.json` and `slice-4-holdout-summary.json`;
 - `agreement-with-phase-a.json`;
 - `reach-target-diagnostic.json`;
-- `e7-performance.json`.
+- `e7-performance.json`;
+- `quiet-dynamic-sources.json` (attribution, IDs and split).
 
 Private ledgers stay under `test-output/auto-gain-staging/`.
