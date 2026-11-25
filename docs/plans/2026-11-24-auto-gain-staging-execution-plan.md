@@ -434,3 +434,198 @@ Not in this plan.
 - The Adaptive Compressor, confidence gating and album character.
 - A DAW plugin.
 - Landing page, marketing, pricing or release work.
+
+## Execution status
+
+Executor: the auto gain staging session, on `claude/auto-gain-staging-bf8b35`,
+started 2026-11-24 from `a8231b5`. Nothing pushed or merged. No file under
+`src/` or `src-tauri/src/` changed.
+
+### Slice 0: done
+
+- **Machine and audio.** The office Windows PC. Every location in "Test
+  material" exists. `private-audio-fixtures\suno-set\` and
+  `private-audio-fixtures\unmastered-mixes\` are **empty**, so nothing was
+  split.
+- **Baseline at `a8231b5`**, recorded in
+  `test-output/auto-gain-staging/baseline/`:
+
+  | Lane | Result |
+  | --- | --- |
+  | `cargo fmt --check` | Clean |
+  | `cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings` | Clean |
+  | Rust suite with the slow fixture lane (`AMS_RUN_REAL_FIXTURE=1`, `AMS_REAL_FIXTURE_PATH` = `It’s a coat-original-test.wav`) | 48 suites, 796 passed, 0 failed, 35 ignored; the four real-fixture tests ran |
+  | `npm ci`; `npm test` | 92 files, 982 passed |
+  | `npm run build` | Succeeded |
+  | `chain_bench`, release, 7 runs each | Coat (44.1 kHz) median **83.42×** realtime (81.85–83.94); Doors Open (48 kHz) median **91.24×** (87.29–91.43). The binary is kept as `chain_bench-a8231b5.exe` for E7 |
+
+- **Nominal values (A6):** the app's analysis of `It’s a coat-original-test.wav`
+  gives **−12.3312845 LUFS** and **−1.882721 dBTP**. Level in for it is
+  exactly 0.0 dB.
+
+### Slice 1: done (`ecb9c09`, `682d030`, `bbe56f0`)
+
+The research runner is `src-tauri/examples/auto_gain_staging_research/`,
+tested by `src-tauri/tests/auto_gain_staging_research.rs` (13 tests) and
+documented in `docs/TESTING.md`. It measured 61 development songs × 4 Styles
+× 3 loudnesses × T, S and G: 2,196 delivered masters per run, all finite and
+under the ceiling.
+
+The results and the condition table are in
+[the Phase A note](../reviews/2026-11-24-auto-gain-staging-phase-a.md), with
+numbers-only evidence in
+`docs/reviews/evidence/2026-11-24-auto-gain-staging-phase-a/`.
+
+### Checkpoint A
+
+**The rule selects S.** G fails R1 (2 of 594 cases; worst −0.21 dB) and R4
+(3 of 126). S satisfies R1, R3 and R7. Stop trigger 4 does not apply, because
+S qualifies. Stopped here for the planning session's grade. Phase B has not
+started.
+
+| # | G | S |
+| --- | --- | --- |
+| R1 | Fail: 2 below −0.1 dB, worst −0.210 dB (594 cases) | Pass: worst +0.000 dB |
+| R2 | Pass: 674 against T's 594 | Fail: 573 against 594 |
+| R3 | Pass: median +2.61 dB (555 cases) | Pass: median +3.57 dB |
+| R4 | Fail: 70 reached, 53 stopped at the clean limit, 3 neither (126 cases) | Fail: 0 reached |
+| R5 | Pass: 3.93 against 3.58 | Pass: 4.03 against 3.58 |
+| R6 | Pass: level in 0.0 dB; largest tone difference 0.364 dB | Fail: 0.897 dB |
+| R7 | Pass: 732 of 732 | Pass: 732 of 732 |
+
+Lanes at Checkpoint A (office PC, on the committed runner):
+
+| Lane | Result |
+| --- | --- |
+| `cargo fmt --check`; `cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings` | Clean |
+| `cargo test --target-dir target\codex-rc` | 49 suites, 820 passed, 0 failed, 35 ignored. The 24 new tests are the runner's 13 and the resampler's 11, which its `#[path]` include compiles in a second time |
+| `npm test` | 92 files, 982 passed |
+| Slow fixture lane, bridges, try-it | Not re-run: no file under `src-tauri/src/` or `src/` changed since the baseline |
+
+For the planning session:
+
+- only 5 quiet, dynamic pieces (below −18 LUFS) were available, one short of
+  six;
+- the export's final true-peak check, which is today's code, often decides
+  the delivered loudness (surprise 1 in the note);
+- S re-voices the Styles at low targets and lands on target in 21 fewer cases
+  than today (surprises 2 and 3);
+- G's cost: about today's time when one limiter pass suffices, plus 1.5–6 s
+  for each extra pass; 0.35 extra passes per render across the set.
+
+### Deviation log (Slices 0–1)
+
+1. **Branch.** The desktop app cut the worktree branch
+   `claude/auto-gain-staging-bf8b35` from `claude/smart-balance-2e58b2` at
+   `a8231b5`, as the plan asks ("a new worktree … on its own branch"). Used
+   as it is.
+2. **Where the runner lives.** The plan says "in the style of
+   `smart_match_evaluation.rs`", which is a crate module. This runner is an
+   example only (`examples/auto_gain_staging_research/`), and
+   `tests/auto_gain_staging_research.rs` compiles its core module into the
+   normal suite. Reason: no file under `src/` changes, so Phase A cannot
+   change product behavior, and nothing ripples into the phone bridges or the
+   try-it engine. The app's resampler is crate-private, so both crates include
+   `src/sample_rate.rs` by path, as `tests/realtime_meter.rs` already does.
+3. **How the limiter drive is rendered.** A product change was not allowed in
+   Phase A, so a render is split in two: the real chain with its limiter
+   swapped for a pass-through one (same lookahead, a ceiling of +200 dBFS),
+   which captures the exact signal that reaches the limiter, then a real
+   `Limiter` built as the chain builds it, fed that signal times the drive.
+   - With no drive the split is bit-identical to the production chain. The
+     runner checks it on the first 20 s of every song for every Style, the
+     tests check it on synthetic music at 44.1 and 48 kHz, and the timing
+     mode checks it over whole songs.
+   - With a drive, the drive is one f32 multiply immediately before a real
+     limiter: the stage Phase B would add.
+   - Level in multiplies the chain's input gain (the Style push plus the
+     user's input gain). Phase B would add it in dB before one `powf`; the
+     two differ by float rounding only. Slice 4 re-runs everything through the
+     product and must agree within 0.1 dB.
+   - The limiter's two timing constants are private in `dsp.rs`. The runner
+     mirrors them (3 ms, 50 ms); the bit-identity check fails if they drift.
+4. **Limiter load.** Measured as the limiter's largest gain reduction over the
+   delivered render. To cap the drive at the clean limit without trial
+   renders, the runner replicates the limiter's own detector (every sample,
+   and 1.012 × the four-phase reconstructed peak). A test pins the replica
+   against the limiter's measured reduction within 0.01 dB at 0.5, 3 and
+   6 dB, and idle just below the threshold.
+5. **How G resolves the drive** (contract rules 3–5). The Style stages run
+   once and their loudness is measured. The first drive is the difference to
+   the target, capped at the clean limit. When the limiter stays idle at that
+   drive, this is exactly the contract's "the drive is the difference". Each
+   further step adds the remaining delivered shortfall, still capped. A dB of
+   drive adds at most a dB through a limiter, and the export's landing never
+   leaves a master above the target, so no step overshoots. Resolution stops
+   within 0.2 LU below the target, at the clean limit, or after four limiter
+   passes. (Run 1 measured loudness before delivery; see entry 16.)
+6. **How S resolves.** The plan gives S no pass limit. It uses the same
+   tolerance (0.2 LU) and pass limit (4 full renders, T's included). Its
+   overshoot is the chain output's loudness at the source rate minus the
+   target. When T does not overshoot by more than 0.2 LU, S is T.
+7. **What "today" is.** Standard's export as the app sends it: the frontend
+   defaults (`useTrackMaster.ts`), Intensity 0.5, Adapt at its default with
+   the backend-resolved profile, Volume Match off, then
+   `standardExportSettings`: Custom profile, the target, −1 dBTP, 24-bit,
+   44.1 kHz. The chain, the 44.1 kHz conversion and the qualified finalizer
+   are the export's own functions. The confidence, adaptive-compressor and
+   album-character gates are checked off at start-up.
+8. **"Within tolerance"** for R1, R2 and R4 is |delivered − target| ≤ 0.2 LU,
+   the plan's resolving tolerance, read from the export finalizer's own
+   loudness.
+9. **Metrics.** September's definitions, at 48 kHz, through the app's own
+   resampler rather than scipy's `resample_poly`. They are consistent within
+   this study but not numerically identical to September's tables.
+10. **Style distinctness.** `preset_fingerprint.rs` defines its distance on
+    synthetic fixtures. On real songs the runner uses the same formula and
+    weights on: band tilt over the app's six bands (from the Welch spectrum,
+    top band closed at 20 kHz), crest (delivered sample peak minus loudness),
+    width change, and half-weighted delivered loudness. The THD term needs the
+    harness's 1 kHz probe tone and is left out. A song's distinctness at one
+    loudness is the mean of the six pairwise distances. R5 compares medians
+    over (song, loudness) cases whose source is louder than −14 LUFS.
+11. **R6 read strictly:** all four Styles at each loudness on the reference
+    song, not only one Style.
+12. **Owner material.** `tests for presets\` holds the reference song plus ten
+    files mastered from it (four BandLab, three LANDR, three YES exports). The
+    plan lists the folder as development material, so all are used.
+    - Two files are byte-identical (`YES-compressor-on.wav` and the
+      Universal-75 YES export), so 13 owner songs count, not 14.
+    - Ten of the 61 songs are therefore the reference song, which could weigh
+      the medians toward it. The Phase A note gives R3 and R5 without them as
+      context. The graded numbers include them, and leaving them out changes
+      no outcome.
+13. **Corpus.** All eight September pieces are development, as the plan
+    states. The Smart Match runner had treated three as holdout; September's
+    holdout was used up. The corpus "coat" piece is the reference song and is
+    counted once.
+14. **Suno and unmastered folders** were empty at Slice 0, so nothing was
+    split.
+15. **Nominal values** come from the app's analysis of the reference song,
+    full precision. Level in for that song is therefore exactly 0.0 dB, and G
+    reuses T's stage pass for it.
+16. **Correction after run 1: G now resolves on the delivered loudness.** Run
+    1 resolved G on the chain's output loudness at the source rate. It assumed
+    the export's landing would only trim a small remainder. That assumption
+    was wrong, and it departed from contract rule 3 ("chosen so the delivered
+    loudness equals the target").
+    - The export's qualified true-peak check often turned G's masters down
+      0.2–2.8 dB after the limiter. That one cause made 30 of G's 34 R4
+      failures and 59 of its 66 R2 losses.
+    - `bbe56f0` puts the 44.1 kHz conversion and the export's finalizer inside
+      every resolution pass. That is the graded run.
+    - No rule, parameter or product code changed, and the selection is S in
+      both runs.
+    - Run 1 stays reproducible with `--g-resolve chain-output`. Its condition
+      tables are committed beside run 2's summary. T and S are identical, row
+      for row, in both runs.
+17. **Run 1's provenance.** Its binary was built from the working tree just
+    before `ecb9c09`, which differs from it by rustfmt formatting only. Its
+    summary records `682d030`, the HEAD when it finished.
+18. **Not tried: a higher pass limit.** The plan allows 2–6 passes, and more
+    would likely clear G's three R4 cases. The task forbids tuning to make a
+    design qualify, and it would not change the R1 result.
+19. **Evidence size.** The committed run 2 summary is the runner's output
+    with floats rounded to four decimals and written compactly (1.5 MB instead
+    of 3.6 MB). It records the SHA-256 of the full-precision file, which stays
+    in the private ledger folder.

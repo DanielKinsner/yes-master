@@ -1,0 +1,101 @@
+[
+ {
+  "full_length_split_bit_identical": true,
+  "g_limiter_passes": 1,
+  "g_resolve_and_delivery_s": 6.3909,
+  "production_render_and_delivery_s": 5.4762,
+  "runs": 3,
+  "seconds_of_audio": 244.56,
+  "song": "owner c24e08dd52 (reference song)",
+  "t_split_render_and_delivery_s": 6.0585,
+  "target": -14.0
+ },
+ {
+  "full_length_split_bit_identical": true,
+  "g_limiter_passes": 1,
+  "g_resolve_and_delivery_s": 6.0708,
+  "production_render_and_delivery_s": 5.1691,
+  "runs": 3,
+  "seconds_of_audio": 244.56,
+  "song": "owner c24e08dd52 (reference song)",
+  "t_split_render_and_delivery_s": 5.7649,
+  "target": -11.0
+ },
+ {
+  "full_length_split_bit_identical": true,
+  "g_limiter_passes": 1,
+  "g_resolve_and_delivery_s": 6.1097,
+  "production_render_and_delivery_s": 5.0319,
+  "runs": 3,
+  "seconds_of_audio": 244.56,
+  "song": "owner c24e08dd52 (reference song)",
+  "t_split_render_and_delivery_s": 5.8798,
+  "target": -9.0
+ },
+ {
+  "full_length_split_bit_identical": true,
+  "g_limiter_passes": 1,
+  "g_resolve_and_delivery_s": 10.8699,
+  "production_render_and_delivery_s": 8.5959,
+  "runs": 3,
+  "seconds_of_audio": 444.0555,
+  "song": "Scott Buckley – Unraveling",
+  "t_split_render_and_delivery_s": 9.6875,
+  "target": -14.0
+ },
+ {
+  "full_length_split_bit_identical": true,
+  "g_limiter_passes": 1,
+  "g_resolve_and_delivery_s": 11.5419,
+  "production_render_and_delivery_s": 8.9557,
+  "runs": 3,
+  "seconds_of_audio": 444.0555,
+  "song": "Scott Buckley – Unraveling",
+  "t_split_render_and_delivery_s": 10.3098,
+  "target": -11.0
+ },
+ {
+  "full_length_split_bit_identical": true,
+  "g_limiter_passes": 3,
+  "g_resolve_and_delivery_s": 21.1679,
+  "production_render_and_delivery_s": 8.6969,
+  "runs": 3,
+  "seconds_of_audio": 444.0555,
+  "song": "Scott Buckley – Unraveling",
+  "t_split_render_and_delivery_s": 9.8278,
+  "target": -9.0
+ },
+ {
+  "full_length_split_bit_identical": true,
+  "g_limiter_passes": 1,
+  "g_resolve_and_delivery_s": 3.3364,
+  "production_render_and_delivery_s": 2.9708,
+  "runs": 3,
+  "seconds_of_audio": 133.4857,
+  "song": "Zane Little – Sideways City",
+  "t_split_render_and_delivery_s": 3.1846,
+  "target": -14.0
+ },
+ {
+  "full_length_split_bit_identical": true,
+  "g_limiter_passes": 1,
+  "g_resolve_and_delivery_s": 3.2376,
+  "production_render_and_delivery_s": 2.8676,
+  "runs": 3,
+  "seconds_of_audio": 133.4857,
+  "song": "Zane Little – Sideways City",
+  "t_split_render_and_delivery_s": 3.3226,
+  "target": -11.0
+ },
+ {
+  "full_length_split_bit_identical": true,
+  "g_limiter_passes": 2,
+  "g_resolve_and_delivery_s": 4.7101,
+  "production_render_and_delivery_s": 2.9491,
+  "runs": 3,
+  "seconds_of_audio": 133.4857,
+  "song": "Zane Little – Sideways City",
+  "t_split_render_and_delivery_s": 3.2302,
+  "target": -9.0
+ }
+]

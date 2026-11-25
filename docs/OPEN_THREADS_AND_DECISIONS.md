@@ -1,5 +1,28 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-24 — Auto gain staging at Checkpoint A: measured offline; the
+> rule selects S; waiting for the planning session's grade.** On branch
+> `claude/auto-gain-staging-bf8b35`, stacked on Smart Match (not merged, not
+> pushed). No product code changed
+> ([plan](plans/2026-11-24-auto-gain-staging-execution-plan.md),
+> [Phase A note](reviews/2026-11-24-auto-gain-staging-phase-a.md)).
+>
+> - **Measured:** 61 development songs × the four Standard Styles × −14, −11
+>   and −9 LUFS, each rendered three ways: today (T), turn-down first (S) and
+>   two gains (G).
+> - **G** passes five of the seven conditions. It hits the target in 674 of
+>   732 cases against today's 594. It keeps a median 2.6 dB more punch where
+>   today turns a song down. It fails R1 on 2 cases (worst −0.21 dB against a
+>   −0.1 dB limit) and R4 on 3 cases.
+> - **So the rule selects S.** S qualifies on R1, R3 and R7. It fixes only the
+>   "flattened, then turned down" case, lands on target 21 times fewer than
+>   today, and re-voices the Styles at low targets.
+>
+> Open:
+> - **Planning session:** grade Checkpoint A and say what to build.
+> - Only 5 quiet, dynamic development pieces were available; the plan asks
+>   for 6 before the holdout.
+
 > **2026-11-24 — Smart Match at Checkpoint C: interface built; owner hand test
 > and merge/push decision needed (O1).** On branch `claude/smart-balance-2e58b2`
 > (not merged; the planning session pushes after its review). Smart Balance

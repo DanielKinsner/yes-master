@@ -1,0 +1,120 @@
+{
+ "schema": "auto-gain-staging-phase-a-v1",
+ "commit": "682d030",
+ "parameters": {
+  "clean_limit_db": 6.0,
+  "level_in_range_db": 24.0,
+  "max_passes": 4.0,
+  "target_tolerance_lu": 0.2
+ },
+ "nominal": {
+  "lufs": -12.3313,
+  "peak_dbtp": -1.8827
+ },
+ "material": {
+  "cases": 732,
+  "corpus": 7,
+  "library_build": 41,
+  "library_holdout_never_decoded": 14,
+  "owner": 13,
+  "songs": 61,
+  "suno_files": 0,
+  "unmastered_files": 0
+ },
+ "conditions_g": [
+  {
+   "id": "R1",
+   "pass": false,
+   "cases": 528,
+   "detail": "G PLR − T PLR where both within ±0.2 LU: worst -0.210 dB, 3 below −0.1 dB, median +2.621 dB"
+  },
+  {
+   "id": "R2",
+   "pass": false,
+   "cases": 732,
+   "detail": "within ±0.2 LU: G 583, T 594"
+  },
+  {
+   "id": "R3",
+   "pass": true,
+   "cases": 555,
+   "detail": "T turned down ≥ 1 dB: median G PLR gain +2.618 dB (p10 +1.212, p90 +3.659)"
+  },
+  {
+   "id": "R4",
+   "pass": false,
+   "cases": 126,
+   "detail": "T missed by > 0.5 LU: G reached 50, stopped at the clean limit 42, neither 34"
+  },
+  {
+   "id": "R5",
+   "pass": true,
+   "cases": 126,
+   "detail": "source louder than −14 LUFS: median distinctness G 3.934, T 3.584"
+  },
+  {
+   "id": "R6",
+   "pass": true,
+   "cases": 12,
+   "detail": "reference song: level in exactly 0.0 dB yes; largest tone-band difference from T 0.364 dB"
+  },
+  {
+   "id": "R7",
+   "pass": true,
+   "cases": 732,
+   "detail": "732 renders: 0 non-finite or over the ceiling, 0 failed to deliver"
+  }
+ ],
+ "conditions_s": [
+  {
+   "id": "R1",
+   "pass": true,
+   "cases": 573,
+   "detail": "S PLR − T PLR where both within ±0.2 LU: worst +0.000 dB, 0 below −0.1 dB, median +3.405 dB"
+  },
+  {
+   "id": "R2",
+   "pass": false,
+   "cases": 732,
+   "detail": "within ±0.2 LU: S 573, T 594"
+  },
+  {
+   "id": "R3",
+   "pass": true,
+   "cases": 555,
+   "detail": "T turned down ≥ 1 dB: median S PLR gain +3.573 dB (p10 +1.209, p90 +6.217)"
+  },
+  {
+   "id": "R4",
+   "pass": false,
+   "cases": 126,
+   "detail": "T missed by > 0.5 LU: S reached 0, stopped at the clean limit 0, neither 126"
+  },
+  {
+   "id": "R5",
+   "pass": true,
+   "cases": 126,
+   "detail": "source louder than −14 LUFS: median distinctness S 4.033, T 3.584"
+  },
+  {
+   "id": "R6",
+   "pass": false,
+   "cases": 12,
+   "detail": "reference song: level in exactly 0.0 dB (n/a for S); largest tone-band difference from T 0.897 dB"
+  },
+  {
+   "id": "R7",
+   "pass": true,
+   "cases": 732,
+   "detail": "732 renders: 0 non-finite or over the ceiling, 0 failed to deliver"
+  }
+ ],
+ "selected": "S",
+ "every_decomposition_bit_identical": true,
+ "every_coefficient_set_target_independent": true,
+ "gates_off": true,
+ "g_resolves_on": "chain output before delivery",
+ "note": "Development run 1, superseded: G resolved its drive on the chain's output before delivery (runner deviation; see the plan's execution status). T and S rows are identical in both runs.",
+ "source_sha256": "bad8d1c0d730dd78478a95255f68139a7b523f780424d685be27d420f6bbd426",
+ "commit_note": "'commit' is HEAD when the run finished. The binary was built from the working tree just before ecb9c09, which differs from it by rustfmt formatting only."
+}
