@@ -843,6 +843,40 @@ cargo run --release --example smart_match_evaluation -- --phase development --li
 | The row, the card, the copy or the hook | `npm test`, `npm run build`, `npm run verify:headless` (the Smart Match scenarios above), and `npm run verify:landing-assets` (Standard and Advanced are captured surfaces) |
 | Caps, default amount, dead zone or fade | An owner decision first. Then the development phase of the evaluation runner, and a new holdout only with the planning session's agreement |
 
+## Auto Gain Staging Research
+
+Local-only evidence runner for Phase A of
+`docs/plans/2026-11-24-auto-gain-staging-execution-plan.md`. It changes no
+product behavior: it lives entirely in
+`src-tauri/examples/auto_gain_staging_research/`, and
+`tests/auto_gain_staging_research.rs` compiles its core module into the normal
+suite. For every development song, each Standard Style at default Intensity and
+each Standard loudness, it renders T (today), S (turn-down first) and G (level
+in plus limiter drive, priority Clean) through Standard's export recipe, then
+applies the plan's decision rule R1–R7.
+
+```powershell
+cd src-tauri
+cargo run --release --example auto_gain_staging_research -- --library "<free-cc folder>" --library-sources ../docs/reviews/evidence/2026-11-24-smart-balance-reference-range/library-sources.json --corpus-json ../docs/reviews/evidence/2026-09-15-mastering-quality/corpus.json --corpus-root "<mastering-quality-20260915 folder>" --owner-dir "<tests for presets folder>" --owner-extra "<private-audio-fixtures folder>" --suno "<suno-set folder>" --unmastered "<unmastered-mixes folder>" --output "<private dir>" --evidence "<private dir>/evidence"
+```
+
+- Every path is required. From a worktree, pass the main checkout's private
+  folders by absolute path.
+- **How the limiter drive is rendered without product changes.** The chain's
+  stages run once with a pass-through limiter, which captures the exact signal
+  that reaches the limiter. A real limiter then takes that signal times the
+  drive. With no drive the split is bit-identical to the production chain; the
+  runner checks that on every song and Style before any number counts, and
+  `--timing 1` checks it again at full length.
+- The free library's held-out songs are identified by content hash and never
+  decoded. All eight September corpus pieces are development material.
+- `ledger.{json,csv}` names files and stays under `test-output/`.
+  `evidence/phase-a-summary.json` holds numbers, library and corpus titles, and
+  the owner's files as anonymous IDs; it is the file that may be committed.
+- `--only "<a>|<b>"` and `--excerpt-seconds <s>` are for smoke runs only; the
+  decision needs the full set. `--timing 1 --only "<a>|<b>|<c>"` times the
+  production render, T and G single-threaded, three runs each.
+
 ## Preset Fingerprint Harness
 
 The committable, synthetic-fixture counterpart to the private runners:

@@ -20,10 +20,11 @@
 //!     --suno <suno-set folder> --unmastered <unmastered-mixes folder> \
 //!     --output <private dir> --evidence <committable dir> [--workers 8]
 //!
-//! Optional: `--only <text>` keeps songs whose label contains the text (smoke
-//! runs; the decision needs the full set), `--excerpt-seconds <s>` renders the
-//! first seconds only (smoke runs), `--timing <n>` runs the controlled
-//! single-thread timing on the first n songs instead of the measurement.
+//! Optional: `--only <a|b|…>` keeps songs whose label contains any of the
+//! texts (smoke runs; the decision needs the full set), `--excerpt-seconds
+//! <s>` renders the first seconds only (smoke runs), `--timing 1` runs the
+//! controlled single-thread timing on the `--only` songs instead of the
+//! measurement, after checking their full-length split render bit for bit.
 
 mod research;
 #[allow(dead_code)]
@@ -59,7 +60,7 @@ struct Args {
     workers: usize,
     only: Option<String>,
     excerpt_seconds: Option<f64>,
-    timing: Option<usize>,
+    timing: bool,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -91,7 +92,7 @@ fn parse_args() -> Result<Args, String> {
         workers: map.get("workers").and_then(|w| w.parse().ok()).unwrap_or(8),
         only: map.get("only").cloned(),
         excerpt_seconds: map.get("excerpt-seconds").and_then(|s| s.parse().ok()),
-        timing: map.get("timing").and_then(|s| s.parse().ok()),
+        timing: map.get("timing").is_some_and(|v| v == "1"),
     })
 }
 
@@ -889,9 +890,9 @@ fn summary_rows(s: &SongResult) -> Vec<serde_json::Value> {
 // Controlled timing (single thread, sequential)
 // ---------------------------------------------------------------------------
 
-fn timing(songs: &[Song], nominal: Nominal, n: usize, output: &Path) -> Result<(), String> {
+fn timing(songs: &[Song], nominal: Nominal, output: &Path) -> Result<(), String> {
     let mut rows = Vec::new();
-    for song in songs.iter().take(n) {
+    for song in songs {
         let src = load(song, None)?;
         let ch = src.channels;
         let level_in = level_in_db(nominal, src.lufs, src.true_peak).unwrap_or(0.0);
@@ -903,6 +904,22 @@ fn timing(songs: &[Song], nominal: Nominal, n: usize, output: &Path) -> Result<(
                 src.profile,
                 Some(src.lufs),
             );
+            // Untimed: the full-length split render equals the production one.
+            let production = production_chain_render(&src.samples, src.rate, ch, &settings);
+            let split = limiter_pass(
+                &stage_pass(&src.samples, src.rate, ch, &settings, 0.0),
+                STANDARD_CEILING_DBTP,
+                0.0,
+            );
+            let full_length_identical = production.len() == split.samples.len()
+                && production
+                    .iter()
+                    .zip(&split.samples)
+                    .all(|(a, b)| a.to_bits() == b.to_bits());
+            drop((production, split));
+            if !full_length_identical {
+                return Err(format!("{}: full-length split render differs", song.label));
+            }
             let mut t_s = Vec::new();
             let mut g_s = Vec::new();
             let mut p_s = Vec::new();
@@ -951,6 +968,7 @@ fn timing(songs: &[Song], nominal: Nominal, n: usize, output: &Path) -> Result<(
                 "t_split_render_and_delivery_s": med(&t_s),
                 "g_resolve_and_delivery_s": med(&g_s),
                 "g_limiter_passes": g_passes, "runs": 3,
+                "full_length_split_bit_identical": full_length_identical,
             }));
         }
     }
@@ -997,7 +1015,10 @@ fn run() -> Result<(), String> {
     );
     let mut songs = discovery.songs.clone();
     if let Some(only) = &args.only {
-        songs.retain(|s| s.label.contains(only.as_str()) || s.reference);
+        let wanted: Vec<&str> = only.split('|').collect();
+        songs.retain(|s| {
+            wanted.iter().any(|w| s.label.contains(w)) || (s.reference && !args.timing)
+        });
     }
     println!(
         "songs: {} (library build {}, library holdout skipped {}, suno {} with {} held out, unmastered {} with {} held out)",
@@ -1009,8 +1030,8 @@ fn run() -> Result<(), String> {
         discovery.unmastered_files,
         discovery.unmastered_holdout
     );
-    if let Some(n) = args.timing {
-        return timing(&songs, nominal, n, &args.output);
+    if args.timing {
+        return timing(&songs, nominal, &args.output);
     }
 
     let started = Instant::now();
