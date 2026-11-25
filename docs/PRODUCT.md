@@ -237,6 +237,50 @@ the compressor and limiter.
   30 seconds, silent, unreadable, or a sample rate too low for the air band.
   Mono references are accepted.
 
+## Auto Gain Staging (Beta)
+
+Two automatic gains, so a song is limited only as much as the chosen loudness
+needs. The plan is
+`docs/plans/2026-11-24-auto-gain-staging-execution-plan.md`. The engine
+evaluation (Checkpoint B) is
+`docs/reviews/2026-11-25-auto-gain-staging-evaluation.md`, and the Phase C
+note (Checkpoint C) is `docs/reviews/2026-11-25-auto-gain-staging-phase-c.md`.
+
+- **Level in.** Before the Style's EQ, compressor and saturation, the song is
+  brought to the level the Styles were voiced at: the owner's reference song,
+  `It’s a coat-original-test.wav`, whose level in is exactly 0.0 dB. The rule
+  is `min(−12.33 LUFS − the song's loudness, −1.88 dBTP − its true peak)`,
+  within ±24 dB.
+- **Limiter drive.** After the Style and just before the limiter, only as much
+  gain as the loudness target needs. The drive is chosen on the delivered
+  loudness, after the export's sample-rate conversion and its final checks.
+  The existing landing and peak protection stay the last, exact step.
+- **Off by default.** It is a switch in Advanced with a Beta tag. Off, or
+  inert (no loudness target, Album mode, or no usable measurement), the chain
+  and its renders are bit-identical to before the feature. Turning it on by
+  default, raising the clean limit or moving the reference level needs an
+  owner decision.
+- **Clean limit and Loudness priority.** With priority **Clean** (the
+  default) it never takes more than 6 dB off the loudest peak automatically:
+  it stops there and says what loudness it reached. **Reach target** goes
+  past the clean limit; the existing export checks still apply. Some songs cannot
+  reach a loud target at all under the ceiling, because the export's final
+  true-peak check holds them down; Reach target then stops and says so.
+- **Truthful.** The Advanced line and the export receipt show the gains and
+  the limiting the chain used. Audition resolves the gains with the export's
+  own resolution, so the line, what you hear and the export agree.
+- **Waits.** Each new combination of settings is resolved over the whole song
+  before the line settles. On the office PC that took about 8–11 s on a
+  2-minute song, 15 s on a 4-minute song and 27–43 s on a 7-minute song, and
+  returning to settings already resolved took under 0.2 s. Playback keeps
+  going meanwhile, with level in applied and the drive held.
+- **Works with Smart Match** and does not change its decisions.
+- **Track Master only.** Album mode shows it disabled, with an explanation.
+  It is not on mobile or in the browser try-it.
+- **Known limits.** Its quiet test material was classical and piano heavy,
+  so nothing yet establishes how it treats a typical unmastered band mix.
+  Whether it sounds better is the owner's hand test.
+
 ## Compressor Canon
 
 The compressor's baseline is preset/density fallback. It is partially

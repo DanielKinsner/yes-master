@@ -65,6 +65,17 @@ Important frontend helpers:
   with the track analysis's own decoder and six-band meter, and
   `smart_match_typical_shape.rs` is generated from the committed reference
   statistics.
+- `src-tauri/src/gain_staging.rs` is auto gain staging (Beta): level in from
+  the source's measured loudness and true peak, and the limiter-drive search
+  on the delivered loudness. `render_export` runs the Style stages once,
+  then limiter passes over that signal (each through the post-limiter stages,
+  the export's sample-rate conversion and its qualified finalizer) and keeps
+  the last pass as the delivered audio; a test pins it bit-identical to a
+  chain built from the resolved gains. The gains live in
+  `AdvancedSettings::gain_staging_resolved`, backend-only (`serde(skip)`),
+  and the chain applies them only through
+  `MasteringSettings::active_gain_staging`, so off or inert is bit-identical.
+  The receipt line comes from the same resolved values (`receipt_digest`).
 - `src-tauri/src/album_render.rs` is the active album render path
   (`render_album_plan_impl`), invoked by the `render_album_plan` command in
   `engine.rs`. `album.rs` is the separate album *planner*; the two are
@@ -123,6 +134,18 @@ sinks. Rodio's stream helper hides its internal format fallback. Callback errors
 set a flag handled by the existing device-loss path on the control thread.
 Signal-chain indicators use backend-resolved stage activity rather than copied
 frontend preset tables.
+Auto gain staging (Beta) resolves on the same preview worker, before its
+Volume Match and landing measurements, with the export's own resolution
+(`gain_staging::resolve_preview`). `audio/gain_staging_live.rs` keeps the
+resolutions in a bounded cache keyed by file, modification time and the
+settings without resolved gains; the audio command thread only `try_lock`s
+it, so it never waits on a worker. While a resolution is pending, the chain
+plays level in from the analysis (stored in the profile store) and holds the
+limiter drive it already applies (contract rule 8). A superseded resolution
+is cancelled and never stored. The `auto_gain_staging_readout` command
+resolves the selected song in the background on the same permit and cache,
+and `auto-gain-staging:status` carries the loaded song's live line,
+`Measuring` while pending.
 
 ## Signal-Chain Direction
 

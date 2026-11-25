@@ -7,6 +7,10 @@ The interface (Slice 6) and live audition (Slice 5) are not built.
 [Phase A](2026-11-24-auto-gain-staging-phase-a.md) has the design study and
 the Checkpoint A grade.
 
+**Since then:** the planning session graded Checkpoint B, and its three items
+and Slices 5–7 are in the [Phase C note](2026-11-25-auto-gain-staging-phase-c.md).
+This note keeps the Checkpoint B state as it was.
+
 ## Bottom line
 
 **G is built into the engine and export, off by default. Seven of the eight

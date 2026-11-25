@@ -453,8 +453,8 @@ Not in this plan.
 ## Execution status
 
 Executor: the auto gain staging session, on `claude/auto-gain-staging-bf8b35`,
-started 2026-11-24 from `a8231b5`. Nothing pushed or merged. No file under
-`src/` or `src-tauri/src/` changed.
+started 2026-11-24 from `a8231b5`. Nothing pushed or merged by the executor.
+Phase A changed no product code; Phases B and C did (see each slice).
 
 ### Slice 0: done
 
@@ -921,3 +921,173 @@ no product code changed since `6901451`.
 34. **R6 in the holdout summary reads "fail (0 cases)"** only because the
     reference song is development material. E3 does not include R6.
 
+### Checkpoint B: graded by the planning session
+
+Graded 2026-11-25. Continue to Phase C after three items; still no push or
+merge. Each item below was approved on the planning session's
+recommendation.
+
+1. **E4, Reach target.** E4 stays recorded as failed as written. Clean keeps
+   its never-overshoot step and 6 passes. Reach target only may use a faster
+   step, may overshoot, and may run 8 passes. Acceptance, on the 20
+   development cases the 12-pass diagnostic reached: within 0.2 LU of the
+   target in every one, in at most 8 passes; limiter load no more than 0.5 dB
+   above the 12-pass reference's; never above the target after landing (E5).
+2. **No-progress stop.** When a pass adds at least 1 dB of drive and the
+   delivered loudness rises by less than 0.1 LU, stop. Line: `Reached −11.3
+   LUFS of −9.0. This song's peaks stop it going louder under your
+   ceiling.` Receipt: ` · stopped by the peak check`.
+3. **Pin `Limiter::detector_level`** with a regression across signals, rates
+   and channel counts.
+
+Also: report the slowest Reach-target export on the long song and confirm
+the export's progress keeps moving across passes; carry the uncompiled Swift
+fields to Checkpoint C as an open Mac item; keep the quiet-material limit.
+
+### The three items: done (`5b63cea`)
+
+- **Reach target's step** is a secant through the last two passes, aimed half
+  a tolerance under the target, at least the remaining shortfall and at most
+  6 dB per pass; at most 8 passes. Clean is unchanged.
+- **The no-progress stop** applies to Reach target only (deviation 35).
+- **`Limiter::detector_level`** is pinned by
+  `the_limiter_level_helper_matches_the_limiters_own_detection`: 4 signals ×
+  44.1/48/96 kHz × 1/2/6 channels. A gain putting the detector level exactly
+  at the ceiling reduces nothing; 0.1% more reduces about 0.0087 dB; 1 dB
+  more reduces about 1 dB. Changing the 1.012 factor to 1.015 fails it.
+
+**E4 re-check, through the production resolver at `5b63cea`**
+(`docs/reviews/evidence/2026-11-25-auto-gain-staging-evaluation/reach-target-recheck.json`):
+
+| | Result |
+| --- | --- |
+| The 20 acceptance cases | **19 of 20 meet every condition.** All 20 land within 0.2 LU (worst −9.17 for −9.0), all in 4 passes, none above the target. **One fails the load condition:** Small Colin – All On Me, Universal, −9: 10.66 dB of limiting against the reference's 10.07 dB, 0.59 dB more where 0.5 dB is allowed. It landed at −9.06 LUFS where the reference stopped at −9.20; the last 0.14 LU cost the extra limiting. Not tuned. |
+| Development, 136 cases (where Clean stopped) | 129 within 0.2 LU (was 109). 7 stopped by the peak check, all Funkorama. 0 above the target. Passes: 2 (12), 3 (76), 4 (46), 5 (1), 6 (1). |
+| Holdout, 50 cases | 50 within 0.2 LU (was 48). 0 stopped by the peak check. 0 above the target. Passes: 2 (3), 3 (28), 4 (19). |
+
+E4 as written stays failed. Under the amended acceptance it fails on one case
+by 0.09 dB; that is for the planning session.
+
+**The slowest Reach-target export on the long song** (Scott Buckley –
+Unraveling, 7:24, Universal, single thread): 21.6 s at −9 LUFS against 9.6 s
+with the switch off; 11.5–11.7 s at −14 and −11. Progress rose monotonically
+to 100% with 49–61 updates and advanced on every pass; its longest pause was
+3.4 s, inside a pass, while that pass's conversion and final check ran.
+
+### Slice 5: done
+
+- Resolution on the existing preview worker, before its Volume Match and
+  landing measurements, with the export's own resolution
+  (`gain_staging::resolve_preview`, pinned bit-identical to the export).
+- Rule 8: level in from the analysis (stored in the profile store) applies at
+  once; the drive holds what the chain plays and never rises on an
+  unverified value; the line reads "Measuring this song…" until it settles.
+- Updates go through the existing coefficient crossfade; superseded work is
+  cancelled, never stored and never shown.
+- Time to a settled sound, office PC (Universal, Intensity 0.75):
+
+| Song | Today, target edit | Switch on | Target edit, on | Already resolved |
+| --- | --- | --- | --- | --- |
+| Sideways City (2:13) | 0.89–0.96 s | 10.7 s | 8.1–8.2 s | 0.13 s |
+| Reference song (4:05) | 1.42–1.44 s | 15.4 s | 14.8–14.9 s | 0.19 s |
+| Unraveling (7:24) | 2.37–2.38 s | 42.6 s | 26.6–27.2 s | 0.12 s |
+
+- Probes: 0 callback allocations through the crossfade; 0 deadline misses
+  off and on (606 / 607 callbacks; the device granted 480–1056 frames for
+  256 requested); Original/Mastered keeps the playhead (≤ 0.01 s); Volume
+  Match within 1 LU of the source with the resolved chain.
+
+### Slice 6: done
+
+- Advanced Controls card, under the knobs: the switch with its Beta tag, the
+  locked line (including the peak-check line) and `Loudness priority` while
+  on. Standard unchanged; Album shows it disabled.
+- An Advanced edit under `standard-managed.ts` while on; the card's reset,
+  Reset all and the return to Standard turn it off.
+- `npm run verify:headless` passed with two new scenarios at both window
+  sizes. The landing gate asked for new scripted captures, retaken with
+  `npm run capture:landing`; the owner's plates were not touched.
+
+### Slice 7: done
+
+`PRODUCT`, `APP_BEHAVIOR`, `ARCHITECTURE`, `TESTING`, `OPEN_THREADS`,
+`IDEAS_BACKLOG`, `CHANGELOG`, and the line in `CLAUDE.md` and `AGENTS.md`
+(byte-identical). Phase C note:
+`docs/reviews/2026-11-25-auto-gain-staging-phase-c.md`.
+
+### Checkpoint C
+
+Stopped here for the owner's hand test (in the Phase C note and above).
+Nothing pushed or merged.
+
+Commits on top of `5b63cea` (Checkpoint B's three items):
+
+- `560a7a2`: the E4 re-check evidence and the Reach-target export timing;
+- `97a2854`: Slice 5, live audition;
+- `6586a1b`: Slice 6, the interface;
+- `01be25b`: the scripted landing captures;
+- the commit carrying the Phase C note: Slice 7, the documents.
+
+Lanes (this PC):
+
+| Lane | Result |
+| --- | --- |
+| `cargo fmt --check`; `cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings` | Clean |
+| `cargo test --target-dir target\codex-rc`, slow fixture lane on the reference song (`AMS_RUN_REAL_FIXTURE=1`, `AMS_REAL_FIXTURE_PATH`) | 863 passed, 0 failed, 36 ignored (the opt-in native and private probes) |
+| iPhone bridge: `cargo check --all-targets`, `cargo test` | Clean; 46 passed |
+| Android bridge: `cargo test`, `cargo ndk -t arm64-v8a --platform 29 check` | 26 passed; clean |
+| Try-it engine: `npm run build:tryit-wasm`, `npx vitest run src/tryit` | Rebuilt; 32 passed |
+| `npm test` | 1,005 passed (94 files) |
+| `npm run build` | Pass |
+| `npm run verify:headless` | Pass: 54 scenario/viewport checks, including the two new ones |
+| `npm run verify:landing-assets` | Pass, after `npm run capture:landing` retook the three scripted captures (the owner's plates untouched) |
+| Native, opt-in, muted | `mastering_quality_auto_gain_staging_live` on 3 songs; `mastering_quality_streaming_callback_bench` off and on |
+
+Open:
+
+- **E4 under the amended acceptance:** one of 20 cases, 0.09 dB over the
+  load condition. The planning session's call.
+- **Audition settling time** (above). Ideas recorded in
+  `docs/IDEAS_BACKLOG.md`; none tried.
+- **Mac:** the Swift receipt model's two optional fields are uncompiled.
+- **The quiet material** is classical and piano heavy; nothing establishes
+  how G treats a typical unmastered band mix.
+
+### Deviation log (Checkpoint B items and Phase C)
+
+35. **The no-progress stop applies to Reach target only.** Clean was frozen
+    by the Checkpoint B grade, and Clean already stops at the clean limit, so
+    a Clean search never adds 1 dB without progress before stopping there.
+36. **Reach target's step** is a secant through the last two passes, its
+    slope clamped to 0.1–1, aimed at the target minus half the tolerance, and
+    clamped between the remaining shortfall and 6 dB (or the shortfall when
+    that is larger). The first pass, and Clean, are unchanged.
+37. **The level in audition plays while pending** comes from the analysis,
+    newly stored in the profile store at analysis time. The resolution itself
+    measures the decoded file once per song, exactly as the export does
+    (deviation 24), so the settled gains equal the export's.
+38. **A readout command and a status event were added,** beyond the plan's
+    "extend the worker's result": `auto_gain_staging_readout` resolves the
+    selected song when it is not playing, so the line has something true to
+    show, and `auto-gain-staging:status` carries the loaded song's live line,
+    edge-triggered like the landing status. Both share the one permit and the
+    one cache with the worker.
+39. **Preparing the preview level also resolves** when the switch is on, so
+    the prepared landing is measured on the chain audition will play.
+40. **Switching off keeps `{enabled: false, priority}`** in the settings, so
+    the receipt reads `Auto gain staging: off` and the priority survives;
+    Standard's reset and the card's reset clear it.
+41. **The row reuses Smart Match's look** through shared CSS selectors, with
+    its own class names so nothing that looks for Smart Match's switch can
+    match it.
+42. **Test support beyond the slice's files:** three App test fakes gained
+    the hook's new view (as they did for Smart Match), and one reset-payload
+    expectation gained `auto_gain_staging: null`.
+43. **Runner options:** `--reach-check` (the E4 re-check) and
+    `--timing-reach` (Reach-target export timing with the progress trace).
+44. **Native probe and bench variant (test-only):**
+    `mastering_quality_auto_gain_staging_live`, and
+    `YES_MASTER_CALLBACK_AUTO_GAIN_STAGING=1` for the callback bench.
+45. **Audition settling time was reported, not optimized.** The plan asks for
+    the report; speeding it up would change how audition resolves and is
+    recorded for the planning session.

@@ -142,6 +142,23 @@ Generated 2026-06-22 from the docs-hygiene recon.
     design that aims at the target meets it head-on.
   - The limiter and the final check are on the auto gain staging plan's
     do-not-touch list; this needs its own investigation and owner decision.
+- **Auto gain staging: faster settling in audition** (found 2026-11-25,
+  Slice 5; `docs/reviews/2026-11-25-auto-gain-staging-phase-c.md`).
+  - Each new combination of settings runs the export's whole resolution over
+    the song, then today's landing measurement renders the chain again. On
+    the office PC that took 8–11 s on a 2-minute song, 15 s on a 4-minute
+    song and 27–43 s on a 7-minute song, against today's 0.9–2.4 s for a
+    target edit. Settings already resolved apply in under 0.2 s.
+  - Candidates, none tried:
+    - reuse the stage capture across edits that leave the Style stages
+      unchanged (for example the priority; the target and ceiling need
+      checking first);
+    - hand the resolution's delivered audio to the landing measurement
+      instead of rendering the chain again;
+    - use the analysis's own level for the first resolution of a song instead
+      of measuring it again (identical numbers, one fewer full pass).
+  - Exactness rule: whatever changes must keep audition, the line and the
+    export resolving the same gains.
 
 ## Contracts / bindings / drift
 

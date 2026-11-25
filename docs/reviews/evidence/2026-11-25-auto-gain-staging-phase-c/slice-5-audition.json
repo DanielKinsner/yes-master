@@ -1,0 +1,176 @@
+{
+ "note": "Slice 5 (live audition) on the office PC, muted, through the production AudioPlayer and the existing native callback bench. 'Settled' means no landing pending and the emitted output revision equals the requested one; with the switch on it also means the line is settled. This is application output, not DAC or speaker latency, and not listening. The reference song is the owner's file and is not committed.",
+ "settings": "Universal, Intensity 0.75, preset compressor, ceiling −1.0 dBTP, export-loudness preview on, WAV",
+ "live": {
+  "short": {
+   "song": "Zane Little – Sideways City (2:13, library)",
+   "cold_start_switch_off_settled_s": 5.08,
+   "today_settled_loudness_after_a_target_edit_s": [
+    0.893,
+    0.958
+   ],
+   "switch_on_settled_sound_s": [
+    {
+     "event": "switch_on",
+     "target": -9.0,
+     "priority": "Clean",
+     "first_line": "Measuring",
+     "settled_sound_s": 10.65
+    },
+    {
+     "event": "target_edit",
+     "target": -14.0,
+     "priority": "Clean",
+     "first_line": "Measuring",
+     "settled_sound_s": 8.222
+    },
+    {
+     "event": "target_edit",
+     "target": -11.0,
+     "priority": "Clean",
+     "first_line": "Measuring",
+     "settled_sound_s": 8.061
+    },
+    {
+     "event": "priority_edit",
+     "target": -11.0,
+     "priority": "ReachTarget",
+     "first_line": "Measuring",
+     "settled_sound_s": 4.27
+    }
+   ],
+   "revisit_resolved_settings_s": 0.125,
+   "volume_match_on_s": 0.188,
+   "original_mastered_playhead_drift_s": 0.0,
+   "original_mastered_swap_s": [
+    0.009,
+    0.133,
+    0.005,
+    0.134
+   ]
+  },
+  "medium": {
+   "song": "Reference song (4:05, owner)",
+   "cold_start_switch_off_settled_s": 9.124,
+   "today_settled_loudness_after_a_target_edit_s": [
+    1.422,
+    1.444
+   ],
+   "switch_on_settled_sound_s": [
+    {
+     "event": "switch_on",
+     "target": -9.0,
+     "priority": "Clean",
+     "first_line": "Measuring",
+     "settled_sound_s": 15.404
+    },
+    {
+     "event": "target_edit",
+     "target": -14.0,
+     "priority": "Clean",
+     "first_line": "Measuring",
+     "settled_sound_s": 14.788
+    },
+    {
+     "event": "target_edit",
+     "target": -11.0,
+     "priority": "Clean",
+     "first_line": "Measuring",
+     "settled_sound_s": 14.852
+    },
+    {
+     "event": "priority_edit",
+     "target": -11.0,
+     "priority": "ReachTarget",
+     "first_line": "Measuring",
+     "settled_sound_s": 7.74
+    }
+   ],
+   "revisit_resolved_settings_s": 0.187,
+   "volume_match_on_s": 0.188,
+   "original_mastered_playhead_drift_s": 0.01,
+   "original_mastered_swap_s": [
+    0.014,
+    0.129,
+    0.01,
+    0.129
+   ]
+  },
+  "long": {
+   "song": "Scott Buckley – Unraveling (7:24, library)",
+   "cold_start_switch_off_settled_s": 15.326,
+   "today_settled_loudness_after_a_target_edit_s": [
+    2.372,
+    2.375
+   ],
+   "switch_on_settled_sound_s": [
+    {
+     "event": "switch_on",
+     "target": -9.0,
+     "priority": "Clean",
+     "first_line": "Measuring",
+     "settled_sound_s": 42.598
+    },
+    {
+     "event": "target_edit",
+     "target": -14.0,
+     "priority": "Clean",
+     "first_line": "Measuring",
+     "settled_sound_s": 26.587
+    },
+    {
+     "event": "target_edit",
+     "target": -11.0,
+     "priority": "Clean",
+     "first_line": "Measuring",
+     "settled_sound_s": 27.23
+    },
+    {
+     "event": "priority_edit",
+     "target": -11.0,
+     "priority": "ReachTarget",
+     "first_line": "Measuring",
+     "settled_sound_s": 14.815
+    }
+   ],
+   "revisit_resolved_settings_s": 0.124,
+   "volume_match_on_s": 0.189,
+   "original_mastered_playhead_drift_s": 0.005,
+   "original_mastered_swap_s": [
+    0.01,
+    0.131,
+    0.009,
+    0.131
+   ]
+  }
+ },
+ "callback_bench": {
+  "off": {
+   "auto_gain_staging": false,
+   "callbacks": 606,
+   "deadline_misses": 0,
+   "device_errors": 0,
+   "exhausted_samples": 0,
+   "worst_callback_share_of_buffer": 0.184,
+   "coefficient_edits": 120,
+   "duration_s": 6.048
+  },
+  "device": {
+   "output": "the office PC's default output (Realtek), float32, 48 kHz stereo",
+   "requested_frames": 256,
+   "granted_frames_min": 480,
+   "granted_frames_max": 1056
+  },
+  "on": {
+   "auto_gain_staging": true,
+   "callbacks": 607,
+   "deadline_misses": 0,
+   "device_errors": 0,
+   "exhausted_samples": 0,
+   "worst_callback_share_of_buffer": 0.241,
+   "coefficient_edits": 120,
+   "duration_s": 6.051
+  }
+ },
+ "callback_scope": "mastering_quality_streaming_callback_bench on the reference song: 120 coefficient edits at 50 ms while the concurrent worker runs the landing measurement (off) or the auto gain staging resolution then the landing (on). The device granted 480–1056-frame buffers instead of the 256 requested, so this does not establish small-buffer headroom."
+}

@@ -1,6 +1,34 @@
 # YES Master — Open Threads & Owner Decisions
 
-> **2026-11-25 — Auto gain staging at Checkpoint B: built into the engine
+> **2026-11-25 — Auto gain staging at Checkpoint C: built end to end, off
+> by default; waiting for the owner's hand test.** On branch
+> `claude/auto-gain-staging-bf8b35` (not merged; nothing pushed by the
+> executor). Engine, export, live audition and the Advanced switch are built
+> ([Phase C note](reviews/2026-11-25-auto-gain-staging-phase-c.md)).
+>
+> - **Checkpoint B's items, approved on the planning session's
+>   recommendation:** a faster step for Reach target only (at most 8
+>   passes), a stop with its own line when a song's peaks hold it down, and a
+>   regression pinning the limiter's level helper.
+>   - Reach target now reaches the target in 129 of 136 development and 50
+>     of 50 holdout cases; the other 7 are Funkorama, stopped by the peak
+>     check.
+>   - Under the amended acceptance, 19 of 20 cases pass. One took 0.59 dB
+>     more limiting than the 12-pass reference, where 0.5 dB is allowed.
+> - **Audition** resolves the gains with the export's own resolution. It
+>   takes 8–43 s to settle a new combination of settings, depending on song
+>   length (today: 0.9–2.4 s); settings already resolved apply in under
+>   0.2 s.
+>
+> Open:
+> - **Owner:** the hand test in the Phase C note. Whether the on version
+>   sounds better is the owner's call.
+> - **Planning session:** E4's one case over the amended load condition, and
+>   whether to speed up audition settling (ideas in `IDEAS_BACKLOG.md`).
+> - **Mac:** the Swift receipt model change is uncompiled.
+
+> **2026-11-25 — Auto gain staging at Checkpoint B (graded the same day; see
+> above): built into the engine
 > and export, off by default; waiting for the planning session's grade.** On
 > branch `claude/auto-gain-staging-bf8b35` (not merged; nothing pushed by the
 > executor). The interface and live audition (Slices 5–6) are not built

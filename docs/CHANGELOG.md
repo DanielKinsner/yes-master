@@ -12,6 +12,36 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-11-25 — Auto gain staging (Beta) built on a branch
+
+Internal entry, not a release or an announcement. Built on
+`claude/auto-gain-staging-bf8b35`, not merged; the plan is
+`docs/plans/2026-11-24-auto-gain-staging-execution-plan.md`.
+
+- Two automatic gains, so a song is limited only as much as its loudness
+  target needs: level in before the Style, toward the level the Styles were
+  voiced at (the owner's reference song is exactly 0.0 dB), and a limiter
+  drive chosen on the delivered loudness. The landing and peak protection
+  stay the last step.
+- A switch in Advanced with a Beta tag, off by default. Off or inert, renders
+  are bit-identical to before. Loudness priority `Clean` stops at 6 dB of
+  limiting and says what it reached; `Reach target` goes past it, and stops
+  with an explanation when a song's peaks hold it down.
+- Audition resolves the gains on the existing preview worker with the
+  export's own resolution, so the line, what plays and the export agree.
+  A new combination of settings takes several seconds to settle on long
+  songs; playback continues meanwhile.
+- Standard, Album, mobile and the browser try-it are unchanged. The Track
+  receipt carries the render's line.
+- Engine gates: seven of eight passed at Checkpoint B, including the holdout.
+  E4's Reach-target half failed as written; after the planning session's
+  change it reaches the target in 129 of 136 development and 50 of 50
+  holdout cases. One of the 20 acceptance cases took 0.09 dB more limiting
+  than the amended rule allows. Whether it sounds better is the owner's hand
+  test.
+
+---
+
 ## 2026-11-24 — Smart Match (Beta) built on a branch
 
 Internal entry, not a release or an announcement. Built on

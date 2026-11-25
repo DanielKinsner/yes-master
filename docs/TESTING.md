@@ -894,10 +894,44 @@ cargo run --release --example auto_gain_staging_research -- --library "<free-cc 
     switch off and on.
   - `--max-passes 4` reproduces the Phase A runs, which predate the frozen
     limit of 6.
+  - `--path production --reach-check <ledger.json>` re-runs Reach target,
+    through the export's own resolver, on every case a prior production
+    ledger shows stopped at the clean limit (Checkpoint B, E4).
+  - `--path production --timing-reach 1 --only "…"` times real exports with
+    Reach target against the switch off, three runs each, and records the
+    export's progress trace (updates, monotonic, longest gap).
 - **Product tests:** the setting, the chain stages and export resolution are
   pinned by `src-tauri/tests/auto_gain_staging.rs`. Its reference-song test
   needs the slow fixture lane with `AMS_REAL_FIXTURE_PATH` set to
   `It’s a coat-original-test.wav`.
+- **Audition (Slice 5), in the normal suite:**
+  - `audio::gain_staging_live::tests` cover the inert states, rule 8 (level
+    in at once, the drive held, never settled while pending), audition
+    resolving bit-identically to the export, the worker resolving before
+    Volume Match and landing (Volume Match within 1 LU of the source), and a
+    superseded resolution being cancelled, never stored and never shown;
+  - `sources::render_alignment_tests::auto_gain_staging_drive_updates_crossfade_without_allocating`
+    sends the switch and four drives through the coefficient crossfade with
+    zero callback allocations.
+- **Audition, native and opt-in (muted):**
+  - `audio::native_callback_bench::mastering_quality_auto_gain_staging_live`
+    times a settings change to a settled sound against today's settled
+    loudness on the production `AudioPlayer`, and checks the line, the
+    cached revisit, Original/Mastered playhead and Volume Match. It needs
+    `YES_MASTER_BENCH_MUTE=1`, `YES_MASTER_BENCH_FILE` and a fresh
+    `YES_MASTER_GAIN_STAGING_REPORT` path.
+  - `mastering_quality_streaming_callback_bench` with
+    `YES_MASTER_CALLBACK_AUTO_GAIN_STAGING=1` puts resolved gains in the
+    chain, moves the drive on every coefficient edit and runs the resolution
+    as the concurrent worker; compare its deadline misses with the same run
+    without the variable.
+- **Interface (Slice 6):** `src/lib/auto-gain-staging.test.ts` (every copy-table
+  state), `src/components/AutoGainStagingRow.test.tsx`,
+  `src/lib/standard-managed.test.ts`, and the hook's pending, superseded,
+  live-line and Album paths in `useTrackMaster.integration.test.tsx`. The
+  headless lane's `auto-gain-staging-on` and `auto-gain-staging-stopped`
+  scenarios check the row's reachability at both window sizes, an axe scan,
+  Reach target and the switch.
 
 ### Lanes an auto gain staging change requires
 
@@ -907,6 +941,8 @@ cargo run --release --example auto_gain_staging_research -- --library "<free-cc 
 | A wire type (the setting or the receipt fields) | The above, plus `npm test` (`bindings-drift`, `export-receipt`) and `npm run build` |
 | The clean limit, the reference level or the pass limit | A planning-session or owner decision first (see the plan), then the development run through `--path production`; a new holdout only with the planning session's agreement |
 | Chain speed | `chain_bench` with and without `--auto-gain-staging` against the saved baseline binary |
+| Audition (`audio/gain_staging_live.rs`, the preview worker, `sources.rs`) | The Rust lanes above, then the native probes above on a short, a medium and a long song, and the callback bench with and without the variable |
+| The Advanced row, its copy or the hook | `npm test`, `npm run build`, `npm run verify:headless`, and `npm run verify:landing-assets` (recapture the scripted captures with `npm run capture:landing` if it asks; never the owner's plates) |
 
 ## Preset Fingerprint Harness
 

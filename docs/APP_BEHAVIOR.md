@@ -278,6 +278,54 @@ picks a reference song) replaces it. What it is and its limits are in
 - **Signal chain readout.** When Smart Match borrows the Warmth or Air slot,
   the readout counts it as EQ and never shows the user's Warmth or Air as on.
 
+### Auto Gain Staging (Beta)
+
+What it is and its limits are in `docs/PRODUCT.md`; the wording below is the
+plan's locked copy
+(`docs/plans/2026-11-24-auto-gain-staging-execution-plan.md`).
+
+- **Where.** Advanced only, in the Advanced Controls card under the gain,
+  loudness and ceiling knobs: the label `Auto gain staging` with a Beta tag,
+  an on/off switch, its line, and `Loudness priority` (`Clean` /
+  `Reach target`) while the switch is on. Standard shows nothing new.
+- **The line.** It is built from the backend's readout:
+  - off: "Sets the level for this song automatically, so it is limited only
+    as much as your loudness needs.";
+  - resolving: "Measuring this song…";
+  - no limiting needed: `Level in −3.3 dB · limiter drive 0.0 dB · no
+    limiting needed.`;
+  - limiting: `Level in +2.1 dB · limiter drive +4.5 dB · limiting up to
+    3.1 dB.`;
+  - stopped at the clean limit: `Reached −11.2 LUFS of −9.0. Going louder
+    needs more than 6 dB of limiting.`;
+  - stopped by the peak check (Reach target): `Reached −11.3 LUFS of −9.0.
+    This song's peaks stop it going louder under your ceiling.`;
+  - no loudness target: "Choose a loudness target to use auto gain
+    staging.";
+  - no usable measurement: "Not enough audio to measure this track.";
+  - Album mode (switch disabled): "Auto gain staging applies to Track
+    Master, not Album renders."
+
+  Numbers have one decimal place and a real minus sign.
+- **Audition.** While a new resolution is in flight, level in applies at once
+  (from the analysis), the limiter drive holds and never rises on an
+  unverified value, and the line reads "Measuring this song…". The resolved
+  gains then reach the playing chain through the usual coefficient
+  crossfade. Settings already resolved apply at once. Original/Mastered keeps
+  the playhead, and Volume Match measures the chain with the resolved gains.
+- **Where the numbers come from.** For the loaded Mastered song, the line
+  follows what the audio plays. Otherwise it comes from a background
+  resolution of the selected song, which shares the preview worker's permit
+  and the live chain's cache.
+- **Standard and resets.** Switched on, it is an Advanced edit: entering
+  Standard asks to reset it, and Reset all, the return to Standard and the
+  card's own reset turn it off. Switched off, it keeps the chosen priority.
+- **Receipt.** When the song used the switch, the Track export receipt shows
+  `Auto gain staging: off`, or the render's own line, for example
+  `Auto gain staging: level in −3.3 dB · limiter drive 0.0 dB · limiting
+  0.0 dB`, with ` · stopped at the clean limit` or ` · stopped by the peak
+  check` appended when that applies.
+
 ## Project, Settings, And Help
 
 - Save Project and Open Project use `.ams.json` project files.
