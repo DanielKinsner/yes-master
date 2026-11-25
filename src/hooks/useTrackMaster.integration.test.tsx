@@ -11,6 +11,8 @@ import {
 } from "vitest";
 
 import type {
+  AutoGainStagingReadout,
+  AutoGainStagingStatus,
   AnalysisResult,
   AlbumPlan,
   CompressionPlan,
@@ -60,6 +62,9 @@ const mocks = vi.hoisted(() => {
     prewarmDecode: vi.fn(),
     preparePreviewLevel: vi.fn(),
     cancelPreviewPreparation: vi.fn(),
+    autoGainStagingReadout: vi.fn(),
+    cancelAutoGainStagingReadout: vi.fn(),
+    onAutoGainStagingStatus: vi.fn(),
     onAnalysisReady: vi.fn(),
     pausePlayback: vi.fn(),
     resumePlayback: vi.fn(),
@@ -376,6 +381,9 @@ function resetApiMocks() {
   mocks.api.prewarmDecode.mockResolvedValue(null);
   mocks.api.preparePreviewLevel.mockResolvedValue(null);
   mocks.api.cancelPreviewPreparation.mockResolvedValue(null);
+  mocks.api.autoGainStagingReadout.mockResolvedValue(null);
+  mocks.api.cancelAutoGainStagingReadout.mockResolvedValue(null);
+  mocks.api.onAutoGainStagingStatus.mockResolvedValue(() => {});
   mocks.api.onAnalysisReady.mockResolvedValue(() => {});
   mocks.api.setLoopRegion.mockResolvedValue(null);
   mocks.api.stopPlayback.mockResolvedValue(null);
@@ -5117,6 +5125,133 @@ describe("listening follow-through", () => {
     expect(mocks.api.playTrack).not.toHaveBeenCalled();
     await act(async()=>{pending.resolve();});
     await act(async()=>harness.root.unmount());
+  });
+});
+
+describe("Auto gain staging (plan Slices 5 and 6)", () => {
+  const settled = (
+    overrides: Partial<Extract<AutoGainStagingReadout, { state: "settled" }>> = {},
+  ): AutoGainStagingReadout => ({
+    state: "settled",
+    level_in_db: 2.1,
+    limiter_drive_db: 4.5,
+    limiter_load_db: 3.1,
+    stopped_at_clean_limit: false,
+    stopped_by_peak_check: false,
+    delivered_lufs: -9,
+    target_lufs: -9,
+    ...overrides,
+  });
+
+  it("reads Measuring from the switch until the backend answers, and never shows a superseded answer", async () => {
+    const tracks = [makeTrack("ags-a", "/in/ags-a.wav")];
+    mocks.api.importTracks.mockResolvedValue(tracks);
+    const first = deferred<AutoGainStagingReadout | null>();
+    const second = deferred<AutoGainStagingReadout | null>();
+    mocks.api.autoGainStagingReadout
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles(tracks.map((t) => t.path)); });
+    expect(harness.current().autoGainStaging.state).toBe("off");
+    expect(mocks.api.autoGainStagingReadout).not.toHaveBeenCalled();
+
+    await act(async () => harness.current().toggleAutoGainStaging());
+    expect(harness.current().selectedSettings.advanced.auto_gain_staging).toEqual({
+      enabled: true,
+      priority: "clean",
+    });
+    expect(harness.current().autoGainStaging.state).toBe("measuring");
+    expect(harness.current().autoGainStaging.line).toBe("Measuring this song…");
+    await waitFor(() => expect(mocks.api.autoGainStagingReadout).toHaveBeenCalledTimes(1));
+    const [firstRequest, trackId, trackPath, sent, album] =
+      mocks.api.autoGainStagingReadout.mock.calls[0];
+    expect([trackId, trackPath, album]).toEqual([tracks[0].id, tracks[0].path, false]);
+    expect(sent.advanced.auto_gain_staging).toEqual({ enabled: true, priority: "clean" });
+
+    // A new edit supersedes the request in flight.
+    await act(async () => harness.current().setLoudnessPriority("reach_target"));
+    expect(mocks.api.cancelAutoGainStagingReadout).toHaveBeenCalledWith(firstRequest);
+    await waitFor(() => expect(mocks.api.autoGainStagingReadout).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      second.resolve(settled({ stopped_by_peak_check: true, delivered_lufs: -11.3 }));
+    });
+    await waitFor(() => expect(harness.current().autoGainStaging.state).toBe("stopped_by_peak_check"));
+    // The superseded answer arrives last and is discarded.
+    await act(async () => { first.resolve(settled({ limiter_drive_db: 1.0 })); });
+    expect(harness.current().autoGainStaging.state).toBe("stopped_by_peak_check");
+    expect(harness.current().autoGainStaging.line).toBe(
+      "Reached −11.3 LUFS of −9.0. This song's peaks stop it going louder under your ceiling.",
+    );
+    expect(harness.current().autoGainStaging.priority).toBe("reach_target");
+
+    // Off: the readout is not asked for, and the line describes the switch.
+    await act(async () => harness.current().toggleAutoGainStaging());
+    expect(harness.current().autoGainStaging.state).toBe("off");
+    await act(async () => harness.root.unmount());
+  });
+
+  it("prefers the loaded Mastered song's live line, which reads Measuring while the chain is pending", async () => {
+    let playbackHandler: ((tick: unknown) => void) | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler: (tick: unknown) => void) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    let statusHandler: ((status: AutoGainStagingStatus) => void) | undefined;
+    mocks.api.onAutoGainStagingStatus.mockImplementation(
+      (handler: (status: AutoGainStagingStatus) => void) => {
+        statusHandler = handler;
+        return Promise.resolve(() => {});
+      },
+    );
+    const track = makeTrack("ags-live", "/in/ags-live.wav");
+    mocks.api.importTracks.mockResolvedValueOnce([track]);
+    mocks.api.autoGainStagingReadout.mockResolvedValue(settled({ limiter_drive_db: 4.5 }));
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    await waitFor(() => expect(playbackHandler).toBeDefined());
+    await waitFor(() => expect(statusHandler).toBeDefined());
+    await act(async () => harness.current().toggleAutoGainStaging());
+    await waitFor(() => expect(harness.current().autoGainStaging.state).toBe("limiting"));
+
+    // The song is loaded and Mastered plays it.
+    await act(async () => {
+      playbackHandler?.({
+        track_id: track.id, position_sec: 3, is_playing: true, is_loaded: true,
+        peak_dbfs: -6, peak_left_dbfs: -6, peak_right_dbfs: -6,
+        gr_low_db: -120, gr_mid_db: -120, gr_high_db: -120,
+        lufs_momentary: -10, lufs_integrated: -10, spectrum_db: [-120],
+      });
+    });
+    await act(async () => { statusHandler?.({ track_id: track.id, readout: { state: "measuring" } }); });
+    expect(harness.current().autoGainStaging.state).toBe("measuring");
+    expect(harness.current().autoGainStaging.pending).toBe(true);
+
+    await act(async () => {
+      statusHandler?.({ track_id: track.id, readout: settled({ limiter_drive_db: 0, limiter_load_db: 0, level_in_db: -3.3 }) });
+    });
+    expect(harness.current().autoGainStaging.line).toBe(
+      "Level in −3.3 dB · limiter drive 0.0 dB · no limiting needed.",
+    );
+    // Another song's line never paints this one.
+    await act(async () => {
+      statusHandler?.({ track_id: "other" as TrackId, readout: { state: "measuring" } });
+    });
+    expect(harness.current().autoGainStaging.state).toBe("limiting");
+    await act(async () => harness.root.unmount());
+  });
+
+  it("is disabled in Album mode and the switch does nothing there", async () => {
+    const tracks = [makeTrack("ags-album", "/in/ags-album.wav")];
+    mocks.api.importTracks.mockResolvedValue(tracks);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles(tracks.map((t) => t.path)); });
+    await act(async () => harness.current().setMode("album"));
+    expect(harness.current().autoGainStaging.state).toBe("album_disabled");
+    expect(harness.current().autoGainStaging.disabled).toBe(true);
+    await act(async () => harness.current().toggleAutoGainStaging());
+    expect(harness.current().selectedSettings.advanced.auto_gain_staging ?? null).toBeNull();
+    await act(async () => harness.root.unmount());
   });
 });
 

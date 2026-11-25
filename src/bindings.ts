@@ -709,6 +709,30 @@ export interface LandingStatus {
   pending: boolean;
 }
 
+/// Mirrors `types::AutoGainStagingReadout`: the Advanced line's state for one
+/// song, from the computation the audio uses. Never recomputed here.
+export type AutoGainStagingReadout =
+  | { state: "no_target" }
+  | { state: "album" }
+  | { state: "unusable" }
+  | { state: "measuring" }
+  | {
+      state: "settled";
+      level_in_db: number;
+      limiter_drive_db: number;
+      limiter_load_db: number;
+      stopped_at_clean_limit: boolean;
+      stopped_by_peak_check: boolean;
+      delivered_lufs: number;
+      target_lufs: number;
+    };
+
+/// Mirrors `types::AutoGainStagingStatus` (`auto-gain-staging:status`).
+export interface AutoGainStagingStatus {
+  track_id: TrackId | null;
+  readout: AutoGainStagingReadout | null;
+}
+
 export interface PlaybackDeviceLost {
   track_id: TrackId | null;
   position_sec: number;

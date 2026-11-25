@@ -109,6 +109,30 @@ describe("hasNonManagedEdits", () => {
   });
 });
 
+describe("auto gain staging (Beta) is an Advanced value until the default flips", () => {
+  const withSwitch = (enabled: boolean, priority: "clean" | "reach_target" = "clean") =>
+    base({ advanced: { ...base().advanced, auto_gain_staging: { enabled, priority } } });
+
+  it("switched on counts as an Advanced edit; off or absent does not", () => {
+    expect(hasNonManagedEdits(base())).toBe(false);
+    expect(hasNonManagedEdits(withSwitch(false))).toBe(false);
+    expect(hasNonManagedEdits(withSwitch(false, "reach_target"))).toBe(false);
+    expect(hasNonManagedEdits(withSwitch(true))).toBe(true);
+    expect(forceAdvancedOnStandardEntry({
+      isAlbum: false,
+      hasTrack: true,
+      hasNonManagedEdits: hasNonManagedEdits(withSwitch(true)),
+    })).toBe(true);
+  });
+
+  it("the Advanced->Standard reset turns it off", () => {
+    const reset = resetToStandardManaged(withSwitch(true, "reach_target"));
+    expect(reset.advanced.auto_gain_staging).toBeNull();
+    expect(hasNonManagedEdits(reset)).toBe(false);
+    expect(needsStandardReturnReset(withSwitch(true))).toBe(true);
+  });
+});
+
 describe("resetToStandardManaged", () => {
   it("clears all non-managed fields but preserves preset/intensity/loudness/format", () => {
     const dirty = base({

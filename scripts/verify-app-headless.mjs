@@ -109,6 +109,25 @@ const SMART_MATCH_AMOUNT = {
   selector: 'input[type="range"][aria-label="Match amount"]',
 };
 
+// Auto gain staging (Beta, plan Slice 6). The preview mock answers with fixed,
+// plausible gains; these sentences are the locked copy applied to them.
+const AGS_LIMITING_LINE =
+  "Level in −2.4 dB · limiter drive +2.6 dB · limiting up to 1.8 dB.";
+const AGS_STOPPED_LINE =
+  "Reached −10.4 LUFS of −9.0. Going louder needs more than 6 dB of limiting.";
+const AGS_REACH_LINE =
+  "Level in −2.4 dB · limiter drive +7.8 dB · limiting up to 8.6 dB.";
+const AGS_OFF_LINE =
+  "Sets the level for this song automatically, so it is limited only as much as your loudness needs.";
+const AGS_SWITCH = {
+  label: "Auto gain staging switch",
+  selector: 'button.ags-switch[role="switch"]',
+};
+const AGS_PRIORITY = {
+  label: "Loudness priority",
+  selector: '.ags-priority-options[role="radiogroup"]',
+};
+
 // The preview's staged analysis runs 5 x 800ms. Settling is detected by
 // polling for a terminal state rather than sleeping a fixed amount, but this
 // bounds how long we are willing to wait for one.
@@ -320,6 +339,65 @@ const SCENARIOS = [
     mustContainAfterDrive: [SMART_MATCH_PARTIAL],
     mustReach: [SMART_MATCH_CARD, SMART_MATCH_AMOUNT],
     assert: smartMatchStripCheck(3),
+  },
+  // Auto gain staging (Beta, plan Slice 6). Advanced only, beside the gain
+  // knobs; the switch, its line and Loudness priority must be reachable at both
+  // supported sizes without hiding Delivery Format or Export.
+  {
+    name: "auto-gain-staging-on",
+    label: "auto-gain-staging-advanced",
+    scenarioId: "S-F1",
+    purpose:
+      "Auto gain staging on in Advanced: the switch, the settled line and Loudness priority, " +
+      "reachable without hiding Delivery Format or Export.",
+    viewports: [LAPTOP, MIN_DESKTOP],
+    settle: "ready",
+    mustContainAfterDrive: [AGS_LIMITING_LINE, "Loudness priority"],
+    mustReach: [AGS_SWITCH, AGS_PRIORITY, DELIVERY_FORMAT, EXPORT_MASTER],
+    axe: true,
+    assert: async (page, report) => {
+      const state = await page.evaluate(() => ({
+        on: document.querySelector("button.ags-switch")?.getAttribute("aria-checked"),
+        radios: [...document.querySelectorAll('.ags-priority-options [role="radio"]')].map(
+          (el) => `${el.textContent}:${el.getAttribute("aria-checked")}`,
+        ),
+      }));
+      if (state.on !== "true") report(`Auto gain staging switch is aria-checked=${state.on}, expected true`);
+      if (JSON.stringify(state.radios) !== JSON.stringify(["Clean:true", "Reach target:false"])) {
+        report(`Loudness priority shows ${JSON.stringify(state.radios)}`);
+      }
+    },
+  },
+  {
+    name: "auto-gain-staging-stopped",
+    label: "auto-gain-staging-advanced-stopped",
+    scenarioId: "S-F1",
+    purpose:
+      "Auto gain staging stopped at the clean limit: Reach target goes louder, and the switch " +
+      "turns off (hiding Loudness priority) and back on (keeping it).",
+    viewports: [LAPTOP, MIN_DESKTOP],
+    settle: "ready",
+    mustContainAfterDrive: [AGS_STOPPED_LINE],
+    mustReach: [AGS_SWITCH, AGS_PRIORITY, EXPORT_MASTER],
+    assert: async (page, report) => {
+      const line = async () =>
+        ((await page.locator(".ags-line").first().textContent()) ?? "").trim();
+      const wait = (expected, what) =>
+        waitForText(page, (text) => text === expected, what, line);
+      try {
+        await page.getByRole("radio", { name: "Reach target" }).click();
+        await wait(AGS_REACH_LINE, "the Reach target line");
+        await page.locator(AGS_SWITCH.selector).click();
+        await wait(AGS_OFF_LINE, "the off line");
+        if ((await page.locator(AGS_PRIORITY.selector).count()) !== 0) {
+          report("Loudness priority still shows with the switch off");
+        }
+        await page.locator(AGS_SWITCH.selector).click();
+        await wait(AGS_REACH_LINE, "the Reach target line after switching back on");
+      } catch (error) {
+        report(String(error));
+      }
+    },
   },
   {
     name: "warning",

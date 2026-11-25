@@ -588,6 +588,11 @@ function App() {
                 onRemove: tm.removeSmartMatchReference,
                 onAmount: tm.setSmartMatchAmount,
               }}
+              autoGainStaging={{
+                view: tm.autoGainStaging,
+                onToggle: tm.toggleAutoGainStaging,
+                onPriority: tm.setLoudnessPriority,
+              }}
             />
           ) : undefined
         }

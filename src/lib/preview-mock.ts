@@ -10,6 +10,7 @@
 // ~50 Hz with bouncing meter values so the live readouts animate.
 
 import type {
+  AutoGainStagingReadout,
   AnalysisResult,
   AudioOutputDevice,
   CompressionPlan,
@@ -78,7 +79,9 @@ export type PreviewScenarioName =
   | "smart-match-none"
   | "smart-match-active"
   | "smart-match-partial"
-  | "smart-match-off";
+  | "smart-match-off"
+  | "auto-gain-staging-on"
+  | "auto-gain-staging-stopped";
 
 interface PreviewScenario {
   /// Human-readable purpose, surfaced to the headless lane for failure output.
@@ -111,6 +114,10 @@ interface PreviewScenario {
   /// seeds no reference; the others seed a reference that is on with a
   /// typical gap, on with a far gap that hits the caps, or switched off.
   readonly smartMatch: "none" | "active" | "partial" | "off";
+  /// Auto gain staging (Beta, plan Slice 6): the seeded track's switch. "on"
+  /// has a target the mock reaches with some limiting; "stopped" has one it
+  /// stops short of at the clean limit.
+  readonly autoGainStaging: "off" | "on" | "stopped";
 }
 
 const BASE_SCENARIO: PreviewScenario = {
@@ -124,6 +131,7 @@ const BASE_SCENARIO: PreviewScenario = {
   overridePositions: [],
   albumSourceFormats: {},
   smartMatch: "none",
+  autoGainStaging: "off",
 };
 
 export const PREVIEW_SCENARIOS: Record<PreviewScenarioName, PreviewScenario> = {
@@ -222,6 +230,16 @@ export const PREVIEW_SCENARIOS: Record<PreviewScenarioName, PreviewScenario> = {
     ...BASE_SCENARIO,
     purpose: "Smart Match switched off with the reference kept.",
     smartMatch: "off",
+  },
+  "auto-gain-staging-on": {
+    ...BASE_SCENARIO,
+    purpose: "Auto gain staging on in Advanced: the switch, the settled line and Loudness priority.",
+    autoGainStaging: "on",
+  },
+  "auto-gain-staging-stopped": {
+    ...BASE_SCENARIO,
+    purpose: "Auto gain staging stopped at the clean limit; Reach target goes louder.",
+    autoGainStaging: "stopped",
   },
 };
 
@@ -407,7 +425,12 @@ function previewProject(): ProjectState {
     mode: "track",
     tracks: [track],
     track_order: [PREVIEW_TRACK_ID],
-    track_settings: { [PREVIEW_TRACK_ID]: previewSmartMatchSettings(scenario.smartMatch) },
+    track_settings: {
+      [PREVIEW_TRACK_ID]: previewAutoGainStagingSettings(
+        previewSmartMatchSettings(scenario.smartMatch),
+        scenario.autoGainStaging,
+      ),
+    },
     album_intent: null,
     track_override_album: [],
     selected_track_id: PREVIEW_TRACK_ID,
@@ -591,6 +614,13 @@ export async function mockInvoke<T>(
       mockPosition = (args?.positionSec as number) ?? 0;
       return null as unknown as T;
 
+    case "auto_gain_staging_readout":
+      return mockAutoGainStagingReadout(
+        args?.settings as MasteringSettings | undefined,
+        args?.album === true,
+      ) as unknown as T;
+
+    case "cancel_auto_gain_staging_readout":
     case "set_loop_region":
     case "update_chain":
     case "prepare_preview_level":
@@ -872,6 +902,22 @@ const PREVIEW_GAPS_TYPICAL = [-0.6, -2.4, -2.6, 0.4, 0.9, 1.6];
 const PREVIEW_GAPS_FAR = [3.2, -9.5, -6.0, 0.4, 7.8, 9.0];
 const FAR_REFERENCE_NAME = "Far Reference (browser preview)";
 
+function previewAutoGainStagingSettings(
+  settings: MasteringSettings,
+  state: PreviewScenario["autoGainStaging"],
+): MasteringSettings {
+  if (state === "off") return settings;
+  return {
+    ...settings,
+    delivery_profile: "custom",
+    advanced: {
+      ...settings.advanced,
+      lufs_offset_db: state === "on" ? -11 : -9,
+      auto_gain_staging: { enabled: true, priority: "clean" },
+    },
+  };
+}
+
 function previewSmartMatchSettings(state: PreviewScenario["smartMatch"]): MasteringSettings {
   if (state === "none") return DEFAULT_SETTINGS;
   return {
@@ -1018,6 +1064,10 @@ export async function mockListen<T>(
   if (channel === "playback:device-lost") {
     return () => {};
   }
+  if (channel === "auto-gain-staging:status") {
+    // The mock has no live chain; the Advanced line uses the readout command.
+    return () => {};
+  }
   if (channel === "updater:available") {
     // Startup update check (Slice 7). The preview has no real updater, so this
     // is a known no-op — registered explicitly to avoid the unhandled-channel warning.
@@ -1129,4 +1179,35 @@ export function mockWebview(): {
       };
     },
   };
+}
+
+/// Auto gain staging (Beta) in the browser preview: plausible, deterministic
+/// lines for each copy-table state. The desktop app resolves real gains.
+function mockAutoGainStagingReadout(
+  settings: MasteringSettings | undefined,
+  album: boolean,
+): AutoGainStagingReadout | null {
+  const ags = settings?.advanced.auto_gain_staging;
+  if (!settings || !ags?.enabled) return null;
+  if (album) return { state: "album" };
+  const target = settings.advanced.lufs_offset_db ?? -14;
+  const settled = (
+    drive: number,
+    load: number,
+    delivered: number,
+    stopped = false,
+  ): AutoGainStagingReadout => ({
+    state: "settled",
+    level_in_db: -2.4,
+    limiter_drive_db: drive,
+    limiter_load_db: load,
+    stopped_at_clean_limit: stopped,
+    stopped_by_peak_check: false,
+    delivered_lufs: delivered,
+    target_lufs: target,
+  });
+  if (target <= -12) return settled(0, 0, target);
+  if (target <= -10) return settled(2.6, 1.8, target - 0.1);
+  if (ags.priority === "reach_target") return settled(7.8, 8.6, target - 0.1);
+  return settled(4.9, 6.0, target - 1.4, true);
 }

@@ -56,6 +56,9 @@ export function hasNonManagedEdits(s: MasteringSettings): boolean {
   // Smart Match (plan M13): the reference and its switch are Standard-managed;
   // a non-default Match amount is an Advanced value.
   if (hasSmartMatchAmountEdit(s)) return true;
+  // Auto gain staging (Beta) ships off; switched on it is an Advanced value
+  // until the owner flips the default (plan Slice 6).
+  if (a.auto_gain_staging?.enabled) return true;
   return false;
 }
 
@@ -99,6 +102,7 @@ export function resetToStandardManaged(s: MasteringSettings): MasteringSettings 
       compression_high_release_ms: null,
       compression_link_stereo: null,
       adaptive_strength: ADAPTIVE_STRENGTH_DEFAULT,
+      auto_gain_staging: null,
     },
   };
 }

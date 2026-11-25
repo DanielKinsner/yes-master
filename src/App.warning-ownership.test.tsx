@@ -431,6 +431,14 @@ describe("U10(a) DUP-3 — an album row states an override once", () => {
       toggleSmartMatch: vi.fn(),
       removeSmartMatchReference: vi.fn(),
       setSmartMatchAmount: vi.fn(),
+      // Auto gain staging (plan Slice 6): the real hook always supplies a view.
+      autoGainStaging: {
+        state: "off", enabled: false, priority: "clean",
+        line: "Sets the level for this song automatically, so it is limited only as much as your loudness needs.",
+        pending: false, disabled: false, showPriority: false,
+      },
+      toggleAutoGainStaging: vi.fn(),
+      setLoudnessPriority: vi.fn(),
       reorderTracks: vi.fn(),
       // The track opts out of album intent — the fact under test.
       overrideAlbum: new Set([albumTrack.id]),

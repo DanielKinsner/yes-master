@@ -47,6 +47,12 @@ import {
 } from "../lib/shortcuts";
 import { buildExportReport } from "../lib/export-receipt";
 import {
+  autoGainStagingView,
+  withAutoGainStaging,
+  withLoudnessPriority,
+  type AutoGainStagingView,
+} from "../lib/auto-gain-staging";
+import {
   presetSettingsKeepingSmartMatch,
   smartMatchView,
   withSmartMatchAmount,
@@ -62,6 +68,9 @@ import {
   supportedAudioExtensionFromName,
 } from "../lib/supported-formats";
 import type {
+  AutoGainStagingReadout,
+  AutoGainStagingStatus,
+  LoudnessPriority,
   SmartMatchReadout,
   SmartMatchReferenceMeasurement,
   SmartMatchRefusal,
@@ -437,6 +446,17 @@ export function useTrackMaster() {
   const [savingPreset, setSavingPreset] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [loadedTrackId, setLoadedTrackId] = useState<TrackId | null>(null);
+  // Auto gain staging (Beta, plan Slices 5 and 6). The live line for the
+  // loaded Mastered song (edge-triggered from the backend) and the readout
+  // command's line for the selected song; both come from the one backend
+  // resolution the audio uses.
+  const [autoGainStagingLive, setAutoGainStagingLive] =
+    useState<AutoGainStagingStatus | null>(null);
+  const [autoGainStagingReadout, setAutoGainStagingReadout] = useState<{
+    trackId: TrackId;
+    readout: AutoGainStagingReadout | null;
+  } | null>(null);
+  const [autoGainStagingMeasuring, setAutoGainStagingMeasuring] = useState(false);
   const [loadedKindByTrack, setLoadedKindByTrack] = useState<Record<TrackId, PlaybackKindUI>>({});
   const [playbackDeviceLost, setPlaybackDeviceLost] = useState<PlaybackDeviceLost | null>(null);
   const [regionByTrack, setRegionByTrack] = useState<Record<TrackId, LoopRegion | null>>({});
@@ -721,6 +741,8 @@ export function useTrackMaster() {
     let unlistenDeviceLost: (() => void) | undefined;
     let unlistenProgress: (() => void) | undefined;
     let unlistenLanding: (() => void) | undefined;
+    let unlistenGainStaging: (() => void) | undefined;
+    let gainStagingListenerActive = true;
     let unlistenAnalysis: (() => void) | undefined;
     let unlistenReady: (() => void) | undefined;
     let analysisListenerActive = true;
@@ -750,6 +772,12 @@ export function useTrackMaster() {
       setLandingPending(pending);
     }).then((fn) => {
       unlistenLanding = fn;
+    });
+    void Promise.resolve(
+      api.onAutoGainStagingStatus?.((status) => setAutoGainStagingLive(status)),
+    ).then((fn) => {
+      if (gainStagingListenerActive) unlistenGainStaging = fn;
+      else fn?.();
     });
     onAnalysisProgress((evt) => {
       if (!inFlightAnalysisBatchesRef.current.has(evt.batch_id)) return;
@@ -893,6 +921,8 @@ export function useTrackMaster() {
       unlistenDeviceLost?.();
       unlistenProgress?.();
       unlistenLanding?.();
+      gainStagingListenerActive = false;
+      unlistenGainStaging?.();
       unlistenAnalysis?.();
       analysisListenerActive=false;
       unlistenReady?.();
@@ -1521,6 +1551,27 @@ export function useTrackMaster() {
       setSmartMatchRefusal({ trackId, reason: result.reason });
     }
   }, [selectedTrackId, mode]);
+
+  // Auto gain staging (Beta): the switch and the Loudness priority are
+  // Advanced settings; Album renders keep the feature inert.
+  const toggleAutoGainStaging = useCallback(() => {
+    if (!selectedTrackId || mode === "album") return;
+    updateSettings(selectedTrackId, (prev) => ({
+      ...prev,
+      advanced: withAutoGainStaging(prev, !(prev.advanced.auto_gain_staging?.enabled ?? false)),
+    }));
+  }, [selectedTrackId, mode, updateSettings]);
+
+  const setLoudnessPriority = useCallback(
+    (priority: LoudnessPriority) => {
+      if (!selectedTrackId || mode === "album") return;
+      updateSettings(selectedTrackId, (prev) => ({
+        ...prev,
+        advanced: withLoudnessPriority(prev, priority),
+      }));
+    },
+    [selectedTrackId, mode, updateSettings],
+  );
 
   const toggleSmartMatch = useCallback(() => {
     if (!selectedTrackId || mode === "album") return;
@@ -2929,6 +2980,33 @@ export function useTrackMaster() {
     };
   },[selectedTrack?.id,selectedTrack?.path,selectedAnalysis,selectedSettings,mode,transport.exportLufsPreview,transport.volumeMatch,forceWysiwyg,previewEncoding]);
 
+  // Auto gain staging's line for the selected song (plan Slice 6). The same
+  // shared permit and backend cache as the live chain, so the line shows
+  // exactly what audition applies and an export resolves. `Measuring` from
+  // the moment the settings change until the backend answers.
+  useEffect(() => {
+    const enabled = selectedSettings?.advanced.auto_gain_staging?.enabled === true;
+    if (!enabled || !selectedTrack || !selectedAnalysis || !api.autoGainStagingReadout) {
+      setAutoGainStagingMeasuring(false);
+      return;
+    }
+    let active = true;
+    const trackId = selectedTrack.id;
+    const requestId = `gain-staging-${Date.now()}-${Math.random()}`;
+    setAutoGainStagingMeasuring(true);
+    const timer = setTimeout(() => {
+      void api.autoGainStagingReadout(requestId, trackId, selectedTrack.path, selectedSettings, mode === "album", ...previewEncodingArgs(previewEncoding))
+        .then((readout) => { if (active) setAutoGainStagingReadout({ trackId, readout }); })
+        .catch((err) => { if (active) console.warn("Auto gain staging readout failed", err); })
+        .finally(() => { if (active) setAutoGainStagingMeasuring(false); });
+    }, 180);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      void api.cancelAutoGainStagingReadout?.(requestId).catch(() => {});
+    };
+  },[selectedTrack?.id,selectedTrack?.path,selectedAnalysis,selectedSettings,mode,previewEncoding]);
+
   const clearError = useCallback(() => setError(null), []);
   const clearProjectFeedback = useCallback(() => setProjectFeedback(null), []);
   const clearPlaybackDeviceLost = useCallback(() => {
@@ -3273,6 +3351,26 @@ export function useTrackMaster() {
     analysisHasProfile: selectedAnalysis?.spectral_balance_6band != null,
   });
 
+  // The loaded Mastered song's live line wins: it is what the audio plays
+  // now, `Measuring` while the chain holds pending gains (rule 8).
+  const liveGainStaging =
+    autoGainStagingLive &&
+    selectedTrackId !== null &&
+    autoGainStagingLive.track_id === selectedTrackId &&
+    loadedTrackId === selectedTrackId
+      ? autoGainStagingLive.readout
+      : null;
+  const autoGainStaging: AutoGainStagingView = autoGainStagingView({
+    settings: selectedSettings,
+    readout:
+      liveGainStaging ??
+      (autoGainStagingReadout && autoGainStagingReadout.trackId === selectedTrackId
+        ? autoGainStagingReadout.readout
+        : null),
+    album: mode === "album",
+    measuring: autoGainStagingMeasuring || liveGainStaging?.state === "measuring",
+  });
+
   return {
     tracks,
     selectedTrackId,
@@ -3351,6 +3449,9 @@ export function useTrackMaster() {
     updatePreview,
     guardrailReadout,
     autoWidthReadout,
+    autoGainStaging,
+    toggleAutoGainStaging,
+    setLoudnessPriority,
     compressionPlan,
     smartMatch,
     chooseSmartMatchReference,

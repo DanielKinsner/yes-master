@@ -301,6 +301,8 @@ describe("AdvancedPanel compressor mode", () => {
       compression_density: null,
       // Reset now restores Adapt Strength to its explicit default too.
       adaptive_strength: ADAPTIVE_STRENGTH_DEFAULT,
+      // Auto gain staging (Beta) sits in this card; its reset turns it off.
+      auto_gain_staging: null,
     });
     await act(async () => {
       root.unmount();

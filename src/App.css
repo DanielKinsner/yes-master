@@ -8610,8 +8610,10 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
 .std-smart-match .smart-match-head { min-height: 24px; }
 .std-smart-match .smart-match-line { line-height: 1.25; }
 
-.smart-match-row { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
-.smart-match-head {
+.smart-match-row,
+.ags-row { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.smart-match-head,
+.ags-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -8619,7 +8621,8 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   min-width: 0;
   min-height: 26px;
 }
-.smart-match-label {
+.smart-match-label,
+.ags-label {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -8631,7 +8634,8 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   color: var(--text-1);
   white-space: nowrap;
 }
-.smart-match-label::before {
+.smart-match-label::before,
+.ags-label::before {
   content: "";
   flex-shrink: 0;
   width: 3px;
@@ -8640,7 +8644,8 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   background: var(--accent);
   box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 65%, transparent);
 }
-.smart-match-beta {
+.smart-match-beta,
+.ags-beta {
   font-size: 0.58rem;
   letter-spacing: 0.08em;
   padding: 0.04rem 0.38rem;
@@ -8649,7 +8654,8 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   color: #8fb2ff;
   font-weight: 700;
 }
-.smart-match-controls {
+.smart-match-controls,
+.ags-controls {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -8684,7 +8690,8 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   border-radius: 4px;
 }
 .smart-match-name:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.smart-match-switch {
+.smart-match-switch,
+.ags-switch {
   flex: none;
   position: relative;
   width: 30px;
@@ -8695,11 +8702,13 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   background: var(--surface-inset);
   cursor: pointer;
 }
-.smart-match-switch[aria-checked="true"] {
+.smart-match-switch[aria-checked="true"],
+.ags-switch[aria-checked="true"] {
   background: color-mix(in srgb, var(--accent) 70%, transparent);
   border-color: var(--accent);
 }
-.smart-match-switch-knob {
+.smart-match-switch-knob,
+.ags-switch-knob {
   position: absolute;
   top: 2px;
   left: 2px;
@@ -8709,8 +8718,10 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   background: var(--text-0);
   transition: transform 160ms ease;
 }
-.smart-match-switch[aria-checked="true"] .smart-match-switch-knob { transform: translateX(12px); }
-.smart-match-switch:disabled { opacity: 0.45; cursor: default; }
+.smart-match-switch[aria-checked="true"] .smart-match-switch-knob,
+.ags-switch[aria-checked="true"] .ags-switch-knob { transform: translateX(12px); }
+.smart-match-switch:disabled,
+.ags-switch:disabled { opacity: 0.45; cursor: default; }
 .smart-match-remove {
   flex: none;
   width: 24px;
@@ -8745,7 +8756,8 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
 }
 .smart-match-line.is-pending { opacity: 0.7; }
 @media (prefers-reduced-motion: reduce) {
-  .smart-match-switch-knob { transition: none; }
+  .smart-match-switch-knob,
+  .ags-switch-knob { transition: none; }
 }
 
 /* Advanced: a rail card with the full line, the strip and the slider. The
@@ -8781,6 +8793,35 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
 .smart-match-strip tbody th { text-align: left; color: var(--text-2); font-weight: 600; }
 .smart-match-strip td.is-capped { color: #f0c060; }
 .rail-card-smart-match .adv-field { margin-top: 0.45rem; }
+
+/* Auto gain staging (Beta, plan Slice 6): the Smart Match row's look inside
+   Advanced Controls, beside the gain knobs, with the whole line shown and the
+   Loudness priority choice while the switch is on. */
+.ags-block { padding-top: 0.35rem; }
+.ags-line {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--text-1);
+}
+.ags-line.is-pending { opacity: 0.7; }
+.ags-priority {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+.ags-priority-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.ags-priority-options {
+  grid-template-columns: repeat(2, 1fr);
+  margin: 0;
+}
 .smart-match-caption {
   margin: 0.3rem 0 0;
   font-size: 0.68rem;

@@ -30,6 +30,8 @@ import { adaptiveReadoutEnabled } from "../lib/debug-flags";
 import { grLabel, grToFill } from "../lib/gain-reduction";
 import { SmartMatchCard, type SmartMatchActions } from "./SmartMatchRow";
 import type { SmartMatchView } from "../lib/smart-match";
+import { AutoGainStagingRow, type AutoGainStagingActions } from "./AutoGainStagingRow";
+import type { AutoGainStagingView } from "../lib/auto-gain-staging";
 
 /// UI_LAYOUT_REVISION_1600x940 L3 — AdvancedPanel renders four
 /// separate rail cards (Delivery Profile, Advanced Controls,
@@ -58,6 +60,7 @@ export function AdvancedPanel({
   liveGr = null,
   isPlayingMaster = false,
   smartMatch,
+  autoGainStaging,
 }: {
   analysis?: AnalysisResult;
   settings: MasteringSettings;
@@ -101,6 +104,9 @@ export function AdvancedPanel({
     view: SmartMatchView;
     onAmount: (amount: number) => void;
   };
+  /// Auto gain staging (Beta, plan Slice 6): the switch, its line and the
+  /// Loudness priority, beside the gain controls. Absent in isolated renders.
+  autoGainStaging?: AutoGainStagingActions & { view: AutoGainStagingView };
 }) {
   const a = settings.advanced;
   const update = (
@@ -191,6 +197,7 @@ export function AdvancedPanel({
         adaptiveReadout={adaptiveReadout}
         autoWidthReadout={autoWidthReadout}
         albumMode={albumMode}
+        autoGainStaging={autoGainStaging}
       />
       <PerBandCompressorCard
         analysis={analysis}
@@ -363,6 +370,7 @@ function AdvancedControlsCard({
   adaptiveReadout,
   autoWidthReadout,
   albumMode = false,
+  autoGainStaging,
 }: {
   settings: MasteringSettings;
   update: (
@@ -376,6 +384,7 @@ function AdvancedControlsCard({
   adaptiveReadout?: GuardrailReadout | null;
   autoWidthReadout?: { value: number; updating: boolean } | null;
   albumMode?: boolean;
+  autoGainStaging?: AutoGainStagingActions & { view: AutoGainStagingView };
 }) {
   const a = settings.advanced;
   const effectiveLufsTarget = loudnessTargetDisplay(settings).current;
@@ -403,6 +412,7 @@ function AdvancedControlsCard({
       // the durable "off" is 0.0 — so an explicit value keeps the readout honest
       // (B4 only warned against writing null, not against resetting the field).
       adaptive_strength: ADAPTIVE_STRENGTH_DEFAULT,
+      auto_gain_staging: null,
     });
   };
   return (
@@ -496,6 +506,15 @@ function AdvancedControlsCard({
           unit="dBTP"
         />
       </div>
+      {autoGainStaging && (
+        <div className="ags-block rail-card-body">
+          <AutoGainStagingRow
+            view={autoGainStaging.view}
+            onToggle={autoGainStaging.onToggle}
+            onPriority={autoGainStaging.onPriority}
+          />
+        </div>
+      )}
       <div className="advanced-grid rail-card-body">
         <NumberField
           label="Width"

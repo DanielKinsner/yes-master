@@ -2,6 +2,8 @@ import { invoke, listen } from "./tauri-runtime";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { ExportEncoding } from "./export-formats";
 import type {
+  AutoGainStagingReadout,
+  AutoGainStagingStatus,
   AlbumArc,
   AlbumPlan,
   AnalysisProgress,
@@ -109,6 +111,15 @@ export const api = {
 
   preparePreviewLevel: (requestId: string, trackId: TrackId, trackPath: string, settings: MasteringSettings, album: boolean, encoding?: ExportEncoding) => invoke<void>("prepare_preview_level", {requestId, trackId, trackPath, settings, album, ...(encoding ? {encoding} : {})}),
   cancelPreviewPreparation: (requestId: string) => invoke<void>("cancel_preview_preparation", {requestId}),
+  /// Auto gain staging (Beta): the Advanced line for the selected song. `null`
+  /// while the switch is off, or when a newer request superseded this one.
+  autoGainStagingReadout: (requestId: string, trackId: TrackId, trackPath: string, settings: MasteringSettings, album: boolean, encoding?: ExportEncoding) =>
+    invoke<AutoGainStagingReadout | null>("auto_gain_staging_readout", {requestId, trackId, trackPath, settings, album, ...(encoding ? {encoding} : {})}),
+  cancelAutoGainStagingReadout: (requestId: string) => invoke<void>("cancel_auto_gain_staging_readout", {requestId}),
+  /// Edge-triggered: auto gain staging's line for the loaded Mastered song,
+  /// `Measuring` while the live chain plays pending gains (plan rule 8).
+  onAutoGainStagingStatus: (handler: (status: AutoGainStagingStatus) => void): Promise<UnlistenFn> =>
+    listen<AutoGainStagingStatus>("auto-gain-staging:status", (event) => handler(event.payload)),
 
   renderTrackMaster: (
     trackId: TrackId,
