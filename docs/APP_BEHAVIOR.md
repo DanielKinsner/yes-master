@@ -321,7 +321,11 @@ plan's locked copy
     meter), which may raise the drive, and then the exact resolution. The
     exact result replaces the estimate only when their drives differ by
     0.3 dB or more; otherwise nothing audible changes and the line shows
-    the exact numbers.
+    the exact numbers. In that case audition keeps playing the estimate's
+    drive, less than 0.3 dB from the exact one, while the line shows the
+    exact resolution: a narrow, audition-only exception to the line
+    reporting the gains the chain used. Exports and receipts always use and
+    report the exact gains.
   - **Reach target has no fast estimate.** The drive holds or falls, and the
     line reads "Measuring this song…" until the exact result lands. On
     bright material the export's final peak check can stop a Reach target

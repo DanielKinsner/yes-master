@@ -456,6 +456,35 @@ Not in this plan.
 
 ## Execution status
 
+### Checkpoint D: graded by the planning session (2026-11-27)
+
+**Passed. Slice 8 is accepted as reported.** The planning session pushed the
+branch at `0c86667`, a fast-forward from `e1dcab8` that started no workflow
+run and no deployment; main is untouched. It checked the three evidence
+files against the report, the estimate path and the fencing of the research
+readings and `finite_upper`, and that `dsp.rs`, `engine.rs`,
+`output_protection.rs`, `guardrails.rs` and `smart_match.rs` are unchanged
+from `08509ab` and no golden or audio file changed on the branch. It re-ran
+`cargo test --lib gain_staging` (17 passed, 5 ignored) and
+`--test auto_gain_staging` (29 passed) on `0c86667`.
+
+Rulings:
+
+1. **F2's 7-minute switch-on** (4.41 s against 4.0 s) failed as written by
+   0.41 s and is accepted by the planning session.
+2. **"The Clean estimate never lands above the exact drive"** holds on the
+   measured songs only (+0.25 dB development, +0.23 dB holdout), not by
+   construction. Accepted, with that wording kept as it is in the
+   documents.
+3. **A narrow exception to rule 9, now recorded** (deviation 53 and
+   APP_BEHAVIOR's audition paragraph). When the exact drive is within
+   0.3 dB of the estimate's, audition keeps playing the estimate's drive
+   while the line shows the exact resolution. This is F3 working as
+   designed. It applies to audition only, to less than 0.3 dB of limiter
+   drive; exports and receipts always use and report the exact gains.
+
+Next: the owner's hand test; the Mac build.
+
 ### Checkpoint D (2026-11-27)
 
 **Slice 8 is done as ruled: audition plays a fast estimate for priority
@@ -1320,3 +1349,9 @@ the owner's hand test. Approved on the planning session's recommendation:
     (`a_clean_search_never_drives_past_its_cap`), and on a signal where the
     clean limit binds, the estimate stopping there within 0.01 dB of the
     export.
+53. **Rule 9 has a narrow audition exception (F3).** When the exact drive
+    is less than 0.3 dB from the estimate's, with the same level in,
+    audition keeps playing the estimate's drive so nothing audible changes,
+    while the line shows the exact resolution. It applies to audition only,
+    to less than 0.3 dB of limiter drive. Exports and receipts always use
+    and report the exact gains. Recorded at the planning session's grading.
