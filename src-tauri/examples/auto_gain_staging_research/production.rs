@@ -211,6 +211,7 @@ pub(super) fn timing_production(
 pub(super) fn estimate_check_song(
     song: &Song,
     variants: &[(yes_master_lib::gain_staging::EstimatePeak, f32)],
+    cached: Option<&[serde_json::Value]>,
 ) -> Result<Vec<serde_json::Value>, String> {
     use yes_master_lib::gain_staging::{estimate_preview_with, resolve_preview};
     let src = load(song, None)?;
@@ -232,14 +233,36 @@ pub(super) fn estimate_check_song(
                     enabled: true,
                     priority,
                 });
-                let t0 = Instant::now();
-                let exact = resolve_preview(&src.samples, src.rate, ch, &s, Some(&level), None)
-                    .map_err(|e| format!("{}: exact: {e}", song.label))?;
-                let exact_s = t0.elapsed().as_secs_f64();
-                let Some(exact) = exact else {
-                    continue;
+                let exact_json = if let Some(cached) = cached {
+                    let found = cached.iter().find(|r| {
+                        r["song"] == song.label.as_str()
+                            && r["style"] == style
+                            && r["target"].as_f64() == Some(f64::from(target))
+                            && r["priority"] == format!("{priority:?}").as_str()
+                    });
+                    let Some(found) = found else {
+                        continue;
+                    };
+                    found["exact"].clone()
+                } else {
+                    let t0 = Instant::now();
+                    let exact = resolve_preview(&src.samples, src.rate, ch, &s, Some(&level), None)
+                        .map_err(|e| format!("{}: exact: {e}", song.label))?;
+                    let exact_s = t0.elapsed().as_secs_f64();
+                    let Some(exact) = exact else {
+                        continue;
+                    };
+                    serde_json::json!({"drive_db": exact.gains.limiter_drive_db,
+                        "level_in_db": exact.gains.level_in_db,
+                        "load_db": exact.gains.limiter_load_db,
+                        "delivered_lufs": exact.delivered_lufs,
+                        "stopped_at_clean_limit": exact.gains.stopped_at_clean_limit,
+                        "stopped_by_peak_check": exact.gains.stopped_by_peak_check,
+                        "seconds": exact_s})
                 };
-                if priority == LoudnessPriority::Clean && exact.gains.stopped_at_clean_limit {
+                if priority == LoudnessPriority::Clean
+                    && exact_json["stopped_at_clean_limit"] == true
+                {
                     priorities.push(LoudnessPriority::ReachTarget);
                 }
                 let mut estimates = Vec::new();
@@ -257,7 +280,7 @@ pub(super) fn estimate_check_song(
                     )
                     .map_err(|e| format!("{}: estimate: {e}", song.label))?;
                     let seconds = t0.elapsed().as_secs_f64();
-                    if let Some(est) = est {
+                    if let Some((est, searched_again)) = est {
                         estimates.push(serde_json::json!({
                             "peak": format!("{peak:?}"),
                             "margin_db": margin, "drive_db": est.gains.limiter_drive_db,
@@ -266,20 +289,14 @@ pub(super) fn estimate_check_song(
                             "delivered_lufs": est.delivered_lufs,
                             "stopped_at_clean_limit": est.gains.stopped_at_clean_limit,
                             "stopped_by_peak_check": est.gains.stopped_by_peak_check,
-                            "seconds": seconds,
+                            "seconds": seconds, "searched_again": searched_again,
                         }));
                     }
                 }
                 rows.push(serde_json::json!({
                     "song": song.label, "group": song.group, "style": style, "target": target,
                     "priority": format!("{priority:?}"),
-                    "exact": {"drive_db": exact.gains.limiter_drive_db,
-                        "level_in_db": exact.gains.level_in_db,
-                        "load_db": exact.gains.limiter_load_db,
-                        "delivered_lufs": exact.delivered_lufs,
-                        "stopped_at_clean_limit": exact.gains.stopped_at_clean_limit,
-                        "stopped_by_peak_check": exact.gains.stopped_by_peak_check,
-                        "seconds": exact_s},
+                    "exact": exact_json,
                     "estimates": estimates,
                 }));
             }

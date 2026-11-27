@@ -548,12 +548,9 @@ fn refining_changes_nothing_below_the_threshold() {
     assert_eq!(audition_gains(&exact, Some(&other_level)), exact.gains);
 }
 
-/// Slice 8: with Clean on band-limited content, the estimate follows the
-/// export's search to within F1's 0.5 dB, and exports never use it (their
-/// resolution is the exact one, pinned above). Reach target past the clean
-/// limit on bright content is where the estimate's low-pass peak reading can
-/// miss the final check's pull-down; that is measured on real music by gate
-/// F1, not promised here.
+/// Slice 8: with Clean, the estimate follows the export's search to within
+/// F1's 0.5 dB, and exports never use it (their resolution is the exact one,
+/// pinned above). Reach target is pinned separately below.
 #[test]
 fn the_estimate_lands_near_the_exact_drive() {
     let pcm = music_like();
@@ -581,5 +578,47 @@ fn the_estimate_lands_near_the_exact_drive() {
         assert!(gap <= 1.5, "{name}");
         // A cancelled estimate is an error, never a result.
         assert!(estimate(&key, &pcm, &settings, None, &AtomicBool::new(true)).is_err());
+    }
+}
+
+/// Slice 8, Reach target on this bright signal: the export's search stops
+/// early at its no-progress peak check, because the final check's qualified
+/// peak (its finite-sinc half) holds the loudness down at low drives. Only
+/// the qualified reading on every pass follows it. The lowpass reading,
+/// alone or checked once on the last pass, overshoots the exact drive here
+/// by about 10 dB (Checkpoint D's F1/F2 trade-off).
+#[test]
+fn only_the_qualified_reading_on_every_pass_follows_the_peak_check_stop() {
+    use crate::gain_staging::{estimate_preview_with, EstimatePeak};
+    let pcm = music_like();
+    let settings = switched_on(-9.0, LoudnessPriority::ReachTarget);
+    let (path, mtime) = source("estimate-reach-9");
+    let key = Key::new(&path, mtime, &settings).unwrap();
+    let cancel = AtomicBool::new(false);
+    let exact = resolve_cached(&key, &pcm, &settings, None, &cancel)
+        .unwrap()
+        .expect("active")
+        .exact;
+    assert!(exact.gains.stopped_by_peak_check, "{exact:?}");
+    let drive = |peak| {
+        let (est, _) = estimate_preview_with(
+            &pcm.samples,
+            pcm.sample_rate,
+            pcm.channels,
+            &settings,
+            None,
+            peak,
+            0.0,
+            None,
+        )
+        .unwrap()
+        .expect("active");
+        est.gains.limiter_drive_db - exact.gains.limiter_drive_db
+    };
+    let qualified = drive(EstimatePeak::Qualified);
+    assert!(qualified.abs() <= 0.5, "qualified {qualified:+.3} dB");
+    for peak in [EstimatePeak::Lowpass, EstimatePeak::Verified] {
+        let gap = drive(peak);
+        assert!(gap > 1.5, "{peak:?} {gap:+.3} dB: the recorded overshoot");
     }
 }

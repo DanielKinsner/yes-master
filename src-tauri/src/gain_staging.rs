@@ -615,12 +615,28 @@ pub enum EstimatePeak {
     /// The recorded-lowpass half of the export's qualified peak meter, which
     /// equals the qualified reading on most music at a fraction of its cost.
     Lowpass,
+    /// Both halves of the qualified meter on every pass: the export's own
+    /// reading, at close to its cost.
+    Qualified,
+    /// The lowpass reading on every pass, then both halves once, on the pass
+    /// the search stopped at. When the two would land that pass differently
+    /// (the finite-sinc half reads higher and the peak binds), the search
+    /// runs again with the qualified reading on every pass.
+    Verified,
 }
-/// The reading audition's estimate uses (Slice 8).
-const ESTIMATE_PEAK: EstimatePeak = EstimatePeak::Lowpass;
+/// The reading audition's estimate uses (Slice 8). Chosen on the development
+/// material: the lowpass reading alone passed F1 on every song but one bright
+/// one (Funkorama, 2.4 dB above the exact drive); checking it once passed F1
+/// on all 1036 development cases.
+const ESTIMATE_PEAK: EstimatePeak = EstimatePeak::Verified;
 /// Added to the estimate's peak reading before its landing step. Tuned on the
 /// development material only (Slice 8).
 const ESTIMATE_TRUE_PEAK_MARGIN_DB: f32 = 0.0;
+/// [`EstimatePeak::Verified`] keeps its lowpass search when the qualified
+/// reading lands the stopping pass within this of the lowpass landing: far
+/// below the 0.3 dB refine threshold, so a disagreement this small could
+/// never change what plays.
+const ESTIMATE_VERIFY_TOLERANCE_LU: f32 = 0.05;
 
 fn cancelled_error(cancel: Option<&AtomicBool>) -> CommandResult<()> {
     if cancelled(cancel) {
@@ -755,6 +771,19 @@ fn detector_level_parallel(pre: &[f32], channels: usize) -> f32 {
     .fold(0.0_f32, f32::max)
 }
 
+/// A linear peak in dBTP.
+fn linear_dbtp(value: f64) -> f32 {
+    if value > 0.0 {
+        20.0 * value.log10() as f32
+    } else {
+        f32::NEG_INFINITY
+    }
+}
+
+fn estimate_peak_error(e: &str) -> CommandError {
+    CommandError::Render(format!("estimate peak: {e}"))
+}
+
 /// The loudness of `pcm` and its peak reading, split across the thread budget.
 fn loudness_and_peak(
     pcm: &[f32],
@@ -763,28 +792,29 @@ fn loudness_and_peak(
     peak: EstimatePeak,
     cancel: Option<&AtomicBool>,
 ) -> CommandResult<(f32, f32)> {
-    let (lufs, four_x) = loudness_and_true_peak(pcm, rate, channels)?;
-    match peak {
-        EstimatePeak::FourX => Ok((lufs, four_x)),
-        EstimatePeak::Lowpass => {
-            let upper = crate::peak_meter::lowpass_upper(pcm, usize::from(channels.max(1)), || {
-                cancelled(cancel)
-            })
-            .map_err(|e| CommandError::Render(format!("estimate peak: {e}")))?;
-            Ok((
-                lufs,
-                if upper > 0.0 {
-                    20.0 * upper.log10() as f32
-                } else {
-                    f32::NEG_INFINITY
-                },
-            ))
+    let (lufs, four_x) = loudness_and_true_peak(pcm, rate, channels, peak == EstimatePeak::FourX)?;
+    let ch = usize::from(channels.max(1));
+    let stop = || cancelled(cancel);
+    let upper = match peak {
+        EstimatePeak::FourX => return Ok((lufs, four_x)),
+        EstimatePeak::Lowpass | EstimatePeak::Verified => {
+            crate::peak_meter::lowpass_upper(pcm, ch, stop)
         }
+        EstimatePeak::Qualified => crate::peak_meter::lowpass_upper(pcm, ch, stop)
+            .and_then(|lowpass| Ok(lowpass.max(crate::peak_meter::finite_upper(pcm, ch, stop)?))),
     }
+    .map_err(estimate_peak_error)?;
+    Ok((lufs, linear_dbtp(upper)))
 }
 
-/// The loudness and a 4x true peak of `pcm`, split across the thread budget.
-fn loudness_and_true_peak(pcm: &[f32], rate: u32, channels: u16) -> CommandResult<(f32, f32)> {
+/// The loudness of `pcm` and, when `four_x` asks for it, a 4x true peak
+/// (otherwise negative infinity), split across the thread budget.
+fn loudness_and_true_peak(
+    pcm: &[f32],
+    rate: u32,
+    channels: u16,
+    four_x: bool,
+) -> CommandResult<(f32, f32)> {
     use ebur128::{EbuR128, Mode};
     let ch = usize::from(channels.max(1));
     let frames = pcm.len() / ch;
@@ -794,12 +824,14 @@ fn loudness_and_true_peak(pcm: &[f32], rate: u32, channels: u16) -> CommandResul
         |range| -> Result<(EbuR128, f64), ebur128::Error> {
             let mut loud = EbuR128::new(u32::from(channels), rate, Mode::I)?;
             loud.add_frames_f32(&pcm[range.start * ch..range.end * ch])?;
-            let from = range.start.saturating_sub(ESTIMATE_PEAK_OVERLAP_FRAMES);
-            let mut peak = EbuR128::new(u32::from(channels), rate, Mode::TRUE_PEAK)?;
-            peak.add_frames_f32(&pcm[from * ch..range.end * ch])?;
             let mut tp = 0.0_f64;
-            for c in 0..u32::from(channels) {
-                tp = tp.max(peak.true_peak(c)?);
+            if four_x {
+                let from = range.start.saturating_sub(ESTIMATE_PEAK_OVERLAP_FRAMES);
+                let mut peak = EbuR128::new(u32::from(channels), rate, Mode::TRUE_PEAK)?;
+                peak.add_frames_f32(&pcm[from * ch..range.end * ch])?;
+                for c in 0..u32::from(channels) {
+                    tp = tp.max(peak.true_peak(c)?);
+                }
             }
             Ok((loud, tp))
         },
@@ -815,12 +847,135 @@ fn loudness_and_true_peak(pcm: &[f32], rate: u32, channels: u16) -> CommandResul
     let lufs = EbuR128::loudness_global_multiple(meters.iter())
         .map_err(|e| CommandError::Render(format!("estimate loudness: {e}")))?
         as f32;
-    let tp_dbtp = if tp > 0.0 {
-        20.0 * tp.log10() as f32
-    } else {
-        f32::NEG_INFINITY
-    };
-    Ok((lufs, tp_dbtp))
+    Ok((lufs, linear_dbtp(tp)))
+}
+
+/// What every pass of one estimate shares.
+struct EstimatePasses<'a> {
+    chain: &'a MasteringChain,
+    template: &'a Limiter,
+    pre: &'a [f32],
+    channels: u16,
+    lookahead: usize,
+    sample_rate: u32,
+    delivery_rate: u32,
+    priority: LoudnessPriority,
+    target: f32,
+    cap: f32,
+    ceiling_dbtp: f32,
+    stage_lufs: f32,
+    level_in: f32,
+    margin_db: f32,
+}
+
+/// Where one estimate search stopped, with the delivered audio and readings
+/// of the pass it stopped on.
+struct EstimateStop {
+    resolution: Resolution,
+    delivered_pcm: Vec<f32>,
+    raw_lufs: f32,
+    peak_dbtp: f32,
+}
+
+impl EstimatePasses<'_> {
+    /// The export's landing rule for one pass's loudness and peak reading.
+    fn landed(&self, raw_lufs: f32, peak_dbtp: f32) -> f32 {
+        raw_lufs
+            + crate::engine::ceiling_bounded_landing_delta_db(
+                raw_lufs.is_finite().then_some(raw_lufs),
+                peak_dbtp.is_finite().then_some(peak_dbtp + self.margin_db),
+                Some(self.target),
+                self.ceiling_dbtp,
+            )
+    }
+
+    /// The drive search with `peak` as every pass's reading.
+    fn search(
+        &self,
+        peak: EstimatePeak,
+        cancel: Option<&AtomicBool>,
+    ) -> CommandResult<EstimateStop> {
+        let ch = usize::from(self.channels.max(1));
+        let mut search = DriveSearch::new(self.priority, self.target, self.cap);
+        let usable_stage = self.stage_lufs.is_finite() && self.stage_lufs > UNUSABLE_LUFS;
+        let mut drive = search.first_drive(self.stage_lufs);
+        loop {
+            cancelled_error(cancel)?;
+            let (rendered, load) = limiter_pass_parallel(
+                self.chain,
+                self.template,
+                self.pre,
+                ch,
+                self.lookahead,
+                drive,
+                self.sample_rate,
+                cancel,
+            )?;
+            let delivered_pcm = if self.delivery_rate != self.sample_rate {
+                crate::sample_rate::convert_interleaved(
+                    &rendered,
+                    self.sample_rate,
+                    self.delivery_rate,
+                    self.channels,
+                )?
+            } else {
+                rendered
+            };
+            let (raw_lufs, peak_dbtp) = loudness_and_peak(
+                &delivered_pcm,
+                self.delivery_rate,
+                self.channels,
+                peak,
+                cancel,
+            )?;
+            let delivered = self.landed(raw_lufs, peak_dbtp);
+            let next = if usable_stage {
+                search.after_pass(drive, delivered)
+            } else {
+                Err(DriveStop::Exhausted)
+            };
+            match next {
+                Ok(next_drive) => drive = next_drive,
+                Err(stop) => {
+                    return Ok(EstimateStop {
+                        resolution: Resolution {
+                            gains: ResolvedGainStaging {
+                                level_in_db: self.level_in,
+                                limiter_drive_db: drive,
+                                limiter_load_db: load,
+                                stopped_at_clean_limit: stop == DriveStop::CleanLimit,
+                                stopped_by_peak_check: stop == DriveStop::PeakCheck,
+                            },
+                            delivered_lufs: delivered,
+                            target_lufs: self.target,
+                        },
+                        delivered_pcm,
+                        raw_lufs,
+                        peak_dbtp,
+                    })
+                }
+            }
+        }
+    }
+
+    /// [`EstimatePeak::Verified`]: the lowpass search, kept when the
+    /// qualified reading of its stopping pass lands that pass within
+    /// [`ESTIMATE_VERIFY_TOLERANCE_LU`]; otherwise the qualified search.
+    /// The flag says whether the search ran again.
+    fn verified(&self, cancel: Option<&AtomicBool>) -> CommandResult<(EstimateStop, bool)> {
+        let first = self.search(EstimatePeak::Lowpass, cancel)?;
+        let ch = usize::from(self.channels.max(1));
+        let finite =
+            crate::peak_meter::finite_upper(&first.delivered_pcm, ch, || cancelled(cancel))
+                .map_err(estimate_peak_error)?;
+        let landed = self.landed(first.raw_lufs, first.peak_dbtp.max(linear_dbtp(finite)));
+        let lowpass = first.resolution.delivered_lufs;
+        if landed == lowpass || (landed - lowpass).abs() < ESTIMATE_VERIFY_TOLERANCE_LU {
+            Ok((first, false))
+        } else {
+            Ok((self.search(EstimatePeak::Qualified, cancel)?, true))
+        }
+    }
 }
 
 /// A fast estimate of the gains [`resolve_preview`] resolves, for audition
@@ -830,7 +985,11 @@ fn loudness_and_true_peak(pcm: &[f32], rate: u32, channels: u16) -> CommandResul
 ///   warmed on the audio before it;
 /// - each pass's delivered loudness is the export's landing rule
 ///   (`ceiling_bounded_landing_delta_db`) applied to the converted pass's
-///   loudness and a 4x true peak, instead of the qualified finalizer.
+///   loudness and the reading [`ESTIMATE_PEAK`] names, instead of the
+///   qualified finalizer: the lowpass half of the qualified meter on every
+///   pass, checked once against both halves on the pass the search stopped
+///   at, and searched again with both halves when the check would land that
+///   pass differently.
 ///
 /// Exports never use it: `render_export` is untouched. `level` is the track
 /// analysis's own measurement when audition has it.
@@ -842,20 +1001,40 @@ pub fn estimate_preview(
     level: Option<&SourceLevel>,
     cancel: Option<&AtomicBool>,
 ) -> CommandResult<Option<Resolution>> {
-    estimate_preview_with(
+    Ok(estimate_preview_with(
         samples,
         sample_rate,
         channels,
         settings,
         level,
-        ESTIMATE_PEAK,
+        estimate_peak(),
         ESTIMATE_TRUE_PEAK_MARGIN_DB,
         cancel,
-    )
+    )?
+    .map(|(resolution, _)| resolution))
+}
+
+#[cfg(not(test))]
+fn estimate_peak() -> EstimatePeak {
+    ESTIMATE_PEAK
+}
+
+/// Test builds (including the native probes) can choose the reading with
+/// `YES_MASTER_ESTIMATE_PEAK` = `lowpass`, `verified` or `qualified`, to time
+/// each one in the production audition.
+#[cfg(test)]
+fn estimate_peak() -> EstimatePeak {
+    match std::env::var("YES_MASTER_ESTIMATE_PEAK").as_deref() {
+        Ok("lowpass") => EstimatePeak::Lowpass,
+        Ok("verified") => EstimatePeak::Verified,
+        Ok("qualified") => EstimatePeak::Qualified,
+        _ => ESTIMATE_PEAK,
+    }
 }
 
 /// [`estimate_preview`] with its peak reading and margin as parameters, for
-/// the research runner that tunes them on development material.
+/// the research runner that tunes them on development material. The flag
+/// says whether [`EstimatePeak::Verified`] ran its search again.
 #[allow(clippy::too_many_arguments)]
 pub fn estimate_preview_with(
     samples: &[f32],
@@ -866,7 +1045,7 @@ pub fn estimate_preview_with(
     peak: EstimatePeak,
     true_peak_margin_db: f32,
     cancel: Option<&AtomicBool>,
-) -> CommandResult<Option<Resolution>> {
+) -> CommandResult<Option<(Resolution, bool)>> {
     let mut resolved = settings.clone();
     resolved.volume_match = false;
     resolved.advanced.gain_staging_resolved = None;
@@ -915,62 +1094,27 @@ pub fn estimate_preview_with(
         }
         _ => f32::INFINITY,
     };
-    let mut search = DriveSearch::new(priority, target, cap);
-    let usable_stage = stage_lufs.is_finite() && stage_lufs > UNUSABLE_LUFS;
-    let mut drive = search.first_drive(stage_lufs);
-    loop {
-        cancelled_error(cancel)?;
-        let (rendered, load) = limiter_pass_parallel(
-            &chain,
-            &template,
-            &pre,
-            ch,
-            lookahead,
-            drive,
-            sample_rate,
-            cancel,
-        )?;
-        let delivered_pcm = if delivery_rate != sample_rate {
-            crate::sample_rate::convert_interleaved(
-                &rendered,
-                sample_rate,
-                delivery_rate,
-                channels,
-            )?
-        } else {
-            rendered
-        };
-        let (raw_lufs, tp_dbtp) =
-            loudness_and_peak(&delivered_pcm, delivery_rate, channels, peak, cancel)?;
-        let delivered = raw_lufs
-            + crate::engine::ceiling_bounded_landing_delta_db(
-                raw_lufs.is_finite().then_some(raw_lufs),
-                tp_dbtp.is_finite().then_some(tp_dbtp + true_peak_margin_db),
-                Some(target),
-                ceiling_dbtp,
-            );
-        let next = if usable_stage {
-            search.after_pass(drive, delivered)
-        } else {
-            Err(DriveStop::Exhausted)
-        };
-        match next {
-            Ok(next_drive) => drive = next_drive,
-            Err(stop) => {
-                return Ok(Some(Resolution {
-                    gains: ResolvedGainStaging {
-                        level_in_db: level_in,
-                        limiter_drive_db: drive,
-                        limiter_load_db: load,
-                        stopped_at_clean_limit: stop == DriveStop::CleanLimit,
-                        stopped_by_peak_check: stop == DriveStop::PeakCheck,
-                    },
-                    delivered_lufs: delivered,
-                    target_lufs: target,
-                }))
-            }
-        }
-    }
+    let passes = EstimatePasses {
+        chain: &chain,
+        template: &template,
+        pre: &pre,
+        channels,
+        lookahead,
+        sample_rate,
+        delivery_rate,
+        priority,
+        target,
+        cap,
+        ceiling_dbtp,
+        stage_lufs,
+        level_in,
+        margin_db: true_peak_margin_db,
+    };
+    let (stop, searched_again) = match peak {
+        EstimatePeak::Verified => passes.verified(cancel)?,
+        other => (passes.search(other, cancel)?, false),
+    };
+    Ok(Some((stop.resolution, searched_again)))
 }
 
 /// What the line shows when the feature cannot run for these settings
@@ -1341,7 +1485,7 @@ mod tests {
         for drive in [0.0_f32, 3.0, 6.0, 10.0] {
             let (out, load) = limiter_pass(&chain, &template, &stage, drive, &|_| {});
             let t = Instant::now();
-            let (_, tp4) = loudness_and_true_peak(&out, rate, channels).unwrap();
+            let (_, tp4) = loudness_and_true_peak(&out, rate, channels, true).unwrap();
             let t4 = t.elapsed().as_secs_f64();
             let t = Instant::now();
             let low = crate::peak_meter::lowpass_upper(&out, ch, || false).unwrap();
@@ -1357,6 +1501,73 @@ mod tests {
             println!(
                 "drive {drive:+.0} (load {load:.1}): 4x {tp4:+.2} dBTP in {t4:.2}s | lowpass {:+.2} in {tl:.2}s | finite sinc {:+.2} | qualified {:+.2} in {tf:.2}s",
                 db(low), db(finite), db(full.upper())
+            );
+        }
+    }
+
+    /// Slice 8 research: what each estimate reading costs on one song, and
+    /// what each half of the qualified meter costs on one delivered pass.
+    /// `YES_MASTER_BENCH_FILE` names the file.
+    #[test]
+    #[ignore = "timing research; YES_MASTER_BENCH_FILE"]
+    fn slice_8_estimate_costs() {
+        use std::time::Instant;
+        let path = std::env::var("YES_MASTER_BENCH_FILE").expect("YES_MASTER_BENCH_FILE");
+        let pcm = crate::decode::decode_full(std::path::Path::new(&path)).unwrap();
+        let (rate, channels) = (pcm.sample_rate, pcm.channels);
+        let ch = usize::from(channels);
+        let level = crate::analysis::measure_source_level(&pcm.samples, rate, channels).unwrap();
+        for (target, priority) in [(-9.0, "clean"), (-11.0, "clean"), (-9.0, "reach_target")] {
+            let settings: MasteringSettings = serde_json::from_value(serde_json::json!({
+                "preset":{"kind":"universal"},"intensity":0.75,"volume_match":false,
+                "eq_low_db":0.,"eq_mid_db":0.,"eq_high_db":0.,"delivery_profile":"custom",
+                "advanced":{"lufs_offset_db":target,"ceiling_dbtp":-1.0,
+                  "auto_gain_staging":{"enabled":true,"priority":priority}}
+            }))
+            .unwrap();
+            for peak in [
+                EstimatePeak::Lowpass,
+                EstimatePeak::Verified,
+                EstimatePeak::Qualified,
+            ] {
+                let mut times = Vec::new();
+                let mut drive = 0.0;
+                for _ in 0..3 {
+                    let t = Instant::now();
+                    let (r, _) = estimate_preview_with(
+                        &pcm.samples,
+                        rate,
+                        channels,
+                        &settings,
+                        Some(&level),
+                        peak,
+                        0.0,
+                        None,
+                    )
+                    .unwrap()
+                    .unwrap();
+                    times.push(t.elapsed().as_secs_f64());
+                    drive = r.gains.limiter_drive_db;
+                }
+                times.sort_by(f64::total_cmp);
+                println!(
+                    "{target} {priority} {peak:?}: median {:.3}s (drive {drive:.2})",
+                    times[1]
+                );
+            }
+        }
+        let rendered = &pcm.samples;
+        for _ in 0..2 {
+            let t = Instant::now();
+            let lp = crate::peak_meter::lowpass_upper(rendered, ch, || false).unwrap();
+            let lp_s = t.elapsed().as_secs_f64();
+            let t = Instant::now();
+            let fi = crate::peak_meter::finite_upper(rendered, ch, || false).unwrap();
+            let fi_s = t.elapsed().as_secs_f64();
+            println!(
+                "source: lowpass {lp_s:.3}s ({:.2} dBTP), finite {fi_s:.3}s ({:.2} dBTP)",
+                linear_dbtp(lp),
+                linear_dbtp(fi)
             );
         }
     }

@@ -242,6 +242,24 @@ pub(crate) fn lowpass_upper(
         .fold(0_f64, f64::max))
 }
 
+/// The finite-sinc half of [`measure`] alone: its continuous upper bound over
+/// all channels. The larger of this and [`lowpass_upper`] is the qualified
+/// reading, to within the lowpass half's numerical reserve (which
+/// [`lowpass_upper`] takes from the loudest channel, so the pair never reads
+/// below [`measure`]). Auto gain staging's audition estimate uses it to check
+/// its cheaper reading.
+pub(crate) fn finite_upper(
+    samples: &[f32],
+    channels: usize,
+    cancelled: impl Fn() -> bool + Sync,
+) -> Result<f64, &'static str> {
+    let source = InterleavedPcm::new(samples, channels)?;
+    Ok(finite_peak::measure(&source, Workers::Budget, &cancelled)?
+        .into_iter()
+        .map(|channel| channel.continuous_upper)
+        .fold(0_f64, f64::max))
+}
+
 /// Run `work` over consecutive ranges of `items`, on the calling thread plus
 /// extra threads leased from the same process-wide budget as the peak passes
 /// (so a concurrent measurement shares it, and the reserved cores stay with

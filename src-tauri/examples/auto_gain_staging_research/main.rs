@@ -78,6 +78,10 @@ struct Args {
     /// Slice 8 (F1): the audition estimate against the exact resolution, at
     /// each comma-separated true-peak margin.
     estimate_check: Option<String>,
+    /// Slice 8: reuse the exact resolutions a prior `estimate-check.json`
+    /// recorded (the export path is pinned bit-identical) instead of
+    /// resolving them again.
+    exact_from: Option<PathBuf>,
     /// G resolves on the delivered loudness (contract rule 3; the default)
     /// or, with `--g-resolve chain-output`, on the chain's output before
     /// delivery (the first development run).
@@ -129,6 +133,7 @@ fn parse_args() -> Result<Args, String> {
         timing: map.get("timing").is_some_and(|v| v == "1"),
         timing_reach: map.get("timing-reach").is_some_and(|v| v == "1"),
         estimate_check: map.get("estimate-check").cloned(),
+        exact_from: map.get("exact-from").map(PathBuf::from),
         max_passes: map
             .get("max-passes")
             .and_then(|v| v.parse().ok())
@@ -1329,6 +1334,8 @@ fn run() -> Result<(), String> {
                 let peak = match peak {
                     "4x" => EstimatePeak::FourX,
                     "lp" => EstimatePeak::Lowpass,
+                    "q" => EstimatePeak::Qualified,
+                    "verified" => EstimatePeak::Verified,
                     other => return Err(format!("unknown peak reading {other}")),
                 };
                 let margin = m.parse::<f32>().map_err(|e| format!("margin {m}: {e}"))?;
@@ -1336,8 +1343,15 @@ fn run() -> Result<(), String> {
             })
             .collect::<Result<_, String>>()?;
         println!("estimate check: {} songs, margins {margins:?}", songs.len());
+        let cached: Option<Vec<serde_json::Value>> = match &args.exact_from {
+            Some(path) => Some(
+                serde_json::from_str(&std::fs::read_to_string(path).map_err(|e| e.to_string())?)
+                    .map_err(|e| e.to_string())?,
+            ),
+            None => None,
+        };
         let rows = parallel_map(&songs, args.workers, |song| {
-            let r = production::estimate_check_song(song, &margins);
+            let r = production::estimate_check_song(song, &margins, cached.as_deref());
             println!("done {}", song.label);
             r
         });
