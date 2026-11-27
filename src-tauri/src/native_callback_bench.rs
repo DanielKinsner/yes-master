@@ -891,7 +891,10 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
             worker_settings.advanced.lufs_offset_db = Some(target);
             let start = Instant::now();
             let result = if gain_staging {
-                crate::gain_staging::resolve_preview(
+                // Slice 8: the audition worker's order, the parallel fast
+                // estimate (on the shared thread budget) and then the exact
+                // resolution, both while the callback runs.
+                crate::gain_staging::estimate_preview(
                     &worker_pcm.samples,
                     worker_pcm.sample_rate,
                     worker_pcm.channels,
@@ -899,6 +902,16 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
                     None,
                     Some(&worker_cancel),
                 )
+                .and_then(|_| {
+                    crate::gain_staging::resolve_preview(
+                        &worker_pcm.samples,
+                        worker_pcm.sample_rate,
+                        worker_pcm.channels,
+                        &worker_settings,
+                        None,
+                        Some(&worker_cancel),
+                    )
+                })
                 .and_then(|resolution| {
                     let mut resolved = worker_settings.clone();
                     resolved.advanced.gain_staging_resolved = resolution.map(|r| r.gains);

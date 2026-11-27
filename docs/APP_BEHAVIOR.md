@@ -291,7 +291,11 @@ plan's locked copy
 - **The line.** It is built from the backend's readout:
   - off: "Sets the level for this song automatically, so it is limited only
     as much as your loudness needs.";
-  - resolving: "Measuring this song…";
+  - resolving, until the fast estimate plays: "Measuring this song…";
+  - while the estimate plays and the exact result is pending (Slice 8): the
+    estimate's line without its closing period, plus ` · refining…`, for
+    example `Level in −3.3 dB · limiter drive +1.4 dB · limiting up to
+    2.0 dB · refining…`;
   - no limiting needed: `Level in −3.3 dB · limiter drive 0.0 dB · no
     limiting needed.`;
   - limiting: `Level in +2.1 dB · limiter drive +4.5 dB · limiting up to
@@ -307,12 +311,17 @@ plan's locked copy
     Master, not Album renders."
 
   Numbers have one decimal place and a real minus sign.
-- **Audition.** While a new resolution is in flight, level in applies at once
-  (from the analysis), the limiter drive holds and never rises on an
-  unverified value, and the line reads "Measuring this song…". The resolved
-  gains then reach the playing chain through the usual coefficient
-  crossfade. Settings already resolved apply at once. Original/Mastered keeps
-  the playhead, and Volume Match measures the chain with the resolved gains.
+- **Audition.** After a settings change, level in applies at once (from the
+  analysis) and the limiter drive holds; it never rises on a value left over
+  from different settings. The preview worker then plays a fast estimate of
+  the gains for these settings (Slice 8: the export's search on parallel
+  chunks, with its final check emulated), which may raise the drive, and
+  then the exact resolution. The exact result replaces the estimate only
+  when their drives differ by 0.3 dB or more; otherwise nothing audible
+  changes and the line shows the exact numbers. Every change goes through
+  the usual coefficient crossfade. Settings already resolved apply at once.
+  Original/Mastered keeps the playhead, and Volume Match measures the chain
+  audition plays. Exports never use the estimate.
 - **Where the numbers come from.** For the loaded Mastered song, the line
   follows what the audio plays. Otherwise it comes from a background
   resolution of the selected song, which shares the preview worker's permit
