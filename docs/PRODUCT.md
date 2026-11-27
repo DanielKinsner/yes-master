@@ -270,10 +270,15 @@ note (Checkpoint C) is `docs/reviews/2026-11-25-auto-gain-staging-phase-c.md`.
   the limiting the chain used. Audition resolves the gains with the export's
   own resolution, so the line, what you hear and the export agree.
 - **Waits.** Each new combination of settings is resolved over the whole song
-  before the line settles. On the office PC that took about 8–11 s on a
-  2-minute song, 15 s on a 4-minute song and 27–43 s on a 7-minute song, and
-  returning to settings already resolved took under 0.2 s. Playback keeps
-  going meanwhile, with level in applied and the drive held.
+  before the line settles. With priority Clean, a fast estimate plays first:
+  on the office PC within about 0.8–1.2 s on a 2-minute song, 1.4–1.5 s on a
+  4-minute song and 2.2–4.4 s on a 7-minute song, while the line adds
+  ` · refining…`. The exact result follows in about 9–12 s, 16–17 s and
+  29–47 s, and changes what plays only when the two differ by 0.3 dB or more.
+  Reach target has no fast estimate: it waits for the exact result (about
+  4 s, 7 s and 13 s after a switch from Clean). Returning to settings already
+  resolved takes under 0.2 s. Playback keeps going meanwhile, with level in
+  applied and the drive held.
 - **Works with Smart Match** and does not change its decisions.
 - **Track Master only.** Album mode shows it disabled, with an explanation.
   It is not on mobile or in the browser try-it.

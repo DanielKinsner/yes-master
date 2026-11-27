@@ -443,6 +443,10 @@ Not in this plan.
   "already bassy" trigger on 42 of 55, 34 of them at full strength. That is the
   next plan, kept separate so each change to the sound can be judged alone.
 - Turning auto gain staging on by default.
+- **The limiter and the final check disagree on bright material**
+  (`docs/IDEAS_BACKLOG.md`), together with the two items that share its root
+  cause: **a fast estimate for Reach target** and **a faster finite-sinc half
+  of the qualified peak meter**. One later, separate plan.
 - Retuning any preset, or changing the saturation curve (September's item E).
 - A deliberate hard-clipping option past the ceiling.
 - Auto gain staging in Album mode, on mobile, or in the browser try-it.
@@ -451,6 +455,133 @@ Not in this plan.
 - Landing page, marketing, pricing or release work.
 
 ## Execution status
+
+### Checkpoint D (2026-11-27)
+
+**Slice 8 is done as ruled: audition plays a fast estimate for priority
+Clean only; Reach target has no estimate.** Nothing pushed or merged. The
+report is the
+[Phase C note's Slice 8 section](../reviews/2026-11-25-auto-gain-staging-phase-c.md#slice-8-fast-settling-checkpoint-d).
+
+- **The wait, reference song (4:05), office PC:** with Clean, the estimate
+  plays 1.40–1.49 s after a settings change and the exact result lands
+  16.0–16.8 s after it; with Reach target (a switch from Clean), the exact
+  result plays after 7.1 s. Today's switch-off target edit settles in 1.5 s.
+- **Gates:** F1 passes on Clean, on development (891 of 900 within 0.5 dB,
+  most above +0.25 dB) and on the holdout (228 of 228, +0.23 dB; frozen
+  `5d80431`; the holdout's second use, for a different measure). F2 passes
+  except the 7-minute switch-on, 4.41 s against 4.0 s, failed as written
+  and accepted by the planning session. F3: the exact result replaced the
+  estimate (≥ 0.3 dB) on 15 of 900 development and 0 of 228 holdout cases.
+  F4: 360 of 360 exports bit-identical to `08509ab`. F5: all Slice 5 probes pass (0 callback allocations, 0 deadline misses in 607 and 754 callbacks with the switch off and on, no rise on a value from other settings, superseded work discarded, playhead kept, Volume Match matched).
+- **Lanes on the final code** (`5d80431` plus the documents): fmt; clippy
+  with and without the research feature; the Rust suite with the slow lane,
+  868 passed, 0 failed, 40 ignored (golden and fingerprint included); both
+  mobile bridges (iOS 46 passed, Android 26 passed, the arm64 NDK check);
+  try-it rebuilt with no change and its tests; `npm test` 1006 passed; the
+  build; `verify:headless` (54 app checks and the landing suite); and
+  `verify:landing-assets`. All passed.
+- **Product code carries only what ships.** The research readings (4x,
+  qualified, verified), `estimate_preview_with`, the 4x meter and
+  `peak_meter::finite_upper` exist only in test builds and with the
+  research runner's `gain-staging-research` feature; the
+  `YES_MASTER_ESTIMATE_PEAK` switch is gone. `peak_meter` changed only by
+  additions (84 lines, none removed): the shipped estimate uses
+  `lowpass_upper` and `map_ranges_on_budget`; `finite_upper` is research
+  only. `output_protection.rs` and `src-tauri/tests/golden/` are untouched
+  since the branch began, and the golden tests pass.
+- **"Never higher" on Clean:** the clean-limit cap holds by construction
+  and is pinned; that the estimate never lands above the exact drive holds
+  only on the measured songs (largest +0.25 dB).
+- **Open:** the owner's hand test (its waiting wording is updated); the Mac
+  build.
+
+### Slice 8: done (`2a27706`, `b06b2b2`, `5d80431`, documents)
+
+- `2a27706`: the callback bench runs the estimate, then the exact result;
+  APP_BEHAVIOR's refining line.
+- `b06b2b2`: the trade-off research (the readings, the runner's
+  `--exact-from`).
+- `5d80431` (frozen for the holdout): the shipped design. Clean only via
+  `gain_staging::has_estimate`; Reach target returns no estimate and skips
+  the level measurement; the research readings behind the feature. Tests:
+  Reach target never produces an estimate (wrapper and worker); rule 8
+  pending for both priorities; a Clean search never drives past its cap;
+  the Clean estimate stops at the clean limit with the export; the bright
+  signal restated for the shipped behaviour.
+- The documents commit: APP_BEHAVIOR, PRODUCT, ARCHITECTURE, TESTING,
+  IDEAS_BACKLOG, OPEN_THREADS, CHANGELOG, this plan (the parking lot joins a
+  fast estimate for Reach target and a faster finite-sinc half to the
+  limiter-versus-final-check item), the Phase C and evaluation notes, and
+  `docs/reviews/evidence/2026-11-27-auto-gain-staging-slice-8/`.
+
+### Slice 8: stopped at the F1/F2 trade-off (2026-11-27; ruled: option 1)
+
+Resumed 2026-11-27 (the pause entry below is history). **No estimate design
+found meets both F1 and F2, so Slice 8 stops here, as the ruling asks, for
+the planning session to choose.** Nothing pushed or merged. The holdout is
+unused; F1's holdout check waits for the chosen design.
+
+- **The checks skipped at the pause** passed after one fix: the try-it
+  engine needed rebuilding for the new readout type (`62bccd1`). Rust 865
+  passed, `npm test` 1006 passed, the build passed.
+- **Why the two gates pull apart.** The export's final check reads the peak
+  with both halves of the qualified meter. The lowpass half is cheap and
+  equals the full reading on almost all music. The finite-sinc half costs
+  about 1.5 s per read of a 4-minute song even on 16 threads, and on very
+  bright material it reads higher (1.4–1.9 dB on Funkorama), so the final
+  check pulls those masters down further. With Reach target, the export's
+  search can then stop early at its no-progress peak check, which an
+  estimate that never reads the sinc half cannot see.
+- **F1, development material** (75 songs, 1036 cases;
+  `docs/reviews/evidence/2026-11-27-auto-gain-staging-slice-8/f1-development.json`):
+
+  | Estimate reading | Within 0.5 dB | Within 1.0 dB | Most above | F1 |
+  | --- | --- | --- | --- | --- |
+  | 4x true peak | 91.3% | 95.1% | +5.78 dB | fail |
+  | Lowpass half | 98.0% | 99.03% | +2.44 dB (one case) | fail |
+  | Lowpass, Clean cases only (900) | 99.0% | 99.67% | +0.25 dB | pass |
+  | Verified: lowpass, then both halves once on the stopping pass, searching again when they disagree | 100% | 100% | +0.33 dB | pass |
+
+  The one lowpass failure is Funkorama, Clarity, −9 LUFS, Reach target:
+  +2.44 dB. Verified searched again on 60 cases (11 songs). A synthetic
+  bright signal shows Verified still has a hole: with Reach target the
+  export stops early at the peak check on a pass Verified never reads in
+  full, and Verified lands about 10 dB above it. Only the qualified reading
+  on every pass follows it (a test pins this).
+- **F2, native audition** (median of three runs, seconds from the settings
+  change to the estimate playing;
+  `.../f2-audition.json`):
+
+  | Song (budget) | Lowpass | Verified |
+  | --- | --- | --- |
+  | Sideways City, 2:13 (2.0 s) | 0.84–1.17 | 1.46–1.88 |
+  | Reference song, 4:05 (2.0 s) | 1.36–1.53 | 2.60–3.04 |
+  | Unraveling, 7:24 (4.0 s) | 2.22–2.44; switch-on 4.51 | 4.31–4.50; switch-on 6.61 |
+
+  The lowpass estimate misses F2 only at the 7-minute switch-on (three
+  search passes). A profile puts the time in the stage capture (0.8 s) and
+  about 1.15 s per pass, half of it the lowpass read; result-neutral
+  speed-ups would save roughly 0.3 s.
+- **Options for the planning session** (my recommendation first):
+  1. **Lowpass estimate for Clean only; Reach target keeps today's wait.**
+     F1 passes on Clean, and a low peak reading can only make a Clean
+     search stop sooner, never higher. F2 passes except the 7-minute
+     switch-on (4.51 s against 4.0 s). Needs a ruling on Reach target
+     getting no estimate, and on that one F2 miss.
+  2. **Verified everywhere** (the committed default now): F1 passes on
+     development; F2 fails on the 4- and 7-minute songs; the Reach hole
+     above remains.
+  3. **Lowpass everywhere:** the fastest; F1 fails on Reach target.
+  4. **Speed up the qualified meter's finite-sinc half**, then read both
+     halves on every pass. That is peak-meter work, on this plan's
+     do-not-touch list, so a separate decision.
+- **Built and committed:** `2a27706` (the callback bench runs the estimate,
+  then the exact result; APP_BEHAVIOR's refining line), `b06b2b2` (the
+  estimate's readings, `peak_meter::finite_upper`, the runner's
+  `--exact-from` and the probe switch `YES_MASTER_ESTIMATE_PEAK`).
+- **Not done until the choice:** the holdout F1 check, the final F2/F3/F5
+  runs on the chosen design, and the remaining documents.
 
 ### Paused 2026-11-25 (owner out of usage until Friday)
 
@@ -1160,3 +1291,32 @@ the owner's hand test. Approved on the planning session's recommendation:
 45. **Audition settling time was reported, not optimized.** The plan asks for
     the report; speeding it up would change how audition resolves and is
     recorded for the planning session.
+
+### Deviation log (Slice 8)
+
+46. **The estimate's peak reading.** A 4x true peak reads the limiter's own
+    ceiling on a limited master, so the estimate reads the qualified
+    meter's lowpass half instead (`peak_meter::lowpass_upper`, a new
+    read-only helper over the existing filter).
+47. **The trade-off stop.** Neither the lowpass reading (F1 fails on Reach
+    target) nor a once-verified reading (F2 fails) met both gates; Slice 8
+    stopped and the planning session chose Clean only. The verified and
+    qualified readings stay as research behind the feature.
+48. **A Cargo feature, `gain-staging-research`,** keeps the research
+    readings out of release builds while the runner can still measure them.
+    The runner's `shipped` reading needs no feature.
+49. **Runner options:** `--estimate-check` (`shipped`, and research readings
+    with margins), `--exact-from` (reuse prior exact results; the export
+    path is pinned bit-identical), `--export-hashes`, and the earlier
+    `--listening-pack`.
+50. **F2 is timed from the backend command** (the native probe's
+    `update_chain`); the interface's 180 ms debounce comes before it. One
+    trade-off run on Sideways City reached the song's end before the probe
+    finished and was re-run.
+51. **The bright-signal test asserts the research readings' overshoot**
+    (more than 1.5 dB above the exact drive) as the recorded reason Reach
+    target has no estimate; a fix to that root cause would update it.
+52. **The Clean-limit pin is two tests:** the search's cap by construction
+    (`a_clean_search_never_drives_past_its_cap`), and on a signal where the
+    clean limit binds, the estimate stopping there within 0.01 dB of the
+    export.

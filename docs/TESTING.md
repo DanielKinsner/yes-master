@@ -897,6 +897,17 @@ cargo run --release --example auto_gain_staging_research -- --library "<free-cc 
   - `--path production --reach-check <ledger.json>` re-runs Reach target,
     through the export's own resolver, on every case a prior production
     ledger shows stopped at the clean limit (Checkpoint B, E4).
+  - `--path production --estimate-check shipped` (Slice 8, F1) compares the
+    estimate audition plays (Clean only) with the exact resolution on every
+    Clean case; `--exact-from <estimate-check.json>` reuses a prior run's
+    exact results instead of resolving them again. Research readings
+    (`4x:0`, `lp:0`, `q:0`, `verified:0`, with true-peak margins in dB) need
+    the build flag `--features gain-staging-research` and also run Reach
+    target. The feature exists only for this runner; release builds never
+    contain the research readings.
+  - `--export-hashes <json> --pack "1 Name=<path>|…"` (Slice 8, F4) writes
+    the SHA-256 of every switch-off, Clean and Reach target export of each
+    song, for comparing two commits byte for byte.
   - `--path production --timing-reach 1 --only "…"` times real exports with
     Reach target against the switch off, three runs each, and records the
     export's progress trace (updates, monotonic, longest gap).
@@ -910,21 +921,31 @@ cargo run --release --example auto_gain_staging_research -- --library "<free-cc 
     resolving bit-identically to the export, the worker resolving before
     Volume Match and landing (Volume Match within 1 LU of the source), and a
     superseded resolution being cancelled, never stored and never shown;
+  - Slice 8's fast estimate, in the same module: the Clean estimate lands
+    within 0.5 dB of the exact drive and stops at the clean limit where the
+    export does; Reach target never produces an estimate (wrapper and
+    worker); refining changes nothing below 0.3 dB; and why Reach target has
+    none (`reach_target_on_bright_material_has_no_estimate`, a bright signal
+    where the research readings overshoot by about 10 dB).
+    `gain_staging::tests::a_clean_search_never_drives_past_its_cap` pins
+    the search's cap by construction;
   - `sources::render_alignment_tests::auto_gain_staging_drive_updates_crossfade_without_allocating`
     sends the switch and four drives through the coefficient crossfade with
     zero callback allocations.
 - **Audition, native and opt-in (muted):**
   - `audio::native_callback_bench::mastering_quality_auto_gain_staging_live`
-    times a settings change to a settled sound against today's settled
-    loudness on the production `AudioPlayer`, and checks the line, the
-    cached revisit, Original/Mastered playhead and Volume Match. It needs
+    times a settings change to the estimate playing (Clean) and to a
+    settled sound, against today's settled loudness, on the production
+    `AudioPlayer`, and checks the line, the cached revisit,
+    Original/Mastered playhead and Volume Match. With Reach target there is
+    no estimate, so its two times are the same wait. It needs
     `YES_MASTER_BENCH_MUTE=1`, `YES_MASTER_BENCH_FILE` and a fresh
     `YES_MASTER_GAIN_STAGING_REPORT` path.
   - `mastering_quality_streaming_callback_bench` with
     `YES_MASTER_CALLBACK_AUTO_GAIN_STAGING=1` puts resolved gains in the
-    chain, moves the drive on every coefficient edit and runs the resolution
-    as the concurrent worker; compare its deadline misses with the same run
-    without the variable.
+    chain, moves the drive on every coefficient edit and runs the estimate
+    and then the exact resolution as the concurrent worker; compare its
+    deadline misses with the same run without the variable.
 - **Interface (Slice 6):** `src/lib/auto-gain-staging.test.ts` (every copy-table
   state), `src/components/AutoGainStagingRow.test.tsx`,
   `src/lib/standard-managed.test.ts`, and the hook's pending, superseded,
@@ -937,7 +958,7 @@ cargo run --release --example auto_gain_staging_research -- --library "<free-cc 
 
 | Change | Lanes |
 | --- | --- |
-| `gain_staging.rs`, or the gain-staging parts of `dsp.rs`, `types.rs`, `analysis.rs` or `engine.rs` | `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test --target-dir target\codex-rc` with the slow fixture lane on the reference song (identity, fingerprint and `auto_gain_staging` suites), both mobile bridge lanes, `npm run build:tryit-wasm` and its tests (the try-it compiles `dsp.rs`, `types.rs` and `analysis.rs`) |
+| `gain_staging.rs`, or the gain-staging parts of `dsp.rs`, `types.rs`, `analysis.rs` or `engine.rs` | `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` (and again with `--features gain-staging-research` when the research readings or the runner change), `cargo test --target-dir target\codex-rc` with the slow fixture lane on the reference song (identity, fingerprint and `auto_gain_staging` suites), both mobile bridge lanes, `npm run build:tryit-wasm` and its tests (the try-it compiles `dsp.rs`, `types.rs` and `analysis.rs`) |
 | A wire type (the setting or the receipt fields) | The above, plus `npm test` (`bindings-drift`, `export-receipt`) and `npm run build` |
 | The clean limit, the reference level or the pass limit | A planning-session or owner decision first (see the plan), then the development run through `--path production`; a new holdout only with the planning session's agreement |
 | Chain speed | `chain_bench` with and without `--auto-gain-staging` against the saved baseline binary |

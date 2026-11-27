@@ -13,6 +13,12 @@ Checkpoint B.
 live audition and the Advanced switch. It is ready for the owner's hand
 test.**
 
+> **Checkpoint D (2026-11-27):** Slice 8 added a fast estimate in audition
+> for priority Clean. On the reference song it plays within about 1.4 s of
+> a settings change; Reach target has no estimate. See
+> [Slice 8](#slice-8-fast-settling-checkpoint-d) below; the settling times
+> in this bottom line are Checkpoint C's.
+
 - **What works, measured:**
   - Audition resolves the gains with the export's own resolution: a test
     pins the two bit for bit.
@@ -207,6 +213,111 @@ export-loudness preview on.
 turn it on by default, raise its clean limit, or move its reference level
 without an owner decision."
 
+## Slice 8: fast settling (Checkpoint D)
+
+Date: 2026-11-27. The planning session's ruling after the F1/F2 trade-off
+(its option 1): **a fast estimate for priority Clean only; Reach target has
+no estimate.**
+
+### What changed, in plain words
+
+- **Clean:** after a settings change, audition plays a fast estimate of the
+  gains, then the exact result. The estimate runs the export's own search
+  on parallel chunks of the song and emulates the export's final check with
+  the cheap (lowpass) half of the qualified peak meter. The line reads the
+  estimate's numbers with ` · refining…` until the exact result lands; the
+  exact result changes what plays only when the drives differ by 0.3 dB or
+  more.
+- **Reach target has no fast estimate.** As before Slice 8: level in at
+  once, the drive holds or falls, and "Measuring this song…" until the
+  exact result lands.
+- **Why not Reach target.** On bright material the export's final check
+  reads a higher peak (the qualified meter's finite-sinc half) than the
+  limiter allows for, and holds the loudness down. Reach target's search
+  then stops early at its no-progress peak check. An estimate that never
+  reads the finite-sinc half cannot see that, so it can land far above the
+  exact result: 2.44 dB on Funkorama (Clarity, −9 LUFS), about 10 dB on a
+  synthetic bright signal. Reading that half costs about 1.5 s per read on a
+  4-minute song, which breaks the 2-second budget. Clean cannot land high
+  that way: its drive never passes the clean limit, and a low peak reading
+  makes its search stop sooner, not later.
+- **Exports never use the estimate.**
+
+### The gates
+
+| Gate | Requirement | Result |
+| --- | --- | --- |
+| F1, development (Clean, 900 cases, 75 songs) | within 0.5 dB in ≥ 90%, within 1.0 dB in ≥ 99%, never > 1.5 dB above | 99.0%, 99.67%, most above +0.25 dB: **pass** |
+| F1, holdout (Clean, 228 cases, 19 songs; frozen `5d80431`) | the same | 100%, 100%, most above +0.23 dB: **pass** |
+| F2, settings change to the estimate playing (Clean) | ≤ 2.0 s (2- and 4-minute songs), ≤ 4.0 s (7-minute song) | 0.84–1.16 s, 1.40–1.49 s, 2.15–2.18 s; the 7-minute switch-on 4.41 s: **failed as written by 0.41 s, accepted by the planning session** |
+| F3, the exact result replacing the estimate | through the crossfade; no change below 0.3 dB; how often ≥ 1.0 dB | unit-tested; ≥ 0.3 dB on 15 of 900 development and 0 of 228 holdout cases; ≥ 1.0 dB on 3 of 900 (all Funkorama, estimate lower) and 0 of 228 |
+| F4, exports with the switch on | bit-identical to `08509ab` | 360 of 360 exports identical (10 songs × 4 Styles × 3 loudnesses × off, Clean, Reach target) |
+| F5, Slice 5's probes | no callback allocation, no deadline miss, no rise on a value from other settings, superseded work discarded, playhead kept, Volume Match matched | all pass (see the lanes below) |
+
+- **This is the holdout's second use, for a different measure.** Its first
+  was the Checkpoint B engine gates: the decision rule (E3), and the E4
+  Reach-target re-check on its Reach cases after the planning session's
+  change. Nothing about the estimate was tuned on it; it ran once.
+- **F1's Clean-limit agreement:** on the holdout the export stopped at the
+  clean limit on 50 cases, and the estimate stopped there on all 50.
+- **"Never higher" on Clean.** The cap holds by construction: a Clean
+  search never tries a drive past the clean limit, whatever loudness its
+  passes report (pinned by `a_clean_search_never_drives_past_its_cap`).
+  That the estimate never lands *above the exact drive* holds only on the
+  measured songs, not by construction: the argument needs the delivered
+  loudness to rise with the drive by at most 1 dB per dB, and the estimate's
+  chunked loudness differs slightly from the export's. The largest measured
+  overshoot was +0.25 dB (development) and +0.23 dB (holdout), within the
+  search's 0.2 LU tolerance plus that small difference.
+
+### Lanes at Checkpoint D (this PC, `5d80431` plus the documents)
+
+| Lane | Result |
+| --- | --- |
+| `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings`, without and with `--features gain-staging-research` | Pass |
+| `cargo test` with the slow lane on the reference song | 868 passed, 0 failed, 40 ignored (golden byte-identity and fingerprint included) |
+| Callback allocations (`auto_gain_staging_drive_updates_crossfade_without_allocating`) | 0 |
+| `mastering_quality_streaming_callback_bench`, off and with `YES_MASTER_CALLBACK_AUTO_GAIN_STAGING=1` (now the estimate, then the exact result, as the concurrent worker) | 0 and 0 deadline misses in 607 and 754 callbacks. The Realtek output granted 480–1056 frames, so this does not establish small-buffer headroom |
+| Native live probe, three songs × three runs | Pass: the line, the cached revisit, playhead within 0.01 s over 4 swaps, Volume Match settled in 0.19 s |
+| Rule 8, superseded work, Reach target's missing estimate | `gain_staging_live` tests pass (rule 8 pending for both priorities; `a_superseded_resolution_is_discarded`; `reach_target_never_produces_an_estimate`) |
+| Mobile bridges | iOS `cargo check --all-targets` and 46 tests; Android 26 tests and the arm64 NDK check: pass |
+| Try-it | Rebuilt with no change; its tests pass |
+| `npm test`, `npm run build` | 1006 passed; build passes |
+| `npm run verify:headless`, `npm run verify:landing-assets` | Pass (54 app checks; landing assets bound to their recorded digest) |
+
+### The wait in practice (office PC, median of three runs)
+
+Seconds from a settings change (the backend command; the interface adds its
+180 ms debounce before it):
+
+| Song | Clean: estimate playing | Clean: exact result | Reach target: exact result | Today, switch off |
+| --- | --- | --- | --- | --- |
+| Sideways City (2:13) | 0.84–1.16 | 8.9–11.8 | 3.9 (settled sound 4.3) | 0.90–0.95 |
+| Reference song (4:05) | 1.40–1.49 | 16.0–16.8 | 7.1 (settled sound 7.8) | 1.49–1.50 |
+| Unraveling (7:24) | 2.15–2.18; switch-on 4.41 | 28.6–47.5 | 12.6 (settled sound 14.9) | 2.38–2.43 |
+
+- The Reach target column is a switch from Clean to Reach target at the
+  same loudness.
+- On the reference song with Clean you hear a close-to-final sound about
+  1.4 s after a change; the exact result arrives about 16 s after it, and
+  on these songs it changed nothing audible (the drives agreed within
+  0.02 dB).
+- The exact result now lands about 1.2 s later than at Checkpoint C (16.0
+  against 14.8 s on the reference song), because the estimate runs first
+  on the same worker.
+
+### How the choice was made
+
+| Estimate reading | F1, development, all 1036 cases | F2, reference song |
+| --- | --- | --- |
+| 4x true peak | fails (most above +5.78 dB) | not timed |
+| Lowpass half | fails on Reach target only (+2.44 dB, one case) | 1.36–1.53 s |
+| Verified: lowpass, then both halves once on the stopping pass | passes (most above +0.33 dB) | 2.60–3.04 s: fails |
+| Both halves on every pass | follows the export, even on the synthetic signal | slower still |
+
+`docs/reviews/evidence/2026-11-27-auto-gain-staging-slice-8/` has the
+numbers: `f1-development.json`, `f1-holdout.json`, `f2-audition.json`.
+
 ## Hand test for the owner
 
 To be run from this plan's worktree with `npm run tauri dev`.
@@ -229,9 +340,15 @@ The part only the owner can judge is whether the on version sounds better.
 
 What to expect while testing:
 
-- After each change with the switch on, the line reads "Measuring this
-  song…" for several seconds (about 15 s on the reference song) before it
-  settles. Flipping back to settings already measured is instant.
+- After each change with the switch on and priority `Clean`, the line
+  reads "Measuring this song…" for about 1.5 s on the reference song, then
+  shows the estimate's numbers with ` · refining…` while you already hear a
+  close-to-final sound. The exact numbers replace them about 16 s after the
+  change.
+- With `Reach target` there is no fast estimate: "Measuring this song…"
+  stays until the exact result, about 7 s on the reference song after a
+  switch from Clean. Flipping back to settings already measured is
+  instant.
 - "High" in Standard is −9 LUFS. In Advanced, the loudness knob sets the
   same target.
 - Step 6's export warning comes from the existing export checks; this work

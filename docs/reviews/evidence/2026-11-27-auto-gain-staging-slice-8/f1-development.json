@@ -1,0 +1,170 @@
+{
+ "measure": "Slice 8 gate F1: estimate limiter drive minus the exact (export) drive, dB",
+ "gate": "within 0.5 dB in >= 90%, within 1.0 dB in >= 99%, never more than 1.5 dB above",
+ "material": "development phase only: 75 songs (library build, corpus, quiet development, owner); holdout unused",
+ "cases": "every Standard Style x -14/-11/-9 LUFS with Clean, plus Reach target where exact Clean stopped at the clean limit",
+ "worst_lowpass_case": "Funkorama, Clarity, -9 LUFS, Reach target: +2.44 dB (exact stopped by the peak check)",
+ "variants": {
+  "4x true peak": {
+   "all": {
+    "cases": 1036,
+    "within_0_5_db": 946,
+    "within_1_0_db": 985,
+    "most_above_db": 5.78,
+    "most_below_db": -20.83,
+    "differ_1_0_db_or_more": 51,
+    "f1_pass": false
+   },
+   "clean": {
+    "cases": 900,
+    "within_0_5_db": 845,
+    "within_1_0_db": 879,
+    "most_above_db": 1.29,
+    "most_below_db": -4.46,
+    "differ_1_0_db_or_more": 21,
+    "f1_pass": false
+   },
+   "reach_target": {
+    "cases": 136,
+    "within_0_5_db": 101,
+    "within_1_0_db": 106,
+    "most_above_db": 5.78,
+    "most_below_db": -20.83,
+    "differ_1_0_db_or_more": 30,
+    "f1_pass": false
+   }
+  },
+  "lowpass": {
+   "all": {
+    "cases": 1036,
+    "within_0_5_db": 1015,
+    "within_1_0_db": 1026,
+    "most_above_db": 2.44,
+    "most_below_db": -14.35,
+    "differ_1_0_db_or_more": 10,
+    "f1_pass": false
+   },
+   "clean": {
+    "cases": 900,
+    "within_0_5_db": 891,
+    "within_1_0_db": 897,
+    "most_above_db": 0.25,
+    "most_below_db": -3.5,
+    "differ_1_0_db_or_more": 3,
+    "f1_pass": true
+   },
+   "reach_target": {
+    "cases": 136,
+    "within_0_5_db": 124,
+    "within_1_0_db": 129,
+    "most_above_db": 2.44,
+    "most_below_db": -14.35,
+    "differ_1_0_db_or_more": 7,
+    "f1_pass": false
+   }
+  },
+  "lowpass +0.1 dB": {
+   "all": {
+    "cases": 1036,
+    "within_0_5_db": 1020,
+    "within_1_0_db": 1025,
+    "most_above_db": 3.18,
+    "most_below_db": -13.07,
+    "differ_1_0_db_or_more": 11,
+    "f1_pass": false
+   },
+   "clean": {
+    "cases": 900,
+    "within_0_5_db": 896,
+    "within_1_0_db": 898,
+    "most_above_db": 0.47,
+    "most_below_db": -3.36,
+    "differ_1_0_db_or_more": 2,
+    "f1_pass": true
+   },
+   "reach_target": {
+    "cases": 136,
+    "within_0_5_db": 124,
+    "within_1_0_db": 127,
+    "most_above_db": 3.18,
+    "most_below_db": -13.07,
+    "differ_1_0_db_or_more": 9,
+    "f1_pass": false
+   }
+  },
+  "lowpass +0.25 dB": {
+   "all": {
+    "cases": 1036,
+    "within_0_5_db": 909,
+    "within_1_0_db": 1018,
+    "most_above_db": 4.47,
+    "most_below_db": -11.23,
+    "differ_1_0_db_or_more": 18,
+    "f1_pass": false
+   },
+   "clean": {
+    "cases": 900,
+    "within_0_5_db": 853,
+    "within_1_0_db": 898,
+    "most_above_db": 0.84,
+    "most_below_db": -2.78,
+    "differ_1_0_db_or_more": 2,
+    "f1_pass": true
+   },
+   "reach_target": {
+    "cases": 136,
+    "within_0_5_db": 56,
+    "within_1_0_db": 120,
+    "most_above_db": 4.47,
+    "most_below_db": -11.23,
+    "differ_1_0_db_or_more": 16,
+    "f1_pass": false
+   }
+  },
+  "verified": {
+   "all": {
+    "cases": 1036,
+    "within_0_5_db": 1036,
+    "within_1_0_db": 1036,
+    "most_above_db": 0.33,
+    "most_below_db": -0.41,
+    "differ_1_0_db_or_more": 0,
+    "f1_pass": true
+   },
+   "clean": {
+    "cases": 900,
+    "within_0_5_db": 900,
+    "within_1_0_db": 900,
+    "most_above_db": 0.2,
+    "most_below_db": -0.41,
+    "differ_1_0_db_or_more": 0,
+    "f1_pass": true
+   },
+   "reach_target": {
+    "cases": 136,
+    "within_0_5_db": 136,
+    "within_1_0_db": 136,
+    "most_above_db": 0.33,
+    "most_below_db": -0.33,
+    "differ_1_0_db_or_more": 0,
+    "f1_pass": true
+   },
+   "searched_again": {
+    "clean": 48,
+    "reach_target": 12,
+    "songs": 11
+   }
+  },
+  "lowpass for Clean, verified for Reach target": {
+   "all": {
+    "cases": 1036,
+    "within_0_5_db": 1027,
+    "within_1_0_db": 1033,
+    "most_above_db": 0.33,
+    "most_below_db": -3.5,
+    "differ_1_0_db_or_more": 3,
+    "f1_pass": true
+   }
+  }
+ }
+}

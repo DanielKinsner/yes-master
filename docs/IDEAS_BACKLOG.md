@@ -142,8 +142,23 @@ Generated 2026-06-22 from the docs-hygiene recon.
     design that aims at the target meets it head-on.
   - The limiter and the final check are on the auto gain staging plan's
     do-not-touch list; this needs its own investigation and owner decision.
+  - Two auto gain staging items share this root cause and belong in the
+    same later, separate plan (Slice 8, 2026-11-27,
+    `docs/reviews/2026-11-25-auto-gain-staging-phase-c.md`):
+    - **A fast estimate for Reach target.** Audition's fast estimate runs
+      for Clean only. On bright material the final check holds Reach
+      target's loudness down, so the export's search stops early at its
+      no-progress peak check; a cheap peak reading misses it (Funkorama,
+      Clarity, −9 LUFS: 2.44 dB above the exact drive; a synthetic bright
+      signal: about 10 dB).
+    - **A faster finite-sinc half of the qualified peak meter.** One read
+      costs about 1.5 s on a 4-minute song even on 16 threads, which is what
+      kept an estimate that reads it out of the 2-second budget.
 - **Auto gain staging: faster settling in audition** (found 2026-11-25,
-  Slice 5; `docs/reviews/2026-11-25-auto-gain-staging-phase-c.md`).
+  Slice 5; `docs/reviews/2026-11-25-auto-gain-staging-phase-c.md`). Slice 8
+  (2026-11-27) added a fast estimate for Clean, heard within about 1.5 s on
+  a 4-minute song; the exact result still takes as long as below, and
+  Reach target still waits for it.
   - Each new combination of settings runs the export's whole resolution over
     the song, then today's landing measurement renders the chain again. On
     the office PC that took 8–11 s on a 2-minute song, 15 s on a 4-minute

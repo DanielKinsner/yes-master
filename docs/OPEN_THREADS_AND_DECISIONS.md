@@ -1,5 +1,19 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-11-27 — Auto gain staging at Checkpoint D: a fast estimate in
+> audition for priority Clean.** On branch `claude/auto-gain-staging-bf8b35`
+> (not merged; nothing pushed by the executor). On the reference song, a
+> close-to-final sound plays about 1.4 s after a change and the exact result
+> about 16 s after it; Reach target has no estimate and waits about 7 s.
+> Approved on the planning session's recommendation: Clean only (option 1),
+> and the 7-minute switch-on's 4.4 s against F2's 4.0 s. F1 passed on
+> development and on the holdout (its second use). A fast estimate for Reach
+> target and a faster finite-sinc half of the peak meter are parked with the
+> limiter-versus-final-check item
+> ([Phase C note, Slice 8](reviews/2026-11-25-auto-gain-staging-phase-c.md#slice-8-fast-settling-checkpoint-d)).
+>
+> Open: the owner's hand test; the Mac build.
+
 > **2026-11-25 — Auto gain staging, Checkpoint C graded: build accepted;
 > a listening pack and Slice 8 (fast settling in audition) come before the
 > owner's hand test.** Approved on the planning session's recommendation:

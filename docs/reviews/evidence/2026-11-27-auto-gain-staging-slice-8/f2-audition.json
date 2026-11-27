@@ -1,0 +1,783 @@
+{
+ "measure": "Slice 8 gate F2: native mastering_quality_auto_gain_staging_live, office PC (i9-12900K), muted, Universal 0.75, ceiling -1 dBTP; seconds from update_chain (the backend command) to the estimate playing (line up and its coefficients applied), and to the exact result settled; median of three runs",
+ "gate": "estimate playing within 2.0 s (2- and 4-minute songs) and 4.0 s (7-minute song)",
+ "note": "times start at the backend command; the interface adds its 180 ms debounce before it. One lowpass Sideways City run reached the song's end before the probe finished and was re-run.",
+ "songs": {
+  "sideways": "Zane Little - Sideways City (2:13)",
+  "coat": "reference song (4:05)",
+  "unraveling": "Scott Buckley - Unraveling (7:24)"
+ },
+ "shipped_commit": "5d80431",
+ "shipped": {
+  "coat|priority_edit -11 ReachTarget": {
+   "estimate_playing_median_s": 7.09,
+   "exact_settled_median_s": 7.82,
+   "estimate_runs_s": [
+    7.11,
+    7.09,
+    7.09
+   ],
+   "exact_runs_s": [
+    7.83,
+    7.81,
+    7.82
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Settled"
+  },
+  "coat|revisit_cached": {
+   "estimate_playing_median_s": 0.13,
+   "exact_settled_median_s": 0.13,
+   "estimate_runs_s": [
+    0.19,
+    0.12,
+    0.13
+   ],
+   "exact_runs_s": [
+    0.19,
+    0.12,
+    0.13
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "coat|switch_on -9 Clean": {
+   "estimate_playing_median_s": 1.41,
+   "exact_settled_median_s": 16.78,
+   "estimate_runs_s": [
+    1.41,
+    1.39,
+    1.44
+   ],
+   "exact_runs_s": [
+    16.78,
+    16.84,
+    16.61
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Estimated"
+  },
+  "coat|target_edit -11 Clean": {
+   "estimate_playing_median_s": 1.4,
+   "exact_settled_median_s": 16.0,
+   "estimate_runs_s": [
+    1.26,
+    1.4,
+    1.49
+   ],
+   "exact_runs_s": [
+    15.97,
+    16.0,
+    16.15
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Estimated"
+  },
+  "coat|target_edit -14 Clean": {
+   "estimate_playing_median_s": 1.49,
+   "exact_settled_median_s": 16.11,
+   "estimate_runs_s": [
+    1.49,
+    1.59,
+    1.25
+   ],
+   "exact_runs_s": [
+    16.18,
+    16.11,
+    15.91
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Estimated"
+  },
+  "coat|today (switch off) -14": {
+   "estimate_playing_median_s": 1.5,
+   "exact_settled_median_s": 1.5,
+   "estimate_runs_s": [
+    1.48,
+    1.5,
+    1.5
+   ],
+   "exact_runs_s": [
+    1.48,
+    1.5,
+    1.5
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "coat|today (switch off) -9": {
+   "estimate_playing_median_s": 1.49,
+   "exact_settled_median_s": 1.49,
+   "estimate_runs_s": [
+    1.43,
+    1.49,
+    1.49
+   ],
+   "exact_runs_s": [
+    1.43,
+    1.49,
+    1.49
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "coat|volume_match_on": {
+   "estimate_playing_median_s": 0.19,
+   "exact_settled_median_s": 0.19,
+   "estimate_runs_s": [
+    0.19,
+    0.19,
+    0.19
+   ],
+   "exact_runs_s": [
+    0.19,
+    0.19,
+    0.19
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "sideways|priority_edit -11 ReachTarget": {
+   "estimate_playing_median_s": 3.91,
+   "exact_settled_median_s": 4.3,
+   "estimate_runs_s": [
+    3.91,
+    3.91,
+    3.89
+   ],
+   "exact_runs_s": [
+    4.3,
+    4.3,
+    4.29
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Settled"
+  },
+  "sideways|revisit_cached": {
+   "estimate_playing_median_s": 0.13,
+   "exact_settled_median_s": 0.13,
+   "estimate_runs_s": [
+    0.12,
+    0.13,
+    0.19
+   ],
+   "exact_runs_s": [
+    0.12,
+    0.13,
+    0.19
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "sideways|switch_on -9 Clean": {
+   "estimate_playing_median_s": 1.16,
+   "exact_settled_median_s": 11.76,
+   "estimate_runs_s": [
+    1.16,
+    1.12,
+    1.22
+   ],
+   "exact_runs_s": [
+    11.84,
+    11.76,
+    11.76
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Estimated"
+  },
+  "sideways|target_edit -11 Clean": {
+   "estimate_playing_median_s": 0.84,
+   "exact_settled_median_s": 8.86,
+   "estimate_runs_s": [
+    0.84,
+    0.92,
+    0.82
+   ],
+   "exact_runs_s": [
+    8.73,
+    8.87,
+    8.86
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Estimated"
+  },
+  "sideways|target_edit -14 Clean": {
+   "estimate_playing_median_s": 0.87,
+   "exact_settled_median_s": 8.88,
+   "estimate_runs_s": [
+    0.9,
+    0.79,
+    0.87
+   ],
+   "exact_runs_s": [
+    8.93,
+    8.88,
+    8.82
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Estimated"
+  },
+  "sideways|today (switch off) -14": {
+   "estimate_playing_median_s": 0.9,
+   "exact_settled_median_s": 0.9,
+   "estimate_runs_s": [
+    0.9,
+    0.9,
+    0.89
+   ],
+   "exact_runs_s": [
+    0.9,
+    0.9,
+    0.89
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "sideways|today (switch off) -9": {
+   "estimate_playing_median_s": 0.95,
+   "exact_settled_median_s": 0.95,
+   "estimate_runs_s": [
+    0.96,
+    0.9,
+    0.95
+   ],
+   "exact_runs_s": [
+    0.96,
+    0.9,
+    0.95
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "sideways|volume_match_on": {
+   "estimate_playing_median_s": 0.19,
+   "exact_settled_median_s": 0.19,
+   "estimate_runs_s": [
+    0.19,
+    0.19,
+    0.19
+   ],
+   "exact_runs_s": [
+    0.19,
+    0.19,
+    0.19
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "unraveling|priority_edit -11 ReachTarget": {
+   "estimate_playing_median_s": 12.63,
+   "exact_settled_median_s": 14.88,
+   "estimate_runs_s": [
+    12.48,
+    12.63,
+    12.63
+   ],
+   "exact_runs_s": [
+    14.71,
+    14.88,
+    14.88
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Settled"
+  },
+  "unraveling|revisit_cached": {
+   "estimate_playing_median_s": 0.13,
+   "exact_settled_median_s": 0.13,
+   "estimate_runs_s": [
+    0.13,
+    0.13,
+    0.13
+   ],
+   "exact_runs_s": [
+    0.13,
+    0.13,
+    0.13
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "unraveling|switch_on -9 Clean": {
+   "estimate_playing_median_s": 4.41,
+   "exact_settled_median_s": 47.45,
+   "estimate_runs_s": [
+    4.41,
+    4.55,
+    4.29
+   ],
+   "exact_runs_s": [
+    46.79,
+    47.45,
+    47.45
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Estimated"
+  },
+  "unraveling|target_edit -11 Clean": {
+   "estimate_playing_median_s": 2.15,
+   "exact_settled_median_s": 29.78,
+   "estimate_runs_s": [
+    2.44,
+    2.12,
+    2.15
+   ],
+   "exact_runs_s": [
+    29.81,
+    29.78,
+    29.64
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Estimated"
+  },
+  "unraveling|target_edit -14 Clean": {
+   "estimate_playing_median_s": 2.18,
+   "exact_settled_median_s": 28.57,
+   "estimate_runs_s": [
+    2.17,
+    2.18,
+    2.19
+   ],
+   "exact_runs_s": [
+    28.57,
+    28.36,
+    29.15
+   ],
+   "first_line": "Some(Measuring)",
+   "what_played_first": "Estimated"
+  },
+  "unraveling|today (switch off) -14": {
+   "estimate_playing_median_s": 2.43,
+   "exact_settled_median_s": 2.43,
+   "estimate_runs_s": [
+    2.43,
+    2.47,
+    2.37
+   ],
+   "exact_runs_s": [
+    2.43,
+    2.47,
+    2.37
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "unraveling|today (switch off) -9": {
+   "estimate_playing_median_s": 2.38,
+   "exact_settled_median_s": 2.38,
+   "estimate_runs_s": [
+    2.37,
+    2.4,
+    2.38
+   ],
+   "exact_runs_s": [
+    2.37,
+    2.4,
+    2.38
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  },
+  "unraveling|volume_match_on": {
+   "estimate_playing_median_s": 0.19,
+   "exact_settled_median_s": 0.19,
+   "estimate_runs_s": [
+    0.19,
+    0.12,
+    0.19
+   ],
+   "exact_runs_s": [
+    0.19,
+    0.12,
+    0.19
+   ],
+   "first_line": "",
+   "what_played_first": ""
+  }
+ },
+ "shipped_note": "the shipped design: lowpass estimate for Clean; Reach target has no estimate, so its estimate_playing time is the exact gains playing and exact_settled adds the landing",
+ "trade_off_runs": {
+  "commit": "b06b2b2",
+  "note": "before the ruling, YES_MASTER_ESTIMATE_PEAK chose the reading in test builds (since removed)",
+  "results": {
+   "coat|priority_edit -11 ReachTarget|lowpass": {
+    "estimate_playing_median_s": 1.36,
+    "exact_settled_median_s": 9.11,
+    "estimate_runs_s": [
+     1.36,
+     1.36,
+     1.19
+    ]
+   },
+   "coat|priority_edit -11 ReachTarget|verified": {
+    "estimate_playing_median_s": 2.73,
+    "exact_settled_median_s": 13.08,
+    "estimate_runs_s": [
+     2.68,
+     3.22,
+     2.73
+    ]
+   },
+   "coat|revisit cached|lowpass": {
+    "estimate_playing_median_s": 0.12,
+    "exact_settled_median_s": 0.12,
+    "estimate_runs_s": [
+     0.12,
+     0.12,
+     0.13
+    ]
+   },
+   "coat|revisit cached|verified": {
+    "estimate_playing_median_s": 0.13,
+    "exact_settled_median_s": 0.13,
+    "estimate_runs_s": [
+     0.13,
+     0.13,
+     0.13
+    ]
+   },
+   "coat|switch_on -9 Clean|lowpass": {
+    "estimate_playing_median_s": 1.53,
+    "exact_settled_median_s": 16.98,
+    "estimate_runs_s": [
+     1.56,
+     1.41,
+     1.53
+    ]
+   },
+   "coat|switch_on -9 Clean|verified": {
+    "estimate_playing_median_s": 2.6,
+    "exact_settled_median_s": 19.6,
+    "estimate_runs_s": [
+     2.6,
+     3.37,
+     2.48
+    ]
+   },
+   "coat|target_edit -11 Clean|lowpass": {
+    "estimate_playing_median_s": 1.39,
+    "exact_settled_median_s": 16.38,
+    "estimate_runs_s": [
+     2.02,
+     1.3,
+     1.39
+    ]
+   },
+   "coat|target_edit -11 Clean|verified": {
+    "estimate_playing_median_s": 3.04,
+    "exact_settled_median_s": 21.85,
+    "estimate_runs_s": [
+     3.0,
+     3.35,
+     3.04
+    ]
+   },
+   "coat|target_edit -14 Clean|lowpass": {
+    "estimate_playing_median_s": 1.45,
+    "exact_settled_median_s": 16.21,
+    "estimate_runs_s": [
+     1.25,
+     1.45,
+     1.49
+    ]
+   },
+   "coat|target_edit -14 Clean|verified": {
+    "estimate_playing_median_s": 2.75,
+    "exact_settled_median_s": 19.15,
+    "estimate_runs_s": [
+     2.58,
+     3.52,
+     2.75
+    ]
+   },
+   "coat|today (switch off) -14|lowpass": {
+    "estimate_playing_median_s": 1.46,
+    "exact_settled_median_s": 1.46,
+    "estimate_runs_s": [
+     1.46,
+     1.45,
+     1.55
+    ]
+   },
+   "coat|today (switch off) -14|verified": {
+    "estimate_playing_median_s": 2.23,
+    "exact_settled_median_s": 2.23,
+    "estimate_runs_s": [
+     1.53,
+     2.23,
+     2.29
+    ]
+   },
+   "coat|today (switch off) -9|lowpass": {
+    "estimate_playing_median_s": 1.44,
+    "exact_settled_median_s": 1.44,
+    "estimate_runs_s": [
+     1.44,
+     1.43,
+     1.53
+    ]
+   },
+   "coat|today (switch off) -9|verified": {
+    "estimate_playing_median_s": 2.4,
+    "exact_settled_median_s": 2.4,
+    "estimate_runs_s": [
+     1.44,
+     2.4,
+     2.7
+    ]
+   },
+   "sideways|priority_edit -11 ReachTarget|lowpass": {
+    "estimate_playing_median_s": 0.95,
+    "exact_settled_median_s": 5.96,
+    "estimate_runs_s": [
+     0.68,
+     0.95,
+     1.08
+    ]
+   },
+   "sideways|priority_edit -11 ReachTarget|verified": {
+    "estimate_playing_median_s": 1.51,
+    "exact_settled_median_s": 5.82,
+    "estimate_runs_s": [
+     1.34,
+     1.51,
+     1.59
+    ]
+   },
+   "sideways|revisit cached|lowpass": {
+    "estimate_playing_median_s": 0.13,
+    "exact_settled_median_s": 0.13,
+    "estimate_runs_s": [
+     0.19,
+     0.13,
+     0.12
+    ]
+   },
+   "sideways|revisit cached|verified": {
+    "estimate_playing_median_s": 0.13,
+    "exact_settled_median_s": 0.13,
+    "estimate_runs_s": [
+     0.13,
+     0.12,
+     0.19
+    ]
+   },
+   "sideways|switch_on -9 Clean|lowpass": {
+    "estimate_playing_median_s": 1.17,
+    "exact_settled_median_s": 13.0,
+    "estimate_runs_s": [
+     1.12,
+     1.22,
+     1.17
+    ]
+   },
+   "sideways|switch_on -9 Clean|verified": {
+    "estimate_playing_median_s": 1.88,
+    "exact_settled_median_s": 12.65,
+    "estimate_runs_s": [
+     1.91,
+     1.82,
+     1.88
+    ]
+   },
+   "sideways|target_edit -11 Clean|lowpass": {
+    "estimate_playing_median_s": 0.98,
+    "exact_settled_median_s": 10.0,
+    "estimate_runs_s": [
+     0.84,
+     0.98,
+     1.18
+    ]
+   },
+   "sideways|target_edit -11 Clean|verified": {
+    "estimate_playing_median_s": 1.5,
+    "exact_settled_median_s": 9.61,
+    "estimate_runs_s": [
+     1.55,
+     1.47,
+     1.5
+    ]
+   },
+   "sideways|target_edit -14 Clean|lowpass": {
+    "estimate_playing_median_s": 0.84,
+    "exact_settled_median_s": 9.63,
+    "estimate_runs_s": [
+     0.84,
+     0.84,
+     1.16
+    ]
+   },
+   "sideways|target_edit -14 Clean|verified": {
+    "estimate_playing_median_s": 1.46,
+    "exact_settled_median_s": 9.66,
+    "estimate_runs_s": [
+     1.46,
+     1.47,
+     1.46
+    ]
+   },
+   "sideways|today (switch off) -14|lowpass": {
+    "estimate_playing_median_s": 0.96,
+    "exact_settled_median_s": 0.96,
+    "estimate_runs_s": [
+     0.97,
+     0.94,
+     0.96
+    ]
+   },
+   "sideways|today (switch off) -14|verified": {
+    "estimate_playing_median_s": 0.96,
+    "exact_settled_median_s": 0.96,
+    "estimate_runs_s": [
+     0.89,
+     0.98,
+     0.96
+    ]
+   },
+   "sideways|today (switch off) -9|lowpass": {
+    "estimate_playing_median_s": 0.9,
+    "exact_settled_median_s": 0.9,
+    "estimate_runs_s": [
+     0.9,
+     0.95,
+     0.9
+    ]
+   },
+   "sideways|today (switch off) -9|verified": {
+    "estimate_playing_median_s": 0.96,
+    "exact_settled_median_s": 0.96,
+    "estimate_runs_s": [
+     0.97,
+     0.96,
+     0.89
+    ]
+   },
+   "unraveling|priority_edit -11 ReachTarget|lowpass": {
+    "estimate_playing_median_s": 2.22,
+    "exact_settled_median_s": 17.12,
+    "estimate_runs_s": [
+     2.22,
+     2.07,
+     2.27
+    ]
+   },
+   "unraveling|priority_edit -11 ReachTarget|verified": {
+    "estimate_playing_median_s": 4.31,
+    "exact_settled_median_s": 19.35,
+    "estimate_runs_s": [
+     4.36,
+     4.13,
+     4.31
+    ]
+   },
+   "unraveling|revisit cached|lowpass": {
+    "estimate_playing_median_s": 0.19,
+    "exact_settled_median_s": 0.19,
+    "estimate_runs_s": [
+     0.19,
+     0.13,
+     0.19
+    ]
+   },
+   "unraveling|revisit cached|verified": {
+    "estimate_playing_median_s": 0.19,
+    "exact_settled_median_s": 0.19,
+    "estimate_runs_s": [
+     0.19,
+     0.19,
+     0.13
+    ]
+   },
+   "unraveling|switch_on -9 Clean|lowpass": {
+    "estimate_playing_median_s": 4.51,
+    "exact_settled_median_s": 47.25,
+    "estimate_runs_s": [
+     4.4,
+     4.56,
+     4.51
+    ]
+   },
+   "unraveling|switch_on -9 Clean|verified": {
+    "estimate_playing_median_s": 6.61,
+    "exact_settled_median_s": 50.2,
+    "estimate_runs_s": [
+     6.73,
+     6.61,
+     6.47
+    ]
+   },
+   "unraveling|target_edit -11 Clean|lowpass": {
+    "estimate_playing_median_s": 2.31,
+    "exact_settled_median_s": 30.04,
+    "estimate_runs_s": [
+     2.34,
+     2.31,
+     2.16
+    ]
+   },
+   "unraveling|target_edit -11 Clean|verified": {
+    "estimate_playing_median_s": 4.45,
+    "exact_settled_median_s": 32.12,
+    "estimate_runs_s": [
+     4.45,
+     4.31,
+     4.6
+    ]
+   },
+   "unraveling|target_edit -14 Clean|lowpass": {
+    "estimate_playing_median_s": 2.44,
+    "exact_settled_median_s": 29.0,
+    "estimate_runs_s": [
+     2.44,
+     2.41,
+     2.6
+    ]
+   },
+   "unraveling|target_edit -14 Clean|verified": {
+    "estimate_playing_median_s": 4.5,
+    "exact_settled_median_s": 31.06,
+    "estimate_runs_s": [
+     4.52,
+     4.47,
+     4.5
+    ]
+   },
+   "unraveling|today (switch off) -14|lowpass": {
+    "estimate_playing_median_s": 2.46,
+    "exact_settled_median_s": 2.46,
+    "estimate_runs_s": [
+     2.52,
+     2.46,
+     2.43
+    ]
+   },
+   "unraveling|today (switch off) -14|verified": {
+    "estimate_playing_median_s": 2.44,
+    "exact_settled_median_s": 2.44,
+    "estimate_runs_s": [
+     2.45,
+     2.44,
+     2.39
+    ]
+   },
+   "unraveling|today (switch off) -9|lowpass": {
+    "estimate_playing_median_s": 2.46,
+    "exact_settled_median_s": 2.46,
+    "estimate_runs_s": [
+     2.39,
+     2.46,
+     2.48
+    ]
+   },
+   "unraveling|today (switch off) -9|verified": {
+    "estimate_playing_median_s": 2.39,
+    "exact_settled_median_s": 2.39,
+    "estimate_runs_s": [
+     2.4,
+     2.39,
+     2.38
+    ]
+   }
+  }
+ },
+ "gate_result": "Clean estimate within budget on every event except the 7-minute switch-on (4.41 s against 4.0 s), failed as written and accepted by the planning session"
+}

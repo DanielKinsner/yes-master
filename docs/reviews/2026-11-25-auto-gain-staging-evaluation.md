@@ -85,6 +85,17 @@ With one resolution pass, an export takes 0.2–1.9 s more: the source
 measurement and the stage capture. Each extra pass adds a limiter run, a
 conversion and a final check, up to about 13 s on the 7-minute song at −9.
 
+### Slice 8: the audition estimate's F1 (2026-11-27)
+
+Not an engine measure: gate F1 compares audition's fast estimate with the
+exact resolution measured here. The shipped estimate (priority Clean only)
+landed within 0.5 dB of the exact drive on 891 of 900 development cases and
+228 of 228 holdout cases, never more than 0.25 dB above. That holdout run,
+frozen at `5d80431`, is **the holdout's second use, for a different
+measure** (the first being this note's engine gates, E3 and the E4 re-check).
+Details are in the
+[Phase C note](2026-11-25-auto-gain-staging-phase-c.md#slice-8-fast-settling-checkpoint-d).
+
 ## Material
 
 - **Development (75 songs):**

@@ -142,7 +142,15 @@ settings without resolved gains; the audio command thread only `try_lock`s
 it, so it never waits on a worker. While a resolution is pending, the chain
 plays level in from the analysis (stored in the profile store) and holds the
 limiter drive it already applies (contract rule 8). A superseded resolution
-is cancelled and never stored. The `auto_gain_staging_readout` command
+is cancelled and never stored. With priority Clean, the worker first plays
+a fast estimate (Slice 8, `gain_staging::estimate_preview`: the same search
+on parallel chunks on the shared peak-measurement thread budget, its final
+check emulated from the lowpass half of the qualified peak meter), then the
+exact result, which replaces it only when the drives differ by 0.3 dB or
+more (`gain_staging_live::audition_gains`). Reach target has no estimate.
+Exports never use it. The research readings behind the
+`gain-staging-research` feature are never in a release build. The
+`auto_gain_staging_readout` command
 resolves the selected song in the background on the same permit and cache,
 and `auto-gain-staging:status` carries the loaded song's live line,
 `Measuring` while pending.

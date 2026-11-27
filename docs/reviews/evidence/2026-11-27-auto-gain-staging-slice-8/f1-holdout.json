@@ -1,0 +1,17 @@
+{
+ "measure": "Slice 8 gate F1 on the holdout: the shipped estimate (lowpass, Clean only) minus the exact (export) drive, dB",
+ "use": "the holdout's second use, for a different measure: its first was the Checkpoint B engine gates (E3, and the E4 Reach-target re-check on its Reach cases); run once, nothing tuned on it",
+ "frozen_commit": "5d80431",
+ "gate": "within 0.5 dB in >= 90%, within 1.0 dB in >= 99%, never more than 1.5 dB above",
+ "material": "19 held-out songs: the library's 14 and the quiet folder's 5",
+ "cases": 228,
+ "within_0_5_db": 228,
+ "within_1_0_db": 228,
+ "most_above_db": 0.23,
+ "most_below_db": -0.22,
+ "differ_1_0_db_or_more": 0,
+ "differ_0_3_db_or_more": 0,
+ "exact_stopped_at_clean_limit": 50,
+ "estimate_stopped_at_clean_limit_on_those": 50,
+ "f1_pass": true
+}

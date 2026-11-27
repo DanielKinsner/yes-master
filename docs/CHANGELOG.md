@@ -12,6 +12,21 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-11-27 — Auto gain staging: a fast estimate in audition (branch)
+
+Internal entry, not a release. On `claude/auto-gain-staging-bf8b35`, not
+merged.
+
+- With priority Clean, audition plays a fast estimate of the gains about
+  1.4 s after a change on a 4-minute song (the exact result follows about
+  16 s later); the line adds ` · refining…` meanwhile. Reach target has no
+  fast estimate and waits for the exact result.
+- Exports never use the estimate: 360 of 360 test exports are bit-identical
+  to the previous build.
+- Gate F1 passed on Clean on development and holdout material; F2 passed
+  except the 7-minute switch-on (4.4 s against 4.0 s), accepted by the
+  planning session.
+
 ## 2026-11-25 — Auto gain staging (Beta) built on a branch
 
 Internal entry, not a release or an announcement. Built on
