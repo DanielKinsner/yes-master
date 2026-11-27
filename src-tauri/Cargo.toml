@@ -82,6 +82,9 @@ tokio = { version = "1", features = ["macros", "rt"] }
 default = ["app-runner", "custom-protocol"]
 app-runner = ["dep:tauri-plugin-updater", "dep:tauri-plugin-opener", "dep:mp3lame-encoder", "dep:sha2"]
 custom-protocol = ["tauri/custom-protocol"]
+# Auto gain staging research (Slice 8): the audition estimate's research
+# readings, for the research runner only. Never part of a release build.
+gain-staging-research = []
 
 # Dev builds must keep the realtime DSP chain comfortably above 1x even at
 # 96 kHz: fully unoptimized it measured 0.86x realtime on a 96k stereo

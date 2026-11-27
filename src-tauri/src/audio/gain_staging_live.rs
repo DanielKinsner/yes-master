@@ -169,9 +169,10 @@ fn source_level(key: &Key, pcm: &PlaybackPcm) -> CommandResult<SourceLevel> {
 }
 
 /// Audition's fast estimate for one song's settings (Slice 8): the export's
-/// drive search on parallel chunks with an emulated final check. Level in
-/// comes from the analysis when audition has it. Never stored; exports never
-/// use it.
+/// drive search on parallel chunks with an emulated final check, for priority
+/// Clean only; `None` for Reach target, which waits for the exact result.
+/// Level in comes from the analysis when audition has it. Never stored;
+/// exports never use it.
 pub(super) fn estimate(
     key: &Key,
     pcm: &PlaybackPcm,
@@ -179,6 +180,9 @@ pub(super) fn estimate(
     analysis: Option<SourceLevel>,
     cancel: &AtomicBool,
 ) -> CommandResult<Option<Resolution>> {
+    if !crate::gain_staging::has_estimate(settings) {
+        return Ok(None);
+    }
     let level = match analysis {
         Some(level) => level,
         None => source_level(key, pcm)?,

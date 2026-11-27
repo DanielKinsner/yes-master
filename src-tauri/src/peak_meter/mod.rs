@@ -246,8 +246,9 @@ pub(crate) fn lowpass_upper(
 /// all channels. The larger of this and [`lowpass_upper`] is the qualified
 /// reading, to within the lowpass half's numerical reserve (which
 /// [`lowpass_upper`] takes from the loudest channel, so the pair never reads
-/// below [`measure`]). Auto gain staging's audition estimate uses it to check
-/// its cheaper reading.
+/// below [`measure`]). Research only: auto gain staging's research readings
+/// use it; nothing shipped does.
+#[cfg(any(test, feature = "gain-staging-research"))]
 pub(crate) fn finite_upper(
     samples: &[f32],
     channels: usize,

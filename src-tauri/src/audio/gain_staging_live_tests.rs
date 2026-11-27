@@ -147,11 +147,19 @@ fn off_and_inert_settings_apply_nothing() {
 /// Contract rule 8: level in applies at once from the analysis, the drive
 /// holds and never rises on an unverified value, and the state is never
 /// settled while pending.
+/// Rule 8 while pending, for both priorities. Reach target has no fast
+/// estimate (Slice 8), so it stays here until the exact result lands.
 #[test]
 fn pending_applies_level_in_at_once_and_never_raises_the_drive() {
+    for priority in [LoudnessPriority::Clean, LoudnessPriority::ReachTarget] {
+        pending_holds_for(priority);
+    }
+}
+
+fn pending_holds_for(priority: LoudnessPriority) {
     let (path, mtime) = source("pending");
     let src = Some((path.as_path(), mtime));
-    let on = switched_on(-9.0, LoudnessPriority::Clean);
+    let on = switched_on(-9.0, priority);
     let expected_level_in = crate::gain_staging::level_in_for(&analysis()).unwrap();
     for held_drive in [-6.0_f32, -0.5, 0.0, 0.7, 3.0, 9.5] {
         let held = ResolvedGainStaging {
@@ -548,19 +556,23 @@ fn refining_changes_nothing_below_the_threshold() {
     assert_eq!(audition_gains(&exact, Some(&other_level)), exact.gains);
 }
 
-/// Slice 8: with Clean, the estimate follows the export's search to within
-/// F1's 0.5 dB, and exports never use it (their resolution is the exact one,
-/// pinned above). Reach target is pinned separately below.
+/// Slice 8: the Clean estimate follows the export's search to within F1's
+/// 0.5 dB, and exports never use it (their resolution is the exact one,
+/// pinned above). Where the export stops at the clean limit, the estimate
+/// stops there too and never passes it: its search caps every drive at the
+/// clean limit (pinned on the search itself in `gain_staging`).
 #[test]
 fn the_estimate_lands_near_the_exact_drive() {
     let pcm = music_like();
-    for (name, target, priority) in [
-        ("estimate-clean-9", -9.0, LoudnessPriority::Clean),
-        ("estimate-clean-11", -11.0, LoudnessPriority::Clean),
-        ("estimate-clean-14", -14.0, LoudnessPriority::Clean),
+    let mut at_the_limit = 0;
+    for (name, target) in [
+        ("estimate-clean-5", -5.0),
+        ("estimate-clean-9", -9.0),
+        ("estimate-clean-11", -11.0),
+        ("estimate-clean-14", -14.0),
     ] {
         let (path, mtime) = source(name);
-        let settings = switched_on(target, priority);
+        let settings = switched_on(target, LoudnessPriority::Clean);
         let key = Key::new(&path, mtime, &settings).unwrap();
         let cancel = AtomicBool::new(false);
         let est = estimate(&key, &pcm, &settings, None, &cancel)
@@ -576,25 +588,39 @@ fn the_estimate_lands_near_the_exact_drive() {
         );
         assert!(gap.abs() <= 0.5, "{name}: estimate {gap:+.3} dB from exact");
         assert!(gap <= 1.5, "{name}");
+        if exact.exact.gains.stopped_at_clean_limit {
+            at_the_limit += 1;
+            assert!(est.gains.stopped_at_clean_limit, "{name}");
+            assert!(gap <= 0.01, "{name}: {gap:+.4} dB past the clean limit");
+        }
         // A cancelled estimate is an error, never a result.
         assert!(estimate(&key, &pcm, &settings, None, &AtomicBool::new(true)).is_err());
     }
+    assert!(
+        at_the_limit > 0,
+        "the clean limit binds on at least one case"
+    );
 }
 
-/// Slice 8, Reach target on this bright signal: the export's search stops
-/// early at its no-progress peak check, because the final check's qualified
-/// peak (its finite-sinc half) holds the loudness down at low drives. Only
-/// the qualified reading on every pass follows it. The lowpass reading,
-/// alone or checked once on the last pass, overshoots the exact drive here
-/// by about 10 dB (Checkpoint D's F1/F2 trade-off).
+/// Slice 8, why Reach target has no fast estimate. On this bright signal the
+/// export's Reach target search stops early at its no-progress peak check,
+/// because the final check's qualified peak (its finite-sinc half) holds the
+/// loudness down at low drives. The shipped behaviour: no estimate, so
+/// audition waits for the exact result. The research readings show the
+/// hole: the lowpass reading, alone or checked once on the last pass, lands
+/// about 10 dB above the exact drive; only the qualified reading on every
+/// pass, at close to the export's cost, follows it.
 #[test]
-fn only_the_qualified_reading_on_every_pass_follows_the_peak_check_stop() {
+fn reach_target_on_bright_material_has_no_estimate() {
     use crate::gain_staging::{estimate_preview_with, EstimatePeak};
     let pcm = music_like();
     let settings = switched_on(-9.0, LoudnessPriority::ReachTarget);
     let (path, mtime) = source("estimate-reach-9");
     let key = Key::new(&path, mtime, &settings).unwrap();
     let cancel = AtomicBool::new(false);
+    assert!(estimate(&key, &pcm, &settings, None, &cancel)
+        .unwrap()
+        .is_none());
     let exact = resolve_cached(&key, &pcm, &settings, None, &cancel)
         .unwrap()
         .expect("active")
@@ -620,5 +646,71 @@ fn only_the_qualified_reading_on_every_pass_follows_the_peak_check_stop() {
     for peak in [EstimatePeak::Lowpass, EstimatePeak::Verified] {
         let gap = drive(peak);
         assert!(gap > 1.5, "{peak:?} {gap:+.3} dB: the recorded overshoot");
+    }
+}
+
+/// Slice 8: Reach target never produces an estimate. The worker sends no
+/// estimated message: its first message carries the exact resolution, and
+/// audition plays exactly that (until then the chain held its drive, pinned
+/// by the pending test above).
+#[test]
+fn reach_target_never_produces_an_estimate() {
+    let pcm = song();
+    let (path, mtime) = source("reach-no-estimate");
+    let settings = switched_on(-9.0, LoudnessPriority::ReachTarget);
+    let key = Key::new(&path, mtime, &settings).unwrap();
+    let cancel = AtomicBool::new(false);
+    assert!(!crate::gain_staging::has_estimate(&settings));
+    assert!(estimate(&key, &pcm, &settings, Some(analysis()), &cancel)
+        .unwrap()
+        .is_none());
+    let entry = DecodedCacheEntry {
+        canonical_path: path.clone(),
+        mtime,
+        pcm: pcm.clone(),
+    };
+    let (tx, rx) = mpsc::channel::<AudioCommand>();
+    let mut pending = settings.clone();
+    pending.advanced.gain_staging_resolved = Some(ResolvedGainStaging {
+        level_in_db: 1.0,
+        limiter_drive_db: 2.0,
+        ..Default::default()
+    });
+    assert!(try_spawn_lufs_preview_worker(
+        Some(&entry),
+        PreviewWorkRequest {
+            settings: pending,
+            generation: 7,
+            track_epoch: 2,
+            landing_enabled: false,
+            device_rate: 48_000,
+            gain_staging: Some(GainStagingWork {
+                key: key.clone(),
+                analysis: Some(analysis()),
+            }),
+        },
+        &tx,
+        &Arc::new(AtomicBool::new(false)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    match rx
+        .recv_timeout(std::time::Duration::from_secs(120))
+        .unwrap()
+    {
+        AudioCommand::PreviewLandingReady {
+            settings: playing,
+            gain_staging: Some(GainStagingOutcome::Resolved(found)),
+            finished,
+            ..
+        } => {
+            assert!(finished);
+            assert_eq!(found.audition, found.exact.gains, "no estimate to keep");
+            assert_eq!(
+                playing.advanced.gain_staging_resolved,
+                Some(found.exact.gains)
+            );
+            assert_eq!(lookup(&key), Some(found));
+        }
+        _ => panic!("the exact result comes first, with no estimate before it"),
     }
 }

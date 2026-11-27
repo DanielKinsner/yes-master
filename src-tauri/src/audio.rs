@@ -2319,10 +2319,12 @@ fn try_spawn_lufs_preview_worker(
             // chain with the resolved gains.
             let mut gain_staging = None;
             if let Some(GainStagingWork { key, analysis }) = gain_staging_key {
-                // Slice 8: a fast estimate first, played at once (it may raise
-                // the drive: it is for these very settings and passed F1),
-                // then the exact resolution, which replaces it only when the
-                // two differ by the refine threshold or more.
+                // Slice 8: with priority Clean, a fast estimate first, played
+                // at once (it may raise the drive: it is for these very
+                // settings and passed F1), then the exact resolution, which
+                // replaces it only when the two differ by the refine
+                // threshold or more. Reach target has no estimate: audition
+                // stays pending (rule 8 as written) until the exact result.
                 let mut estimate = None;
                 if gain_staging_live::lookup(&key).is_none() {
                     match gain_staging_live::estimate(&key, &pcm, &settings, analysis, &cancelled) {

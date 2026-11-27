@@ -1322,25 +1322,12 @@ fn run() -> Result<(), String> {
         return write_json(&args.output.join("reach-check.json"), &all);
     }
     if let Some(margins) = &args.estimate_check {
-        use yes_master_lib::gain_staging::EstimatePeak;
-        // "4x:0,lp:0.1": the peak reading and its margin in dB.
-        let margins: Vec<(EstimatePeak, f32)> = margins
+        // "shipped" is the estimate audition plays (Clean only). With the
+        // gain-staging-research feature, "4x:0,lp:0.1,q:0,verified:0" are the
+        // research readings and their true-peak margins in dB.
+        let margins: Vec<production::EstimateVariant> = margins
             .split(',')
-            .map(|v| {
-                let (peak, m) = v
-                    .trim()
-                    .split_once(':')
-                    .ok_or(format!("variant {v}: expected peak:margin"))?;
-                let peak = match peak {
-                    "4x" => EstimatePeak::FourX,
-                    "lp" => EstimatePeak::Lowpass,
-                    "q" => EstimatePeak::Qualified,
-                    "verified" => EstimatePeak::Verified,
-                    other => return Err(format!("unknown peak reading {other}")),
-                };
-                let margin = m.parse::<f32>().map_err(|e| format!("margin {m}: {e}"))?;
-                Ok((peak, margin))
-            })
+            .map(|v| production::EstimateVariant::parse(v.trim()))
             .collect::<Result<_, String>>()?;
         println!("estimate check: {} songs, margins {margins:?}", songs.len());
         let cached: Option<Vec<serde_json::Value>> = match &args.exact_from {

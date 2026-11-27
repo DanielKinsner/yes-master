@@ -208,12 +208,55 @@ pub(super) fn timing_production(
 /// export's own, pinned bit-identical), for every Standard Style and loudness
 /// with Clean, plus Reach target wherever Clean stopped at the clean limit
 /// (the Slice 4 case set). Each estimate is run at every `margins` value.
+/// One estimate the F1 check measures.
+#[derive(Debug, Clone, Copy)]
+pub(super) enum EstimateVariant {
+    /// What audition plays (`estimate_preview`): Clean only.
+    Shipped,
+    /// A research reading and its true-peak margin, for either priority.
+    #[cfg(feature = "gain-staging-research")]
+    Research(yes_master_lib::gain_staging::EstimatePeak, f32),
+}
+
+impl EstimateVariant {
+    pub(super) fn parse(v: &str) -> Result<Self, String> {
+        if v == "shipped" {
+            return Ok(Self::Shipped);
+        }
+        #[cfg(feature = "gain-staging-research")]
+        {
+            use yes_master_lib::gain_staging::EstimatePeak;
+            let (peak, m) = v
+                .split_once(':')
+                .ok_or(format!("variant {v}: expected peak:margin"))?;
+            let peak = match peak {
+                "4x" => EstimatePeak::FourX,
+                "lp" => EstimatePeak::Lowpass,
+                "q" => EstimatePeak::Qualified,
+                "verified" => EstimatePeak::Verified,
+                other => return Err(format!("unknown peak reading {other}")),
+            };
+            let margin = m.parse::<f32>().map_err(|e| format!("margin {m}: {e}"))?;
+            Ok(Self::Research(peak, margin))
+        }
+        #[cfg(not(feature = "gain-staging-research"))]
+        Err(format!(
+            "variant {v}: only \"shipped\" without the gain-staging-research feature"
+        ))
+    }
+}
+
 pub(super) fn estimate_check_song(
     song: &Song,
-    variants: &[(yes_master_lib::gain_staging::EstimatePeak, f32)],
+    variants: &[EstimateVariant],
     cached: Option<&[serde_json::Value]>,
 ) -> Result<Vec<serde_json::Value>, String> {
-    use yes_master_lib::gain_staging::{estimate_preview_with, resolve_preview};
+    use yes_master_lib::gain_staging::resolve_preview;
+    // Reach target cases are measured only for a research reading: the
+    // shipped estimate has none.
+    let reach = variants
+        .iter()
+        .any(|v| !matches!(v, EstimateVariant::Shipped));
     let src = load(song, None)?;
     let ch = src.channels as u16;
     let level = yes_master_lib::analysis::measure_source_level(&src.samples, src.rate, ch)
@@ -260,29 +303,50 @@ pub(super) fn estimate_check_song(
                         "stopped_by_peak_check": exact.gains.stopped_by_peak_check,
                         "seconds": exact_s})
                 };
-                if priority == LoudnessPriority::Clean
+                if reach
+                    && priority == LoudnessPriority::Clean
                     && exact_json["stopped_at_clean_limit"] == true
                 {
                     priorities.push(LoudnessPriority::ReachTarget);
                 }
                 let mut estimates = Vec::new();
-                for &(peak, margin) in variants {
+                for &variant in variants {
                     let t0 = Instant::now();
-                    let est = estimate_preview_with(
-                        &src.samples,
-                        src.rate,
-                        ch,
-                        &s,
-                        Some(&level),
-                        peak,
-                        margin,
-                        None,
-                    )
-                    .map_err(|e| format!("{}: estimate: {e}", song.label))?;
+                    let (name, margin, est) = match variant {
+                        EstimateVariant::Shipped => (
+                            "Shipped".to_string(),
+                            0.0_f32,
+                            yes_master_lib::gain_staging::estimate_preview(
+                                &src.samples,
+                                src.rate,
+                                ch,
+                                &s,
+                                Some(&level),
+                                None,
+                            )
+                            .map(|e| e.map(|e| (e, false))),
+                        ),
+                        #[cfg(feature = "gain-staging-research")]
+                        EstimateVariant::Research(peak, margin) => (
+                            format!("{peak:?}"),
+                            margin,
+                            yes_master_lib::gain_staging::estimate_preview_with(
+                                &src.samples,
+                                src.rate,
+                                ch,
+                                &s,
+                                Some(&level),
+                                peak,
+                                margin,
+                                None,
+                            ),
+                        ),
+                    };
+                    let est = est.map_err(|e| format!("{}: estimate: {e}", song.label))?;
                     let seconds = t0.elapsed().as_secs_f64();
                     if let Some((est, searched_again)) = est {
                         estimates.push(serde_json::json!({
-                            "peak": format!("{peak:?}"),
+                            "peak": name,
                             "margin_db": margin, "drive_db": est.gains.limiter_drive_db,
                             "level_in_db": est.gains.level_in_db,
                             "load_db": est.gains.limiter_load_db,
